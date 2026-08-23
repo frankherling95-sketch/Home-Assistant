@@ -6,8 +6,8 @@ Levend document. Groeit met elke interviewronde; ik werk het bij zodra jij antwo
 | --- | --- |
 | **Project** | Afbouw en inrichting van een nieuwbouwwoning, oplevering 2027 |
 | **Opdrachtgever** | Frank |
-| **Laatst bijgewerkt** | 23 augustus 2026 — na v0.6 |
-| **App** | https://claude.ai/code/artifact/d3a4ece3-ec9b-4e91-9423-f7419b0d4365 |
+| **Laatst bijgewerkt** | 23 augustus 2026 — na v0.7, live op GitHub Pages |
+| **App** | https://frankherling95-sketch.github.io/staartploeg/ |
 
 Status per regel: **GEBOUWD** = zit in de app · **VAST** = besloten, nog te bouwen ·
 **VOORSTEL** = mijn invulling, mag omver · **OPEN** = wacht op antwoord.
@@ -137,7 +137,7 @@ volgorde; wie de vloer te vroeg legt, legt hem twee keer.
 | F31 | Vrij sleepbaar bord per ruimte, met foto's, stalen en notities | GEBOUWD |
 | F32 | Eigen kleur kiezen bij een staal, met snelkeuzes | GEBOUWD |
 | F21 | Opties naast elkaar leggen en er één kiezen; de keuze vult prijs, winkel en link | GEBOUWD |
-| F33 | Delen vanuit een webshop rechtstreeks de app in | VOORSTEL |
+| F33 | Delen vanuit een webshop rechtstreeks de app in | GEBOUWD |
 | F22 | Documenten koppelen of naar Drive linken | VOORSTEL |
 
 ### Geld
@@ -158,11 +158,11 @@ volgorde; wie de vloer te vroeg legt, legt hem twee keer.
 | N4 | ~~Offline werken~~ — niet nodig, er is altijd bereik | VERVALLEN |
 | N7 | Gegevens exporteerbaar als JSON, en terug te zetten | GEBOUWD |
 | N10 | Donkere en lichte modus, contrast op AA-niveau | GEBOUWD |
-| N2 | Installeerbaar op het beginscherm | VAST |
+| N2 | Installeerbaar op het beginscherm | GEBOUWD |
 | N5 | Twee gebruikers, allebei lezen en schrijven | VAST, uitgesteld |
 | N6 | Wijzigingen van de één zichtbaar bij de ander | VAST, uitgesteld |
-| N9 | GitHub Pages, later eventueel eigen domein | VAST |
-| N8 | Afscherming: publiek bereikbaar of niet | OPEN |
+| N9 | GitHub Pages, later eventueel eigen domein | GEBOUWD — https://frankherling95-sketch.github.io/staartploeg/ |
+| N8 | Afscherming | BESLOTEN — openbare repo en publieke site; projectgegevens blijven in de browser |
 | N11 | Waar de gedeelde gegevens gaan wonen | UITGESTELD → B11 |
 
 ---
@@ -276,3 +276,13 @@ onderdelen met sorteren per kolom.
 Twee bugs gevonden tijdens deze bouw: nieuwe bordtegels stapelden allemaal op dezelfde
 plek, en de tabelstijlen bleken bij de v0.3-herbouw verwijderd, waardoor de tabel
 ongestyled rendeerde.
+
+### v0.7 (23 aug 2026)
+
+Live op GitHub Pages, installeerbaar op het beginscherm, en een share target:
+deel je een productpagina vanuit je browser naar Staartploeg, dan vraagt de app bij
+welke ruimte de link hoort. De service worker is netwerk-eerst, met de cache alleen
+als vangnet — een verouderde versie serveren is erger dan even geen verbinding.
+
+Bij het publiek maken van de repo zijn de commit-adressen omgezet naar het
+noreply-adres van GitHub, zodat het e-mailadres niet publiek werd.

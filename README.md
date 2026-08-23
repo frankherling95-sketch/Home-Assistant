@@ -26,16 +26,21 @@ node build.mjs
 
 ## Status
 
-**v0.3 — werkend.** Ruimte-eerst: de app opent op de kamerlijst. Per ruimte staan de
-onderdelen, een moodboard met foto's en materiaalstalen, de winkellinks en een
-materiaalcalculator op basis van m2 en omtrek. Daarnaast: de achtstaps werkvolgorde,
-een Nu-scherm met besteldeadlines die terugrekenen, en een inkooplijst per winkel.
+**v0.7 — live.** De app draait op GitHub Pages en is installeerbaar op je beginscherm.
+Delen vanuit een webshop komt binnen als link bij een ruimte naar keuze.
 
-Gegevens staan in localStorage; foto's in IndexedDB. Nog geen synchronisatie tussen
-apparaten — dat is een bewuste keuze (zie de requirements, B11). Export en import van
-JSON is de brug naar een gedeelde versie later.
+Gegevens staan in localStorage; fotos in IndexedDB. Nog geen synchronisatie tussen
+apparaten — bewuste keuze, zie de requirements (B11). Export en import van JSON is de
+brug naar een gedeelde versie later.
 
 | | |
 | --- | --- |
-| App | https://claude.ai/code/artifact/d3a4ece3-ec9b-4e91-9423-f7419b0d4365 |
+| Live | https://frankherling95-sketch.github.io/staartploeg/ |
+| Voorbeeld op claude.ai | https://claude.ai/code/artifact/d3a4ece3-ec9b-4e91-9423-f7419b0d4365 |
 | Requirements | https://claude.ai/code/artifact/5133bd49-1d15-441f-a910-3079ecf5edd4 |
+
+## Iconen
+
+```bash
+node tools/maak-iconen.mjs
+```
