@@ -23,12 +23,23 @@ const html = `<!doctype html>
 <meta name="theme-color" content="#EDEDE8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#101317" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Staartploeg">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231B49C4'/%3E%3Cpath d='M8 22V10h4.5a3.5 3.5 0 0 1 0 7H8m8 5V10h8' stroke='%23fff' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icoon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icoon-180.png">
 ${head}
 </head>
 <body>
 ${body}
+<script>
+// Alleen op een echte site; in de Artifact-weergave bestaat sw.js niet.
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  });
+}
+</script>
 </body>
 </html>
 `;

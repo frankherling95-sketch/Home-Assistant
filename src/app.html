@@ -676,6 +676,12 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
       var bg = document.createElement("div");
       bg.className = "sheet-bg";
       var velden = (opts.velden || []).map(function(v){
+        if (v.type === "keuze"){
+          return '<label class="field"><span>' + esc(v.label) + "</span>" +
+            '<select data-v="' + v.id + '">' + (v.opties || []).map(function(o){
+              return '<option value="' + esc(o.waarde) + '"' + (o.waarde === v.waarde ? " selected" : "") + ">" + esc(o.label) + "</option>";
+            }).join("") + "</select></label>";
+        }
         if (v.type === "kleur"){
           return '<div class="field"><span>' + esc(v.label) + "</span>" +
             '<div class="kleurkies"><input type="color" data-v="' + v.id + '" value="' + esc(v.waarde || "#B99A6B") + '">' +
@@ -2355,8 +2361,50 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
     if (e.key === "Escape" && host.lastElementChild) sluitPaneel(host.lastElementChild);
   });
 
+  /* ═══ gedeelde link opvangen ═════════════════════════════
+     Deel je een productpagina vanuit je browser naar Staartploeg,
+     dan komt hij binnen als ?deel_url=… Zie manifest.webmanifest.
+  ═════════════════════════════════════════════════════════ */
+  function vangGedeeld(){
+    var q = new URLSearchParams(location.search);
+    var url = (q.get("deel_url") || "").trim();
+    var tekst = (q.get("deel_tekst") || "").trim();
+    var titel = (q.get("deel_titel") || "").trim();
+    if (!url && !tekst) return;
+    /* Android zet de link soms in het tekstveld in plaats van in url. */
+    if (!url){
+      var m = tekst.match(/https?:\/\/\S+/);
+      if (m){ url = m[0]; tekst = tekst.replace(m[0], "").trim(); }
+    }
+    if (history.replaceState) history.replaceState(null, "", location.pathname);
+    if (!url) return;
+    if (!D.ruimtes.length) return toast("Maak eerst een ruimte aan");
+
+    sheet({
+      titel:"Gedeelde link opslaan", ja:"Opslaan",
+      uitleg:url.replace(/^https?:\/\/(www\.)?/i, "").slice(0, 70),
+      velden:[
+        {id:"naam", label:"Hoe noem je het?", waarde:titel || tekst.slice(0,60), plaats:"Vloertegel 60×60"},
+        {id:"ruimte", label:"Bij welke ruimte?", type:"keuze", waarde:D.laatsteRuimte || D.ruimtes[0].id,
+         opties:D.ruimtes.map(function(r){ return {waarde:r.id, label:r.naam}; })}
+      ]
+    }).then(function(res){
+      if (!res) return;
+      var r = ruimteVan(res.ruimte) || D.ruimtes[0];
+      r.links = r.links || [];
+      r.links.push({id:uid(), naam:res.naam.trim() || url.replace(/^https?:\/\/(www\.)?/i,"").split("/")[0], url:url});
+      D.laatsteRuimte = r.id;
+      bewaar(); tekenAlles();
+      toast("Opgeslagen bij " + r.naam);
+    });
+  }
+
   /* ═══ start ══════════════════════════════════════════════ */
-  function start(){ $("#app").hidden = false; $("#fab").hidden = false; tekenAlles(); }
+  function start(){
+    $("#app").hidden = false; $("#fab").hidden = false;
+    tekenAlles();
+    vangGedeeld();
+  }
   D = laad();
   if (!D.ruimtes.length && !D.items.length) toonSetup(); else start();
 })();
