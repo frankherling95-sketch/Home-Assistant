@@ -215,3 +215,49 @@ werkvolgorde. Zie 1b en 2b.
 ### Ronde 3 — het project zelf (nog niet gestart)
 
 B7 t/m B9 plus de inventarisatie per ruimte.
+
+---
+
+## 8. Testronde en onderzoek (23 aug 2026)
+
+### Gevonden en opgelost
+
+| # | Wat er misging | Ernst |
+| --- | --- | --- |
+| 1 | `prompt()` en `confirm()` worden in een ingesloten frame geblokkeerd — links, kleurstalen en verwijderen deden dan niets, zonder foutmelding | Blokkerend op mobiel |
+| 2 | "Nodig op"-datum werd bij opslaan weggegooid als er nog geen sleuteldatum was | Stil dataverlies |
+| 3 | Terug in plaats van Opslaan liet wijzigingen op het scherm staan die niet bewaard waren | Verwarrend |
+| 4 | "Kopen én doen" kon nooit de status Ingepland krijgen | Ontwerpgat |
+| 5 | Negatieve bedragen en levertijd 999 werden geaccepteerd | Rekenfouten |
+| 6 | Kleurstaal kreeg een willekeurige kleur uit een vaste reeks | Functioneel gat |
+| 7 | `dagenTot` telde een half etmaal mee: elke teller stond een dag te hoog | Rekenfout |
+
+Datums zijn nu gewone datums in plaats van weken-na-sleutel. Verschuift de
+opleverdatum, dan vraagt de app expliciet of alles mee moet schuiven.
+
+### Wat het domeinonderzoek opleverde
+
+- Er zit een **voorschouw** ongeveer twee weken vóór de oplevering.
+- Een opleverpunt is alleen afdwingbaar als het **concreet** is: ruimte, plek, aard, omvang, foto.
+- Onder de Wkb moet de aannemer schriftelijk wijzen op het **5%-opschortingsrecht**; daarna geldt een onderhoudstermijn van zes maanden en op de meeste technische onderdelen zes jaar garantie.
+- **Bouwvocht** kan tot twee jaar duren; stucwerk drogen duurt één tot drie weken, vuistregel één dag per millimeter. Forceren geeft scheuren.
+- Elke bouwfase heeft een eigen **sluitingsdatum** voor koperskeuzes; daarna zijn technische wijzigingen onmogelijk. Extra stopcontacten kosten €150–300 via meerwerk.
+- Kopers vergeten structureel **verlichting** te begroten; gemiddeld gaat er zo'n €25.000 naar inrichting.
+- De **financieringsvergoeding** van 4–8% vóór hypotheekpassering kost duizenden euro's die kopers niet hadden verwacht.
+- Houd een **buffer** aan: schuivende opleverdata leiden tot spoedleveringen tegen hogere prijzen.
+
+### Ronde 3 — vier richtingskeuzes
+
+| Keuze | Antwoord |
+| --- | --- |
+| Eerste app-functie | Kluswijzer-stappenplannen |
+| Koperskeuzes | Eigen module, met voorrang |
+| Oplevering | Volledige module inclusief termijnen |
+| Toon van de app | Actief meedenken |
+
+Alle vier gebouwd in v0.5.
+
+### Nog niet gebouwd
+
+Milanote-bord (vrij verslepen), Notion-tabelweergave, delen vanuit een webshop,
+vergelijkscherm voor twee opties, synchronisatie tussen twee telefoons.
