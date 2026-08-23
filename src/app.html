@@ -1,0 +1,702 @@
+<title>Staartploeg</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* ── tokens ─────────────────────────────────────────────── */
+:root{
+  --ground:#EDEDE8; --surface:#F9F9F6; --surface-2:#E4E5DE; --line:#D2D4CA;
+  --ink:#15181C; --ink-2:#4B5057; --ink-3:#787E85;
+  --accent:#1B49C4; --accent-ink:#FFFFFF; --accent-soft:#DFE6FA;
+  --ok:#2C7A57; --ok-soft:#D6EBE0; --warn:#8F5A08; --warn-soft:#F3E4C4;
+  --crit:#B5352A; --crit-soft:#F6DCD8;
+  --shadow:0 1px 2px rgba(21,24,28,.06), 0 8px 24px -16px rgba(21,24,28,.35);
+  --r:10px;
+  --display:"Bricolage Grotesque","IBM Plex Sans",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#101317; --surface:#171B21; --surface-2:#1F242B; --line:#2D343D;
+    --ink:#EAECE7; --ink-2:#AAB1B8; --ink-3:#78808A;
+    --accent:#89A4FF; --accent-ink:#0D1016; --accent-soft:#1D2942;
+    --ok:#5DBE90; --ok-soft:#15291F; --warn:#DDA24A; --warn-soft:#2A2113;
+    --crit:#E77265; --crit-soft:#2E1815;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#101317; --surface:#171B21; --surface-2:#1F242B; --line:#2D343D;
+  --ink:#EAECE7; --ink-2:#AAB1B8; --ink-3:#78808A;
+  --accent:#89A4FF; --accent-ink:#0D1016; --accent-soft:#1D2942;
+  --ok:#5DBE90; --ok-soft:#15291F; --warn:#DDA24A; --warn-soft:#2A2113;
+  --crit:#E77265; --crit-soft:#2E1815;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--body); font-size:16px; line-height:1.5;
+  -webkit-text-size-adjust:100%;
+}
+h1,h2,h3{font-family:var(--display); text-wrap:balance; margin:0; letter-spacing:-.015em}
+p{margin:0}
+button,input,textarea,select{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+[hidden]{display:none!important}
+
+.shell{max-width:760px; margin:0 auto; min-height:100dvh; display:flex; flex-direction:column}
+
+/* ── header ─────────────────────────────────────────────── */
+.top{
+  position:sticky; top:0; z-index:30; background:var(--ground);
+  border-bottom:1px solid var(--line); padding:14px 16px 12px;
+}
+.brandrow{display:flex; align-items:baseline; justify-content:space-between; gap:12px}
+.brand{font-family:var(--display); font-weight:800; font-size:22px; letter-spacing:-.03em}
+.brand .dot{color:var(--accent)}
+.tag{font-family:var(--mono); font-size:10.5px; font-weight:500; text-transform:uppercase; letter-spacing:.12em; color:var(--ink-3)}
+.countdown{
+  margin-top:12px; display:flex; align-items:center; gap:14px;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:10px 13px;
+}
+.countdown label{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); display:block; margin-bottom:2px}
+.countdown input[type="date"]{
+  background:transparent; border:0; padding:0; font-family:var(--mono); font-size:15px;
+  font-weight:500; color:var(--ink); width:100%; max-width:170px;
+}
+.cd-num{font-family:var(--mono); font-weight:600; font-size:27px; line-height:1; font-variant-numeric:tabular-nums; color:var(--accent); white-space:nowrap; text-align:right}
+.cd-num small{display:block; font-size:9.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3); font-weight:500; margin-top:5px}
+
+/* ── nav ────────────────────────────────────────────────── */
+.nav{
+  position:fixed; bottom:0; left:0; right:0; z-index:40;
+  display:grid; grid-template-columns:repeat(3,1fr);
+  background:var(--surface); border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.nav button{
+  appearance:none; background:none; border:0; padding:9px 4px 11px; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  color:var(--ink-3); border-top:2px solid transparent; margin-top:-1px;
+}
+.nav button[aria-selected="true"]{color:var(--accent); border-top-color:var(--accent)}
+.nav .glyph{width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+.nav .lbl{font-family:var(--mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; font-weight:500}
+main{flex:1; padding:18px 16px 96px}
+@media (min-width:760px){
+  .nav{position:sticky; bottom:auto; top:0; border-top:0; border-bottom:1px solid var(--line); max-width:760px; margin:0 auto}
+  .nav button{flex-direction:row; gap:8px; padding:12px; border-top:0; border-bottom:2px solid transparent; margin-top:0}
+  .nav button[aria-selected="true"]{border-bottom-color:var(--accent)}
+  main{padding-bottom:56px}
+}
+
+/* ── generic ────────────────────────────────────────────── */
+.lede{color:var(--ink-2); font-size:14.5px; max-width:62ch}
+.eyebrow{font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:600}
+.stack{display:flex; flex-direction:column; gap:14px}
+.btn{
+  appearance:none; border:1px solid var(--line); background:var(--surface); color:var(--ink);
+  border-radius:8px; padding:11px 14px; font-size:14px; font-weight:600; cursor:pointer;
+  display:inline-flex; align-items:center; gap:8px; justify-content:center;
+}
+.btn:hover{border-color:var(--ink-3)}
+.btn-primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-row{display:flex; gap:8px; flex-wrap:wrap}
+.hr{height:1px; background:var(--line); border:0; margin:26px 0}
+h2.sec{font-size:19px; font-weight:600; margin-bottom:4px}
+
+/* ── progress ───────────────────────────────────────────── */
+.meter{height:6px; background:var(--surface-2); border-radius:99px; overflow:hidden}
+.meter i{display:block; height:100%; background:var(--accent); border-radius:99px; transition:width .3s ease}
+.meter-line{display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:7px}
+.meter-line b{font-family:var(--mono); font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; color:var(--ink-2)}
+.meter-line span{font-size:12.5px; color:var(--ink-3)}
+
+/* ── intake ─────────────────────────────────────────────── */
+details.block{border:1px solid var(--line); border-radius:var(--r); background:var(--surface); overflow:hidden}
+details.block+details.block{margin-top:10px}
+details.block>summary{list-style:none; cursor:pointer; padding:14px 15px; display:flex; align-items:center; gap:11px}
+details.block>summary::-webkit-details-marker{display:none}
+.sum-idx{font-family:var(--mono); font-size:11px; font-weight:600; color:var(--accent); background:var(--accent-soft); border-radius:6px; padding:4px 7px; flex:none}
+.sum-txt{flex:1; min-width:0}
+.sum-txt strong{display:block; font-family:var(--display); font-weight:600; font-size:15.5px; letter-spacing:-.01em}
+.sum-txt span{display:block; font-size:12.5px; color:var(--ink-3); margin-top:2px}
+.sum-cnt{font-family:var(--mono); font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums; flex:none}
+.chev{width:16px; height:16px; stroke:var(--ink-3); fill:none; stroke-width:2; stroke-linecap:round; flex:none; transition:transform .2s}
+details[open]>summary .chev{transform:rotate(180deg)}
+.qs{padding:15px 15px 16px; display:flex; flex-direction:column; gap:17px; border-top:1px solid var(--line)}
+.q label{display:block; font-weight:600; font-size:14.5px; margin-bottom:3px}
+.q .qid{font-family:var(--mono); color:var(--accent); font-weight:500; font-size:12.5px; margin-right:7px}
+.q .hint{font-size:12.5px; color:var(--ink-3); margin:0 0 7px; max-width:60ch}
+.q textarea{
+  width:100%; background:var(--ground); border:1px solid var(--line); border-radius:8px;
+  padding:9px 11px; font-size:15px; line-height:1.45; resize:vertical; min-height:46px;
+}
+.q textarea:focus{border-color:var(--accent); outline:none; background:var(--surface)}
+.q.filled textarea{border-color:var(--ok)}
+.q.filled .qid{color:var(--ok)}
+
+/* ── draaiboek ──────────────────────────────────────────── */
+.fase{display:grid; grid-template-columns:auto 1fr; gap:0 14px}
+.fase .rail{display:flex; flex-direction:column; align-items:center}
+.fase .pip{
+  width:26px; height:26px; border-radius:50%; flex:none; display:grid; place-items:center;
+  font-family:var(--mono); font-size:11px; font-weight:600; background:var(--surface-2);
+  color:var(--ink-2); border:1px solid var(--line);
+}
+.fase.crit .pip{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.fase .wire{width:2px; flex:1; background:var(--line); margin:4px 0}
+.fase .body{padding-bottom:20px; min-width:0}
+.fase h3{font-size:15.5px; font-weight:600}
+.fase .meta{font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:.03em; margin-top:3px}
+.fase p{font-size:13.5px; color:var(--ink-2); margin-top:6px; max-width:60ch}
+.fase .dep{margin-top:8px; font-size:12.5px; background:var(--warn-soft); color:var(--warn); border-radius:7px; padding:7px 10px}
+.fase .dep b{font-weight:600}
+
+/* ── tabel ──────────────────────────────────────────────── */
+.tablewrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); -webkit-overflow-scrolling:touch}
+table{border-collapse:collapse; width:100%; min-width:540px; font-size:13.5px}
+th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:middle}
+th{font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-3); font-weight:600; background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap}
+.pill{display:inline-block; font-family:var(--mono); font-size:11px; font-weight:600; padding:3px 8px; border-radius:99px; white-space:nowrap}
+.pill.ok{background:var(--ok-soft); color:var(--ok)}
+.pill.warn{background:var(--warn-soft); color:var(--warn)}
+.pill.crit{background:var(--crit-soft); color:var(--crit)}
+.pill.idle{background:var(--surface-2); color:var(--ink-3)}
+
+/* ── features ───────────────────────────────────────────── */
+.grid-feat{display:flex; flex-direction:column; gap:9px}
+.feat{
+  display:grid; grid-template-columns:1fr; gap:11px;
+  padding:13px 14px; border:1px solid var(--line); border-radius:var(--r);
+  background:var(--surface); border-left:3px solid var(--line);
+}
+@media (min-width:560px){.feat{grid-template-columns:1fr auto; align-items:start}}
+.feat[data-p="must"]{border-left-color:var(--accent)}
+.feat[data-p="nice"]{border-left-color:var(--warn)}
+.feat[data-p="no"]{border-left-color:var(--line); opacity:.48}
+.feat h3{font-size:14.5px; font-weight:600}
+.feat p{font-size:13px; color:var(--ink-2); margin-top:4px; max-width:58ch}
+.feat .why{font-size:12.5px; color:var(--ink-3); margin-top:5px; font-style:italic}
+.seg{display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; justify-self:start}
+.seg button{
+  appearance:none; background:var(--ground); border:0; border-right:1px solid var(--line);
+  padding:8px 11px; font-family:var(--mono); font-size:10.5px; font-weight:600; cursor:pointer;
+  color:var(--ink-3); text-transform:uppercase; letter-spacing:.05em;
+}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink)}
+
+/* ── export / notes ─────────────────────────────────────── */
+.export textarea{
+  width:100%; min-height:170px; background:var(--surface); border:1px solid var(--line);
+  border-radius:8px; padding:11px; font-family:var(--mono); font-size:12px; line-height:1.55; resize:vertical;
+}
+.note{font-size:12.5px; color:var(--ink-2); background:var(--accent-soft); border-radius:8px; padding:11px 13px; max-width:64ch}
+.note b{color:var(--ink); font-weight:600}
+.toast{
+  position:fixed; left:50%; transform:translateX(-50%); bottom:calc(80px + env(safe-area-inset-bottom));
+  background:var(--ink); color:var(--ground); font-size:13.5px; font-weight:500;
+  padding:10px 17px; border-radius:99px; z-index:50; box-shadow:var(--shadow);
+  opacity:0; pointer-events:none; transition:opacity .2s, transform .2s;
+}
+.toast.on{opacity:1; transform:translateX(-50%) translateY(-6px)}
+</style>
+<!--HEAD-END-->
+<div class="shell">
+  <header class="top">
+    <div class="brandrow">
+      <div class="brand">Staartploeg<span class="dot">.</span></div>
+      <div class="tag">v0.1 &middot; intake</div>
+    </div>
+    <div class="countdown">
+      <div style="flex:1; min-width:0">
+        <label for="opl">Verwachte oplevering</label>
+        <input type="date" id="opl" aria-describedby="cdnum">
+      </div>
+      <div class="cd-num" id="cdnum">&mdash;<small>weken</small></div>
+    </div>
+  </header>
+
+  <nav class="nav" role="tablist" aria-label="Secties">
+    <button role="tab" id="tab-intake" aria-selected="true" aria-controls="pane-intake" data-pane="intake">
+      <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h9a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8z"/><path d="M9 4v4H5M8.5 12h7M8.5 16h4.5"/></svg>
+      <span class="lbl">Intake</span>
+    </button>
+    <button role="tab" id="tab-draaiboek" aria-selected="false" aria-controls="pane-draaiboek" data-pane="draaiboek">
+      <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/><circle cx="12" cy="7" r="2.2"/><circle cx="12" cy="17" r="2.2"/><path d="M14.2 7H20M4 17h5.8"/></svg>
+      <span class="lbl">Draaiboek</span>
+    </button>
+    <button role="tab" id="tab-plan" aria-selected="false" aria-controls="pane-plan" data-pane="plan">
+      <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M4 12h16M4 18h7"/><circle cx="18" cy="6" r="2"/><circle cx="15" cy="18" r="2"/></svg>
+      <span class="lbl">App-plan</span>
+    </button>
+  </nav>
+
+  <main>
+    <!-- ══ INTAKE ══ -->
+    <section id="pane-intake" role="tabpanel" aria-labelledby="tab-intake">
+      <div class="stack">
+        <div>
+          <p class="eyebrow">Ronde 1 &amp; 2</p>
+          <h2 class="sec">Wat moet er gebeuren?</h2>
+          <p class="lede">Vul in wat je weet &mdash; ook &ldquo;weet ik nog niet&rdquo; is een nuttig antwoord, want dan weet ik dat het een open beslissing is. Alles wordt lokaal op dit apparaat opgeslagen. Onderaan staat een knop om alles te kopi&euml;ren en aan Claude te plakken.</p>
+        </div>
+
+        <div>
+          <div class="meter-line">
+            <b id="pct">0 / 0 beantwoord</b>
+            <span id="pctlabel">blok A is genoeg om te starten</span>
+          </div>
+          <div class="meter"><i id="bar" style="width:0%"></i></div>
+        </div>
+
+        <div id="blocks"></div>
+
+        <div class="export stack" style="gap:10px">
+          <h2 class="sec">Antwoorden meenemen</h2>
+          <p class="lede">Kopieer dit blok en plak het in de chat. Dan bouw ik de app op jouw echte project in plaats van op aannames.</p>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-copy">Kopieer alles</button>
+            <button class="btn" id="btn-show">Toon als tekst</button>
+            <button class="btn" id="btn-clear">Wissen</button>
+          </div>
+          <textarea id="dump" hidden readonly aria-label="Geëxporteerde antwoorden"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ DRAAIBOEK ══ -->
+    <section id="pane-draaiboek" role="tabpanel" aria-labelledby="tab-draaiboek" hidden>
+      <div class="stack">
+        <div>
+          <p class="eyebrow">Volgorde</p>
+          <h2 class="sec">Het standaard draaiboek</h2>
+          <p class="lede">De gebruikelijke volgorde bij afbouw van een nieuwbouwwoning. De blauwe stappen liggen op het kritieke pad: als die schuiven, schuift alles erachter mee. Dit is de basis waarop de app straks jouw echte planning bouwt.</p>
+        </div>
+        <div id="fases"></div>
+
+        <hr class="hr">
+
+        <div>
+          <p class="eyebrow">Terugrekenen</p>
+          <h2 class="sec">Wanneer moet je bestellen?</h2>
+          <p class="lede">Dit is de kern van de app: niet &ldquo;wanneer wil ik het hebben&rdquo;, maar &ldquo;wanneer moet ik het bestellen om het op tijd te hebben&rdquo;. Zet hierboven je opleverdatum en de tabel rekent terug.</p>
+        </div>
+        <div class="note">
+          <b>Let op:</b> de levertijden hieronder zijn richtgetallen om het principe te tonen &mdash; geen offertes. Zodra jij echte levertijden doorgeeft, vervangen die deze waarden.
+        </div>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr><th>Onderdeel</th><th>Levertijd</th><th>Nodig rond</th><th>Bestel uiterlijk</th><th>Status</th></tr>
+            </thead>
+            <tbody id="leadrows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ APP-PLAN ══ -->
+    <section id="pane-plan" role="tabpanel" aria-labelledby="tab-plan" hidden>
+      <div class="stack">
+        <div>
+          <p class="eyebrow">Scope</p>
+          <h2 class="sec">Wat moet de app kunnen?</h2>
+          <p class="lede">Mijn voorstellen. Tik per onderdeel of het <b>Must</b> (v1), <b>Nice</b> (later) of <b>Nee</b> is. Je keuzes gaan mee in de export, en bepalen wat ik als eerste bouw.</p>
+        </div>
+        <div class="grid-feat" id="feats"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-copy2">Kopieer keuzes + antwoorden</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+  var LS = "staartploeg.v1";
+  var store = load();
+
+  function load(){
+    try { return JSON.parse(localStorage.getItem(LS)) || {}; }
+    catch(e){ return {}; }
+  }
+  function save(){
+    try { localStorage.setItem(LS, JSON.stringify(store)); } catch(e){}
+  }
+  store.answers = store.answers || {};
+  store.feats   = store.feats   || {};
+
+  /* ── data: intake ─────────────────────────────────────── */
+  var INTAKE = [
+    { id:"A", title:"Basis & tijdlijn", note:"Genoeg om te starten", qs:[
+      ["A1","Wat voor woning is het?","Type (rijwoning / 2-onder-1-kap / vrijstaand / appartement), woonoppervlak, aantal verdiepingen en kamers."],
+      ["A2","Wanneer is de oplevering, en hoe hard is die datum?","Kwartaal of maand is genoeg. Noem ook of de aannemer al eerder geschoven heeft."],
+      ["A3","Wanneer wil of moet je er echt wonen?","En wat gebeurt er met je huidige woning: huur opzeggen (termijn?) of verkopen (transportdatum?)."],
+      ["A4","Kun je klussen vóórdat je erin trekt?","Weken speling tussen sleutel en verhuizing is het verschil tussen ontspannen en paniek."],
+      ["A5","Wie doen er mee, en wanneer zijn ze beschikbaar?","Partner, familie, vrienden. Ook: hoeveel uur per week kun jij zelf klussen?"],
+      ["A6","Bouwnummer, project en aannemer/ontwikkelaar?","Handig voor documenten en contact; mag ook globaal."]
+    ]},
+    { id:"B", title:"Geld", note:"Budget, depot en cashflow", qs:[
+      ["B1","Wat is je totaalbudget voor afbouw + inrichting?","Eén bedrag is prima. Weet je al hoe het verdeeld is over keuken / badkamer / vloer / meubels?"],
+      ["B2","Zit er een verbouwings- of bouwdepot in de hypotheek?","Zo ja: hoe hoog, en welke voorwaarden (facturen indienen, termijn waarbinnen het op moet)?"],
+      ["B3","Wanneer is welk geld beschikbaar?","Cashflow is bij nieuwbouw vaak het echte probleem: veel moet ver vooruit betaald worden."],
+      ["B4","Hoeveel procent hou je achter voor onvoorzien?","Als je er nog niet over nagedacht hebt: 10-15% is gebruikelijk."],
+      ["B5","Wat is 'moet nu' en wat 'kan volgend jaar'?","Bijv. tuin, tweede badkamer, zolderafwerking. Helpt om scope te faseren."],
+      ["B6","Wil je facturen en garanties bijhouden in de app?","Of blijven die in Drive/mail en wil je alleen een verwijzing?"]
+    ]},
+    { id:"C", title:"Wat komt er vanuit de bouw", note:"Meerwerk, techniek, casco of compleet", qs:[
+      ["C1","Welke koperskeuzes / meerwerk heb je al besteld?","Uitbouw, dakkapel, extra stopcontacten, verplaatste aansluitingen, andere indeling."],
+      ["C2","Lopen er nu nog sluitingsdata voor koperskeuzes?","Dit zijn harde deadlines waar je niet omheen kunt — de eerste die de app moet bewaken."],
+      ["C3","Verwarming en ventilatie: wat wordt het?","Warmtepomp? Vloerverwarming (op welke verdiepingen)? WTW-ventilatie? Radiatoren?"],
+      ["C4","Elektra: hoe is de meterkast opgezet?","Aantal groepen, 1- of 3-fase, krachtstroom voor de keuken, loze leidingen, buitenstopcontact, voorbereiding laadpaal."],
+      ["C5","Data en netwerk: wat ligt er?","UTP-punten en waar, coax, plek voor router/patchkast, dekking op de verdieping."],
+      ["C6","Badkamer en toilet: casco of afgemonteerd?","Als casco: is er wel of geen tegelwerk, en zijn de leidingen al op de juiste plek?"],
+      ["C7","Keuken: liggen de aansluitpunten al vast?","Zijn ze verplaatst t.o.v. standaard? Ligt de indeling vast of kan die nog?"],
+      ["C8","Buiten: wat is inbegrepen?","Zonnepanelen, buitenkraan, terras/bestrating, berging, schutting, hemelwaterafvoer."],
+      ["C9","Wat doet de bouw expliciet NIET?","De belangrijkste vraag van dit blok — alles wat hier staat is jouw werk."]
+    ]},
+    { id:"D", title:"Zelf doen of uitbesteden", note:"Per gewerk", qs:[
+      ["D1","Wandafwerking: zelf of vakman?","Uitvlakken, stucen of latex spuiten. Dit bepaalt sterk je planning en stofoverlast."],
+      ["D2","Plafonds: spuiten, stucen of laten zitten?",""],
+      ["D3","Tegelwerk badkamer/toilet: zelf of tegelzetter?",""],
+      ["D4","Vloer: zelf leggen of laten leggen?","Welke vloer heeft je voorkeur: pvc, laminaat, hout/parket, gietvloer, tegels?"],
+      ["D5","Keuken: zelf monteren of laten plaatsen?",""],
+      ["D6","Elektra aanpassen: zelf of installateur?","Extra punten, spots in het plafond, dimmers, slimme schakelaars."],
+      ["D7","Overige gewerken?","Binnendeuren, trap, plinten, schilderwerk, meubels monteren, tuin aanleggen."],
+      ["D8","Heb je al vakmensen op het oog of vastgelegd?","Namen, offertes, of nog helemaal open. Bij goede vakmensen is de wachttijd het probleem, niet de prijs."],
+      ["D9","Welk gereedschap heb je, wat moet je huren of kopen?",""]
+    ]},
+    { id:"E", title:"Ruimtes", note:"De inventaris per kamer", qs:[
+      ["E1","Welke ruimtes heeft de woning precies?","Noem ze zoals jij ze noemt — dat worden de namen in de app."],
+      ["E2","Heb je plattegronden met maten digitaal?","Dan kan de app m² vloer, m1 plint en wandoppervlak automatisch berekenen (incl. snijverlies)."],
+      ["E3","Woonkamer: wat moet daar gebeuren en wat is al besloten?","Vloer, wanden, plafond, verlichting, raamdecoratie, bank, tv-meubel, kast."],
+      ["E4","Keuken: waar sta je nu?","Leverancier gekozen? Offerte? Apparatuur via de keuken of los? Al ingemeten?"],
+      ["E5","Badkamer en toilet: wat moet er nog?","Sanitair, tegels, douchewand, radiator, spiegel, verlichting, ventilatie."],
+      ["E6","Slaapkamers: wat is er nodig?","Per kamer: vloer, wand, verduistering, bed, kasten. Ook: kinderkamer of werkkamer?"],
+      ["E7","Hal, trap en overloop?","Vaak vergeten en verrassend duur: trapafwerking, kapstok, meterkastdeur, verlichting."],
+      ["E8","Bijkeuken, berging, zolder, techniekruimte?","Wasmachine-opstelling, opbergen, cv/warmtepomp-ruimte."],
+      ["E9","Buiten: tuin, balkon, berging?","Bestrating, schutting, beplanting, overkapping, buitenverlichting."]
+    ]},
+    { id:"F", title:"Grote posten & levertijden", note:"Het kritieke pad", qs:[
+      ["F1","Wat is al besteld of vastgelegd?","Inclusief bevestigde leverdata — die vormen meteen de eerste echte planning."],
+      ["F2","Welke levertijden zijn je al genoemd?","Keuken, vloer, bank, raamdecoratie: hier zit je grootste risico."],
+      ["F3","Meubels: wat heb je al en wat moet nieuw?","Neem je alles mee uit de huidige woning of wordt het (deels) nieuw?"],
+      ["F4","Verlichting: hoeveel punten en wat voor type?","Inbouwspots, hanglampen boven eettafel/eiland, dimbaar, slim (Hue e.d.)?"],
+      ["F5","Raamdecoratie: hoeveel ramen en welk type?","Rolgordijnen, shutters, gordijnen, plissé. Op maat betekent inmeten ná afwerking."],
+      ["F6","Zonwering, screens of overkapping?","Vaak vergunning of goedkeuring nodig, en lange levertijd."],
+      ["F7","Zijn er onderdelen met bijzondere risico's?","Alles op maat, import, één-leverancier, of iets waar je nu al twijfel over voelt."]
+    ]},
+    { id:"G", title:"Logistiek & administratie", note:"De dingen die je vergeet", qs:[
+      ["G1","Nutsvoorzieningen: al geregeld?","Energiecontract, water, en vooral internet/glasvezel — dat heeft een aanvraagtermijn."],
+      ["G2","Verzekeringen?","Opstalverzekering gaat in bij sleuteloverdracht; inboedel bij verhuizing; aansprakelijkheid bij zelf klussen."],
+      ["G3","Waar sla je spullen op die eerder geleverd worden dan de sleutel?","Garage, ouders, opslagbox. Levering weigeren kost je vaak je plek in de rij."],
+      ["G4","Hoe gaat de verhuizing?","Zelf, vrienden, verhuisbedrijf? Datum al bekend? Lift of hoogwerker nodig?"],
+      ["G5","Afval, bouwstroom, parkeren?","Puinafvoer/container, water en stroom tijdens klussen, laden en lossen bij de deur."],
+      ["G6","Opleverpunten: hoe pak je die aan?","Neem je een bouwkundig keurder mee? Ken je de 5%-regeling en de opschortingstermijn?"]
+    ]},
+    { id:"H", title:"Smaak & beslissingen", note:"Waar het schuurt", qs:[
+      ["H1","Beschrijf de stijl die je wil in een paar woorden.",""],
+      ["H2","Is er een kleurenpalet of materiaalrichting die vastligt?","Bijv. warm hout + zwart staal, of juist licht en strak."],
+      ["H3","Heb je een moodboard (Pinterest, foto's)?","Kan de app straks per ruimte tonen."],
+      ["H4","Waar mag het geld heen en waar bespaar je bewust?",""],
+      ["H5","Waar zijn jullie het nog niet over eens?","De app kan zulke punten expliciet als 'besluit nodig' bewaken, met een datum waarop het beslist móét zijn."]
+    ]},
+    { id:"I", title:"De app zelf", note:"Techniek en gebruik", qs:[
+      ["I1","Welke telefoon gebruik je? Android of iPhone?","Bepaalt hoe we 'm als app op je beginscherm zetten en of push-notificaties kunnen."],
+      ["I2","Gebruikt je partner de app ook?","Zo ja: moeten jullie allebei kunnen wijzigen en moet dat live syncen tussen telefoons?"],
+      ["I3","Moet de app werken zonder internet?","In een lege nieuwbouwwoning heb je vaak geen wifi en soms slecht bereik."],
+      ["I4","Wil je foto's kunnen toevoegen?","Per ruimte, per taak, en bij opleverpunten. Kost opslag — vandaar de vraag."],
+      ["I5","Documenten in de app of alleen linken naar Drive?","Offertes, facturen, garantiebewijzen, tekeningen."],
+      ["I6","Hoe wil je herinnerd worden aan deadlines?","Push op de telefoon, e-mail, een agenda-afspraak, of gewoon een lijstje als je de app opent."],
+      ["I7","Mag de app openbaar bereikbaar zijn?","Op GitHub Pages is een gratis site publiek. Wil je 'm afschermen (wachtwoord / eigen domein / niet-vindbaar)?"],
+      ["I8","Wil je de gegevens kunnen exporteren?","Bijv. naar Excel of Drive, als back-up of om te delen met een vakman."]
+    ]}
+  ];
+
+  /* ── data: draaiboek ──────────────────────────────────── */
+  var FASES = [
+    ["Koperskeuzes & meerwerk","vóór oplevering","Alles wat de aannemer nog voor je kan doen is nu goedkoper en makkelijker dan later zelf. Extra groepen, loze leidingen, verplaatste aansluitingen.",1,"Sluitingsdata van de aannemer zijn hard. Mis je die, dan wordt het jouw klus."],
+    ["Oplevering & opleverpunten","dag 0","Vooropname en oplevering. Alle gebreken vastleggen met foto's, meterstanden noteren, sleutels tellen.",1,"Vanaf hier lopen termijnen: herstel van punten en de opschorting van het laatste deel van de aanneemsom."],
+    ["Drogen en ventileren","week 0-6","Een nieuwbouwwoning zit vol bouwvocht. Ramen en roosters open, laten drogen voordat je dicht afwerkt.",1,"Te vroeg afwerken geeft schimmel, scheuren en loslatend stucwerk. Dit is verloren tijd die je moet inplannen, niet negeren."],
+    ["Leidingwerk en elektra aanpassen","week 1-3","Hakken, frezen, extra punten, spots uitzetten. Vuil werk dat vóór de afwerking moet.",0,""],
+    ["Wanden voorbereiden","week 2-5","Uitvlakken en behang- of spuitklaar maken. Bepaalt hoe strak het eindresultaat wordt.",0,""],
+    ["Plafonds en wanden afwerken","week 3-7","Stucen of latex spuiten. Enorm veel stof — daarom altijd vóór de vloer.",1,"Doe je dit ná de vloer, dan moet je de hele vloer afplakken en loop je risico op schade."],
+    ["Tegelwerk badkamer en toilet","week 3-7","Nat en vies werk. Ook vóór de vloer in de rest van het huis.",0,""],
+    ["Vloerverwarming droogstoken","week 5-11","Een verplicht opstookprotocol: geleidelijk opwarmen en afkoelen om het restvocht uit de dekvloer te krijgen.",1,"Duurt drie tot zes weken en is niet in te korten. Sla je het over, dan vervalt vaak de garantie op je vloer."],
+    ["Vloer leggen","week 8-12","Pas na droogstoken en een restvochtmeting. Materiaal eerst 48 uur laten acclimatiseren in de ruimte.",1,"Dit is meestal het echte knelpunt: alles wat op de vloer staat, kan pas daarna."],
+    ["Keuken plaatsen","week 8-13","Inmeten kan vaak pas als de wanden afgewerkt zijn, en dan begint de levertijd pas te lopen.",1,"Bestel je de keuken pas na oplevering, dan sta je maanden zonder keuken. Meestal veel eerder bestellen."],
+    ["Binnendeuren, plinten en trap","week 10-14","Afwerking die pas kan als vloer en wanden klaar zijn.",0,""],
+    ["Schilderwerk en afmontage","week 11-15","Kozijnen, deuren, plinten. Daarna schakelmateriaal, spots, wandcontactdozen afmonteren.",0,""],
+    ["Verlichting ophangen","week 12-15","Hanglampen, spots, buitenverlichting. Pas als plafonds klaar zijn.",0,""],
+    ["Raamdecoratie inmeten","week 12-16","Op maat gemaakte raamdecoratie wordt pas ingemeten als de ramen definitief afgewerkt zijn — daarna komt de levertijd er nog bij.",1,"Reken op weken tussen inmeten en ophangen. Tot die tijd woon je in een etalage."],
+    ["Meubels leveren en verhuizen","week 13-18","De grote meubels moeten maanden eerder besteld zijn om nu te kunnen landen.",1,"Een bank op maat heeft vaak de langste levertijd van het hele project."],
+    ["Tuin en buitenruimte","week 16+","Bestrating, schutting, beplanting, berging. Meestal bewust als laatste, ná al het bouwverkeer.",0,""]
+  ];
+
+  /* ── data: levertijden ────────────────────────────────── */
+  /* [naam, min weken, max weken, plaatsing = weken na oplevering] */
+  var LEAD = [
+    ["Keuken (ontwerp t/m levering)",8,16,9],
+    ["Keukenapparatuur los",1,6,9],
+    ["Vloer: pvc of laminaat",1,4,10],
+    ["Vloer: hout of parket",4,10,10],
+    ["Gietvloer (planning vakman)",3,8,10],
+    ["Sanitair badkamer",2,8,5],
+    ["Tegels",1,6,4],
+    ["Binnendeuren op maat",4,10,12],
+    ["Traprenovatie of -bekleding",4,8,12],
+    ["Raamdecoratie op maat",3,8,14],
+    ["Bank (stof of maatwerk)",8,20,15],
+    ["Eettafel en stoelen",6,14,15],
+    ["Inbouwkasten op maat",6,14,14],
+    ["Bed en matras",2,8,13],
+    ["Verlichting",1,6,13],
+    ["Zonwering of screens",6,12,17],
+    ["Veranda of overkapping",6,16,22],
+    ["Internet / glasvezel aanvragen",2,8,13],
+    ["Tuinaanleg door hovenier",6,20,26]
+  ];
+
+  /* ── data: features ───────────────────────────────────── */
+  var FEATS = [
+    ["terugreken","Terugreken-planner","Je vult in wanneer iets klaar moet zijn en wat de levertijd is; de app rekent terug naar de uiterste besteldatum en zet die op je tijdlijn.","Zonder dit ontdek je te laat dat je te laat bent."],
+    ["kritiekpad","Kritiek pad en afhankelijkheden","Taken weten van elkaar wat er eerst moet: vloer kan niet vóór droogstoken, keuken inmeten niet vóór stucwerk. Schuift er één, dan schuift de rest zichtbaar mee.","Dit is het verschil tussen een takenlijst en een planning."],
+    ["ruimtes","Ruimte-dashboard","Per kamer één kaart met voortgang, budget en openstaande beslissingen. Je denkt in kamers, dus de app ook.","Snelste manier om te zien waar je achterloopt."],
+    ["status","Statusflow per onderdeel","Idee → Gekozen → Offerte → Besteld → Geleverd → Gemonteerd → Klaar. Elke stap met datum.","Maakt 'hoe ver zijn we' beantwoordbaar in één blik."],
+    ["budget","Budgetbewaking","Begroot, geoffreerd en betaald naast elkaar, per ruimte en totaal, met wat er nog te gaan is.","Voorkomt de klassieke verrassing rond de keuken."],
+    ["cashflow","Cashflow-kalender","Niet alleen hoeveel, maar wanneer het van je rekening moet. Aanbetalingen bij bestelling, rest bij levering.","Bij nieuwbouw betaal je maanden vooruit."],
+    ["besluiten","Besluitenlog","Wat is besloten, wanneer, door wie, en waarom. Inclusief 'besluit nodig vóór datum X'.","Voorkomt discussies over wat jullie ook alweer hadden afgesproken."],
+    ["maten","Maatvoering en materiaalcalculator","Maten per ruimte invoeren; de app rekent m² vloer, m1 plint en wandoppervlak uit, inclusief snijverlies.","Scheelt fouten bij bestellen en dubbele ritten."],
+    ["oplever","Opleverpunten en herstellijst","Alle gebreken met foto, ruimte, status en hersteldatum. Exporteerbaar naar de aannemer.","Je hebt dit precies één keer nodig, en dan meteen goed."],
+    ["leveringen","Leveringen-agenda","Wat komt wanneer, wie is thuis, waar zet je het neer, en is de ruimte al vrij.","Twee leveringen op dezelfde ochtend is geen theorie."],
+    ["klusweekend","Klusweekend-planner","Wat kan dit weekend écht, gegeven wat af is en wat je in huis hebt — inclusief boodschappenlijst vooraf.","Voorkomt de zaterdagochtendrit naar de bouwmarkt."],
+    ["inkoop","Inkooplijst per leverancier","Alles wat besteld moet worden, gegroepeerd per winkel of leverancier.","Eén bestelling in plaats van zeven."],
+    ["docs","Documenten en garanties","Offertes, facturen, garantiebewijzen, tekeningen en meterstanden, gekoppeld aan het onderdeel waar ze bij horen.","Over drie jaar zoek je precies dit terug."],
+    ["mood","Moodboard per ruimte","Foto's en links per kamer, naast de gekozen materialen.","Houdt smaakbeslissingen naast praktische bij elkaar."],
+    ["contacten","Contacten en vakmensen","Wie doet wat, wanneer ingepland, welk telefoonnummer, welke offerte.","In een verbouwing bel je meer dan je bouwt."],
+    ["risico","Risicodashboard","Automatisch: wat dreigt te laat te komen, welke beslissing blokkeert iets anders, waar loopt het budget uit de hand.","De app moet aan de bel trekken, niet jij."],
+    ["vandaag","Vandaag-scherm","Bij openen meteen: wat moet er deze week gebeuren en wat moet er vandaag besteld of besloten worden.","Het scherm dat je 90% van de tijd gebruikt."],
+    ["meerwerk","Koperskeuze-deadlines","De sluitingsdata van de aannemer als aparte, harde categorie met waarschuwing vooraf.","Deze deadlines schuiven niet en kosten het meest als je ze mist."],
+    ["fotos","Fototijdlijn per ruimte","Zelfde hoek, elke maand een foto. Voortgang die je anders niet voelt.","Ook fijn als bewijsmateriaal richting aannemer."],
+    ["notif","Herinneringen","Melding een week vóór een uiterste besteldatum, niet erna.","Zonder dit blijft het een spreadsheet."],
+    ["samen","Samen gebruiken","Jij en je partner op eigen telefoon, wijzigingen synchroniseren, zien wie wat veranderd heeft.","Anders wordt het jouw app in plaats van jullie project."],
+    ["offline","Offline werken","Werkt zonder bereik en synchroniseert later, installeerbaar op je beginscherm.","In een lege nieuwbouwwoning is er nog geen wifi."],
+    ["export","Export naar Excel of Drive","Alles eruit als bestand, voor back-up of om te delen met een vakman.","Je wil nooit vastzitten in één app."],
+    ["templates","Standaard checklists","Kant-en-klare lijsten voor verhuizen, nutsvoorzieningen, verzekeringen en adreswijzigingen.","Voorkomt dat je twee weken zonder internet zit."]
+  ];
+
+  /* ── helpers ──────────────────────────────────────────── */
+  var $ = function(s,r){ return (r||document).querySelector(s); };
+  var esc = function(s){ return String(s).replace(/[&<>"]/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); };
+  var toastEl = $("#toast"), toastT;
+  function toast(msg){
+    toastEl.textContent = msg; toastEl.classList.add("on");
+    clearTimeout(toastT); toastT = setTimeout(function(){ toastEl.classList.remove("on"); }, 2200);
+  }
+  function fmtDate(d){
+    return d.toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"});
+  }
+  function addWeeks(d,w){ var n = new Date(d.getTime()); n.setDate(n.getDate()+Math.round(w*7)); return n; }
+
+  /* ── tabs ─────────────────────────────────────────────── */
+  var panes = {intake:$("#pane-intake"), draaiboek:$("#pane-draaiboek"), plan:$("#pane-plan")};
+  Array.prototype.forEach.call(document.querySelectorAll(".nav button"), function(b){
+    b.addEventListener("click", function(){
+      Array.prototype.forEach.call(document.querySelectorAll(".nav button"), function(o){
+        o.setAttribute("aria-selected", String(o === b));
+      });
+      Object.keys(panes).forEach(function(k){ panes[k].hidden = (k !== b.dataset.pane); });
+      window.scrollTo({top:0, behavior:"instant"});
+    });
+  });
+
+  /* ── render: intake ───────────────────────────────────── */
+  var CHEV = '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+  var blocksEl = $("#blocks");
+  blocksEl.innerHTML = INTAKE.map(function(b,i){
+    var qs = b.qs.map(function(q){
+      var id = b.id + q[0].slice(1);
+      var val = store.answers[q[0]] || "";
+      return '<div class="q' + (val ? " filled" : "") + '" data-q="' + q[0] + '">' +
+        '<label for="f-' + q[0] + '"><span class="qid">' + q[0] + '</span>' + esc(q[1]) + '</label>' +
+        (q[2] ? '<p class="hint">' + esc(q[2]) + '</p>' : '') +
+        '<textarea id="f-' + q[0] + '" rows="2" placeholder="Jouw antwoord…">' + esc(val) + '</textarea>' +
+      '</div>';
+    }).join("");
+    return '<details class="block"' + (i === 0 ? " open" : "") + '>' +
+      '<summary><span class="sum-idx">' + b.id + '</span>' +
+      '<span class="sum-txt"><strong>' + esc(b.title) + '</strong><span>' + esc(b.note) + '</span></span>' +
+      '<span class="sum-cnt" data-cnt="' + b.id + '"></span>' + CHEV + '</summary>' +
+      '<div class="qs">' + qs + '</div></details>';
+  }).join("");
+
+  blocksEl.addEventListener("input", function(e){
+    var ta = e.target;
+    if (ta.tagName !== "TEXTAREA") return;
+    var wrap = ta.closest(".q"), key = wrap.dataset.q;
+    var v = ta.value.trim();
+    if (v) store.answers[key] = ta.value; else delete store.answers[key];
+    wrap.classList.toggle("filled", !!v);
+    save(); refreshCounts();
+  });
+
+  function refreshCounts(){
+    var total = 0, done = 0;
+    INTAKE.forEach(function(b){
+      var d = 0;
+      b.qs.forEach(function(q){ total++; if (store.answers[q[0]]) { d++; done++; } });
+      var el = blocksEl.querySelector('[data-cnt="' + b.id + '"]');
+      if (el) el.textContent = d + "/" + b.qs.length;
+    });
+    $("#pct").textContent = done + " / " + total + " beantwoord";
+    $("#bar").style.width = (total ? Math.round(done / total * 100) : 0) + "%";
+  }
+  refreshCounts();
+
+  /* ── render: draaiboek ────────────────────────────────── */
+  $("#fases").innerHTML = FASES.map(function(f,i){
+    var last = i === FASES.length - 1;
+    return '<div class="fase' + (f[3] ? " crit" : "") + '">' +
+      '<div class="rail"><div class="pip">' + (i+1) + '</div>' + (last ? "" : '<div class="wire"></div>') + '</div>' +
+      '<div class="body"><h3>' + esc(f[0]) + '</h3>' +
+      '<div class="meta">' + esc(f[1]) + (f[3] ? " · kritiek pad" : "") + '</div>' +
+      '<p>' + esc(f[2]) + '</p>' +
+      (f[4] ? '<div class="dep"><b>Let op:</b> ' + esc(f[4]) + '</div>' : '') +
+      '</div></div>';
+  }).join("");
+
+  /* ── render: levertijden ──────────────────────────────── */
+  var oplInput = $("#opl");
+  if (store.oplevering) oplInput.value = store.oplevering;
+
+  function renderLead(){
+    var raw = oplInput.value;
+    var base = raw ? new Date(raw + "T12:00:00") : null;
+    var now = new Date(); now.setHours(0,0,0,0);
+
+    if (base && !isNaN(base)) {
+      var wk = Math.round((base - now) / (7*24*3600*1000));
+      $("#cdnum").innerHTML = (wk >= 0 ? wk : "0") + "<small>weken te gaan</small>";
+    } else {
+      $("#cdnum").innerHTML = "&mdash;<small>weken</small>";
+    }
+
+    $("#leadrows").innerHTML = LEAD.map(function(r){
+      var naam = r[0], lmin = r[1], lmax = r[2], plaats = r[3];
+      var lead = '<td class="num">' + lmin + "–" + lmax + " wk</td>";
+      if (!base || isNaN(base)) {
+        return "<tr><td>" + esc(naam) + "</td>" + lead +
+          '<td class="num">wk +' + plaats + '</td>' +
+          '<td class="num">&mdash;</td>' +
+          '<td><span class="pill idle">datum nodig</span></td></tr>';
+      }
+      var nodig  = addWeeks(base, plaats);
+      var bestel = addWeeks(nodig, -lmax);
+      var dagen  = Math.round((bestel - now) / 86400000);
+      var cls, txt;
+      if (dagen < 0)       { cls = "crit";  txt = Math.abs(dagen) + " dgn te laat"; }
+      else if (dagen < 30) { cls = "warn";  txt = "nog " + dagen + " dgn"; }
+      else                 { cls = "ok";    txt = "nog " + Math.round(dagen/7) + " wk"; }
+      return "<tr><td>" + esc(naam) + "</td>" + lead +
+        '<td class="num">' + fmtDate(nodig) + "</td>" +
+        '<td class="num"><b>' + fmtDate(bestel) + "</b></td>" +
+        '<td><span class="pill ' + cls + '">' + txt + "</span></td></tr>";
+    }).join("");
+  }
+  oplInput.addEventListener("change", function(){
+    store.oplevering = oplInput.value; save(); renderLead();
+  });
+  renderLead();
+
+  /* ── render: features ─────────────────────────────────── */
+  var featsEl = $("#feats");
+  var PRIOS = [["must","Must"],["nice","Nice"],["no","Nee"]];
+  featsEl.innerHTML = FEATS.map(function(f,i){
+    var cur = store.feats[f[0]] || "";
+    var seg = PRIOS.map(function(p){
+      return '<button type="button" data-f="' + f[0] + '" data-p="' + p[0] + '" aria-pressed="' +
+        (cur === p[0]) + '">' + p[1] + "</button>";
+    }).join("");
+    return '<div class="feat" data-p="' + esc(cur) + '" data-id="' + f[0] + '">' +
+      "<div><h3>" + (i+1) + ". " + esc(f[1]) + "</h3><p>" + esc(f[2]) + '</p><p class="why">' + esc(f[3]) + "</p></div>" +
+      '<div class="seg">' + seg + "</div></div>";
+  }).join("");
+
+  featsEl.addEventListener("click", function(e){
+    var b = e.target.closest("button[data-f]");
+    if (!b) return;
+    var id = b.dataset.f, p = b.dataset.p;
+    store.feats[id] = (store.feats[id] === p) ? "" : p;
+    save();
+    var card = featsEl.querySelector('.feat[data-id="' + id + '"]');
+    card.dataset.p = store.feats[id];
+    Array.prototype.forEach.call(card.querySelectorAll("button[data-f]"), function(o){
+      o.setAttribute("aria-pressed", String(o.dataset.p === store.feats[id]));
+    });
+  });
+
+  /* ── export ───────────────────────────────────────────── */
+  function buildDump(){
+    var out = ["# Staartploeg — intake", ""];
+    if (store.oplevering) out.push("Verwachte oplevering: " + store.oplevering, "");
+    INTAKE.forEach(function(b){
+      var lines = b.qs.filter(function(q){ return store.answers[q[0]]; })
+        .map(function(q){ return "- **" + q[0] + " " + q[1] + "**\n  " + store.answers[q[0]].replace(/\n/g,"\n  "); });
+      if (lines.length) out.push("## " + b.id + ". " + b.title, "", lines.join("\n"), "");
+    });
+    var chosen = FEATS.filter(function(f){ return store.feats[f[0]]; });
+    if (chosen.length) {
+      out.push("## App-scope", "");
+      ["must","nice","no"].forEach(function(p){
+        var g = chosen.filter(function(f){ return store.feats[f[0]] === p; });
+        if (g.length) out.push("**" + p.toUpperCase() + ":** " + g.map(function(f){ return f[1]; }).join(", "), "");
+      });
+    }
+    if (out.length <= 2) out.push("_Nog niets ingevuld._");
+    return out.join("\n");
+  }
+
+  function copyAll(){
+    var txt = buildDump(), ta = $("#dump");
+    ta.value = txt; ta.hidden = false;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(
+        function(){ toast("Gekopieerd — plak het in de chat"); },
+        function(){ ta.select(); toast("Selecteer en kopieer handmatig"); }
+      );
+    } else {
+      ta.select(); toast("Selecteer en kopieer handmatig");
+    }
+  }
+  $("#btn-copy").addEventListener("click", copyAll);
+  $("#btn-copy2").addEventListener("click", copyAll);
+  $("#btn-show").addEventListener("click", function(){
+    var ta = $("#dump"); ta.value = buildDump(); ta.hidden = !ta.hidden;
+  });
+  $("#btn-clear").addEventListener("click", function(){
+    if (!confirm("Alle antwoorden op dit apparaat wissen?")) return;
+    store.answers = {}; store.feats = {}; save();
+    Array.prototype.forEach.call(blocksEl.querySelectorAll("textarea"), function(t){
+      t.value = ""; t.closest(".q").classList.remove("filled");
+    });
+    Array.prototype.forEach.call(featsEl.querySelectorAll(".feat"), function(c){ c.dataset.p = ""; });
+    Array.prototype.forEach.call(featsEl.querySelectorAll("button[data-f]"), function(b){
+      b.setAttribute("aria-pressed","false");
+    });
+    refreshCounts(); toast("Gewist");
+  });
+})();
+</script>
