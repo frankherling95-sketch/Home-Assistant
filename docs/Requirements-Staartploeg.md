@@ -6,11 +6,13 @@ Levend document. Groeit met elke interviewronde; ik werk het bij zodra jij antwo
 | --- | --- |
 | **Project** | Afbouw en inrichting van een nieuwbouwwoning, oplevering 2027 |
 | **Opdrachtgever** | Frank |
-| **Laatst bijgewerkt** | 23 augustus 2026 — na interviewronde 2 en oplevering v0.3 |
+| **Laatst bijgewerkt** | 23 augustus 2026 — na interviewronde 3, testronde en v0.5 |
 | **App** | https://claude.ai/code/artifact/d3a4ece3-ec9b-4e91-9423-f7419b0d4365 |
 
-Status per regel: **GEBOUWD** = zit in v0.3 · **VAST** = besloten, nog te bouwen ·
+Status per regel: **GEBOUWD** = zit in de app · **VAST** = besloten, nog te bouwen ·
 **VOORSTEL** = mijn invulling, mag omver · **OPEN** = wacht op antwoord.
+
+Sectie 8 onderaan bevat de testbevindingen en het domeinonderzoek.
 
 ---
 
@@ -69,9 +71,10 @@ Geen status, geen budget, geen planning — snel toevoegen en afvinken in de win
 **GEBOUWD** — Beeld hangt aan een **ruimte**: foto's (camera of galerij) en kleur- of
 materiaalstalen, met de winkellinks van die ruimte ernaast.
 
-**GEBOUWD** — Datums zijn **relatief aan de sleuteldatum** opgeslagen. Schuift de oplevering,
-dan schuiven alle deadlines automatisch mee. Dat is de reden dat de app om één sleuteldatum
-vraagt in plaats van om losse datums per onderdeel.
+**GEBOUWD** — "Nodig op" is een **gewone datum**. Verschuift de opleverdatum, dan vraagt de
+app of alle datums evenveel mee moeten schuiven. Eerder werd dit relatief aan de sleutel
+opgeslagen; dat wierp datums weg zolang er nog geen sleuteldatum was, en stilzwijgend
+verplaatsen bleek erger dan een vraag stellen.
 
 ## 2b. De werkvolgorde
 
