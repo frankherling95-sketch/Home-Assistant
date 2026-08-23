@@ -6,7 +6,7 @@ Levend document. Groeit met elke interviewronde; ik werk het bij zodra jij antwo
 | --- | --- |
 | **Project** | Afbouw en inrichting van een nieuwbouwwoning, oplevering 2027 |
 | **Opdrachtgever** | Frank |
-| **Laatst bijgewerkt** | 23 augustus 2026 — na interviewronde 3, testronde en v0.5 |
+| **Laatst bijgewerkt** | 23 augustus 2026 — na v0.6 |
 | **App** | https://claude.ai/code/artifact/d3a4ece3-ec9b-4e91-9423-f7419b0d4365 |
 
 Status per regel: **GEBOUWD** = zit in de app · **VAST** = besloten, nog te bouwen ·
@@ -39,7 +39,7 @@ Frank noemde vijf bestaande gereedschappen. De app moet daar één ding van word
 | --- | --- | --- |
 | **Milanote** | Visueel bord per kamer: foto's, tegels, kleurcodes, productlinks en afmetingen bij elkaar, om combinaties te zien vóór je bestelt | GEBOUWD |
 | **Notion** | Tabel per kamer met Product, Ruimte, Link/Artikelnummer, Afmetingen, Prijs, Status | GEBOUWD |
-| **Houzz / Pinterest** | Inspiratie koppelen aan concrete materialen | Deels — links en foto's kunnen, importeren nog niet |
+| **Houzz / Pinterest** | Verzamelen en vergelijken: meerdere opties naast elkaar, er één kiezen | GEBOUWD — alleen automatisch importeren vanuit een webshop nog niet |
 | **Kluswijzers (Gamma, Praxis, Hornbach)** | Materiaalberekening per m²: voorstrijk, tegellijm, voegmortel, egaline | GEBOUWD |
 | **Klusidee** | Antwoorden op specifieke klusvragen | Niet ingebouwd; blijft een link |
 
