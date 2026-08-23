@@ -184,8 +184,23 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
 /* ── fab & toast ────────────────────────────────────────── */
 .fab{position:fixed; right:16px; bottom:calc(74px + env(safe-area-inset-bottom)); z-index:45; width:54px; height:54px; border-radius:50%; border:0; background:var(--accent); color:var(--accent-ink); box-shadow:var(--shadow); cursor:pointer; display:grid; place-items:center; font-size:27px; line-height:1; font-family:var(--mono); padding:0 0 3px}
 @media (min-width:760px){.fab{bottom:24px}}
-.toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(84px + env(safe-area-inset-bottom)); background:var(--ink); color:var(--ground); font-size:13.5px; font-weight:500; padding:10px 17px; border-radius:99px; z-index:70; box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; max-width:88vw; text-align:center}
+.toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(84px + env(safe-area-inset-bottom)); background:var(--ink); color:var(--ground); font-size:13.5px; font-weight:500; padding:10px 17px; border-radius:99px; z-index:90; box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; max-width:88vw; text-align:center}
 .toast.on{opacity:1; transform:translateX(-50%) translateY(-6px)}
+
+/* ── sheet (eigen dialoog i.p.v. prompt/confirm) ────────── */
+.sheet-bg{position:fixed; inset:0; z-index:80; background:rgba(10,12,15,.5); display:flex; align-items:flex-end; justify-content:center}
+@media (min-width:560px){.sheet-bg{align-items:center}}
+.sheet{background:var(--ground); border:1px solid var(--line); border-radius:16px 16px 0 0; width:100%; max-width:520px; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); max-height:88dvh; overflow-y:auto; box-shadow:0 -8px 40px -12px rgba(0,0,0,.5)}
+@media (min-width:560px){.sheet{border-radius:14px; margin:0 16px}}
+.sheet h3{font-size:17px; font-weight:600; margin-bottom:4px}
+.sheet .uitleg{font-size:13.5px; color:var(--ink-2); margin-bottom:16px; max-width:52ch}
+.sheet .knoppen{display:flex; gap:9px; margin-top:6px}
+.sheet .knoppen .btn{flex:1; padding:13px}
+.kleurkies{display:flex; align-items:center; gap:11px}
+.kleurkies input[type="color"]{width:52px; height:44px; padding:2px; border:1px solid var(--line); border-radius:9px; background:var(--surface); cursor:pointer; flex:none}
+.kleurrij{display:flex; flex-wrap:wrap; gap:6px; margin-top:9px}
+.kleurrij button{width:32px; height:32px; border-radius:8px; border:1px solid var(--line); cursor:pointer; padding:0}
+.kleurrij button[aria-pressed="true"]{outline:2px solid var(--accent); outline-offset:2px}
 </style>
 <!--HEAD-END-->
 <div class="shell" id="app" hidden>
@@ -285,8 +300,22 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
 
   function leeg(){ return {versie:1, project:{naam:"", sleutel:"", budget:0}, ruimtes:[], items:[], klusjes:[], beeld:[]}; }
   function laad(){
-    try { var r = JSON.parse(localStorage.getItem(KEY)); return r && r.versie ? r : leeg(); }
-    catch(e){ return leeg(); }
+    var r;
+    try { r = JSON.parse(localStorage.getItem(KEY)); } catch(e){ r = null; }
+    if (!r || !r.versie) return leeg();
+    /* v0.3 bewaarde "nodig" als week ten opzichte van de sleutel. Zet dat
+       eenmalig om naar een gewone datum. */
+    if (r.project && r.project.sleutel){
+      var s = new Date(r.project.sleutel + "T12:00:00");
+      (r.items || []).forEach(function(it){
+        if (it.nodig == null && it.nodigWk != null && !isNaN(s)){
+          var d = new Date(s); d.setDate(d.getDate() + Math.round(it.nodigWk*7));
+          it.nodig = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+        }
+        delete it.nodigWk;
+      });
+    }
+    return r;
   }
   var bewaarT;
   function bewaar(){
@@ -330,7 +359,7 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
   var STATUS = {
     aanschaf:["tekiezen","gekozen","besteld","geleverd","gemonteerd"],
     klus:["tedoen","ingepland","bezig","klaar"],
-    beide:["tekiezen","gekozen","besteld","geleverd","gemonteerd"]
+    beide:["tekiezen","gekozen","besteld","geleverd","ingepland","gemonteerd"]
   };
   var LABEL = {tekiezen:"Te kiezen", gekozen:"Gekozen", besteld:"Besteld",
                geleverd:"Geleverd op bouw", gemonteerd:"Gemonteerd",
@@ -392,15 +421,85 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
     toastEl.textContent = m; toastEl.classList.add("on");
     clearTimeout(toastT); toastT = setTimeout(function(){ toastEl.classList.remove("on"); }, 2200);
   }
+  /* Eigen dialoog. prompt() en confirm() worden in een ingesloten
+     frame geblokkeerd, en zijn op een telefoon sowieso onwerkbaar. */
+  function sheet(opts){
+    return new Promise(function(res){
+      var bg = document.createElement("div");
+      bg.className = "sheet-bg";
+      var velden = (opts.velden || []).map(function(v){
+        if (v.type === "kleur"){
+          return '<div class="field"><span>' + esc(v.label) + "</span>" +
+            '<div class="kleurkies"><input type="color" data-v="' + v.id + '" value="' + esc(v.waarde || "#B99A6B") + '">' +
+            '<div class="kleurrij" data-voor="' + v.id + '">' + STALEN.map(function(k){
+              return '<button type="button" data-kleur="' + k + '" style="background:' + k + '" aria-label="' + k + '"></button>';
+            }).join("") + "</div></div></div>";
+        }
+        return '<label class="field"><span>' + esc(v.label) + "</span>" +
+          '<input type="' + (v.type || "text") + '" data-v="' + v.id + '" value="' + esc(v.waarde || "") +
+          '" placeholder="' + esc(v.plaats || "") + '" autocomplete="off"></label>';
+      }).join("");
+      bg.innerHTML = '<div class="sheet" role="dialog" aria-modal="true"><h3>' + esc(opts.titel) + "</h3>" +
+        (opts.uitleg ? '<p class="uitleg">' + esc(opts.uitleg) + "</p>" : '<div style="height:12px"></div>') +
+        velden +
+        '<div class="knoppen"><button class="btn" data-nee>' + esc(opts.nee || "Annuleren") + "</button>" +
+        '<button class="btn ' + (opts.gevaar ? "btn-danger" : "btn-primary") + '" data-ja>' + esc(opts.ja || "Opslaan") + "</button></div></div>";
+      document.body.appendChild(bg);
+      var eerste = bg.querySelector("input[data-v]");
+      if (eerste) setTimeout(function(){ eerste.focus(); eerste.select && eerste.select(); }, 60);
+      function sluit(waarde){ bg.remove(); document.removeEventListener("keydown", toets); res(waarde); }
+      function oogst(){
+        var uit = {};
+        $$("[data-v]", bg).forEach(function(i){ uit[i.dataset.v] = i.value; });
+        return uit;
+      }
+      function toets(e){
+        if (e.key === "Escape") sluit(null);
+        if (e.key === "Enter" && e.target.tagName === "INPUT" && e.target.type !== "color") sluit(oogst());
+      }
+      document.addEventListener("keydown", toets);
+      bg.addEventListener("click", function(e){
+        if (e.target === bg) return sluit(null);
+        if (e.target.closest("[data-nee]")) return sluit(null);
+        if (e.target.closest("[data-ja]")) return sluit(opts.velden ? oogst() : {});
+        var k = e.target.closest("[data-kleur]");
+        if (k){
+          var rij = k.closest(".kleurrij");
+          $("[data-v='" + rij.dataset.voor + "']", bg).value = k.dataset.kleur;
+          $$("[data-kleur]", rij).forEach(function(b){ b.setAttribute("aria-pressed", String(b === k)); });
+        }
+      });
+    });
+  }
+  function bevestig(titel, uitleg, jaTekst){
+    return sheet({titel:titel, uitleg:uitleg, ja:jaTekst || "Verwijderen", nee:"Nee, laat staan", gevaar:true})
+      .then(function(r){ return r !== null; });
+  }
+  function klem(v, min, max){
+    var n = Number(v);
+    if (!isFinite(n)) return min;
+    return Math.min(max, Math.max(min, n));
+  }
+  function vraagLink(){
+    return sheet({
+      titel:"Link opslaan", ja:"Opslaan",
+      uitleg:"Plak het adres van de webshop, productpagina of offerte.",
+      velden:[{id:"url", label:"Adres", type:"url", plaats:"gamma.nl/vloertegel-60x60"},
+              {id:"naam", label:"Naam (mag leeg)", plaats:"Vloertegel bij Gamma"}]
+    }).then(function(r){
+      if (!r || !r.url.trim()) return null;
+      var url = r.url.trim();
+      if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+      var naam = r.naam.trim() || url.replace(/^https?:\/\/(www\.)?/i,"").split("/")[0];
+      return {id:uid(), naam:naam, url:url};
+    });
+  }
+
   function vandaag(){ var d = new Date(); d.setHours(0,0,0,0); return d; }
   function sleutel(){
     if (!D.project.sleutel) return null;
     var d = new Date(D.project.sleutel + "T12:00:00");
     return isNaN(d) ? null : d;
-  }
-  function weekNaarDatum(wk){
-    var s = sleutel(); if (!s || wk == null || wk === "") return null;
-    var d = new Date(s); d.setDate(d.getDate() + Math.round(wk*7)); return d;
   }
   function datumNaarWeek(str){
     var s = sleutel(); if (!s || !str) return null;
@@ -411,9 +510,24 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
     return d ? d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0") : "";
   }
   function fmt(d){ return d ? d.toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"2-digit"}) : "—"; }
+  /* "Nodig op" is een gewone datum. Schuift de oplevering, dan vraagt de
+     app of alle datums mee moeten schuiven — expliciet, want stilzwijgend
+     data verplaatsen is erger dan een vraag stellen. */
+  function nodigDatum(it){
+    if (!it.nodig) return null;
+    var d = new Date(it.nodig + "T12:00:00");
+    return isNaN(d) ? null : d;
+  }
   function bestelDatum(it){
-    var n = weekNaarDatum(it.nodigWk); if (!n) return null;
+    var n = nodigDatum(it); if (!n) return null;
     var d = new Date(n); d.setDate(d.getDate() - (Number(it.leverWk)||0)*7); return d;
+  }
+  function schuifDatums(dagen){
+    D.items.forEach(function(it){
+      var n = nodigDatum(it); if (!n) return;
+      n.setDate(n.getDate() + dagen);
+      it.nodig = iso(n);
+    });
   }
   function dagenTot(d){ return d ? Math.round((d - vandaag())/86400000) : null; }
   function ruimteVan(id){
@@ -596,7 +710,7 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
                         .map(function(x){ return x.it; });
     var loopt = D.items.filter(function(i){ return i.status === "ingepland" || i.status === "bezig"; });
     var geenDatum = D.items.filter(function(i){
-      return !AF[i.status] && TEBESTELLEN[i.status] && (i.nodigWk == null || !Number(i.leverWk));
+      return !AF[i.status] && TEBESTELLEN[i.status] && (!i.nodig || !Number(i.leverWk));
     });
     function blok(eyebrow, titel, lede, rows, leegtekst){
       return '<div><p class="eyebrow">' + eyebrow + '</p><h2 class="sec">' + titel + "</h2>" +
@@ -747,25 +861,38 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
       var rij = t.closest("[data-item]");
       if (rij) return openItem(rij.dataset.item);
       if (t.closest("[data-hernoem]")){
-        var n = prompt("Nieuwe naam voor de ruimte:", r.naam);
-        if (n && n.trim()){ r.naam = n.trim(); bewaar(); $("h2", p).textContent = r.naam; }
+        sheet({titel:"Naam van de ruimte", ja:"Opslaan",
+               velden:[{id:"naam", label:"Naam", waarde:r.naam}]}).then(function(res){
+          if (!res || !res.naam.trim()) return;
+          r.naam = res.naam.trim(); bewaar(); $("h2", p).textContent = r.naam;
+        });
         return;
       }
       if (t.closest("[data-verwijder]")){
-        var aantal = itemsVan(rid).length;
-        if (!confirm("“" + r.naam + "” verwijderen?" + (aantal ? " Er " + (aantal === 1 ? "staat 1 onderdeel" : "staan " + aantal + " onderdelen") + " in dat dan ook verdwijnt." : ""))) return;
-        D.items = D.items.filter(function(i){ return i.ruimteId !== rid; });
-        beeldVan(rid).forEach(function(b){ if (b.soort !== "staal") fotoWeg(b.id); });
-        D.beeld = D.beeld.filter(function(b){ return b.ruimteId !== rid; });
-        D.ruimtes = D.ruimtes.filter(function(x){ return x.id !== rid; });
-        bewaar(); sluitPaneel(p); toast("Ruimte verwijderd"); return;
+        var aantal = itemsVan(rid).length, bd = beeldVan(rid).length;
+        var gevolg = [];
+        if (aantal) gevolg.push(aantal === 1 ? "1 onderdeel" : aantal + " onderdelen");
+        if (bd) gevolg.push(bd === 1 ? "1 afbeelding" : bd + " afbeeldingen");
+        bevestig("“" + r.naam + "” verwijderen?",
+                 gevolg.length ? "Ook " + gevolg.join(" en ") + " verdwijnen. Dit kan niet ongedaan gemaakt worden."
+                               : "Dit kan niet ongedaan gemaakt worden.")
+          .then(function(ja){
+            if (!ja) return;
+            D.items = D.items.filter(function(i){ return i.ruimteId !== rid; });
+            beeldVan(rid).forEach(function(b){ if (b.soort !== "staal") fotoWeg(b.id); });
+            D.beeld = D.beeld.filter(function(b){ return b.ruimteId !== rid; });
+            D.ruimtes = D.ruimtes.filter(function(x){ return x.id !== rid; });
+            bewaar(); sluitPaneel(p); toast("Ruimte verwijderd");
+          });
+        return;
       }
       if (t.closest("[data-link]")){
-        var url = prompt("Plak de link:"); if (!url) return;
-        if (!/^https?:\/\//i.test(url)) url = "https://" + url;
-        var naam = prompt("Hoe wil je 'm noemen?", "") || url.replace(/^https?:\/\/(www\.)?/i,"").split("/")[0];
-        r.links = r.links || []; r.links.push({id:uid(), naam:naam, url:url});
-        bewaar(); tekenLinks(); toast("Link opgeslagen"); return;
+        vraagLink().then(function(l){
+          if (!l) return;
+          r.links = r.links || []; r.links.push(l);
+          bewaar(); tekenLinks(); toast("Link opgeslagen");
+        });
+        return;
       }
       var lw = t.closest("[data-linkweg]");
       if (lw){
@@ -774,11 +901,17 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
       }
       if (t.closest("[data-foto-add]")) return $("#rd-file", p).click();
       if (t.closest("[data-staal-add]")){
-        var nm = prompt("Wat is dit voor materiaal of kleur?", "");
-        if (nm === null) return;
-        D.beeld.push({id:uid(), ruimteId:rid, soort:"staal", naam:nm,
-                      kleur:STALEN[D.beeld.length % STALEN.length]});
-        bewaar(); tekenTiles(); return;
+        sheet({titel:"Kleur of materiaal", ja:"Toevoegen",
+               uitleg:"Kies de kleur zelf, of plak een hexcode uit de webshop.",
+               velden:[{id:"naam", label:"Wat is het?", plaats:"Eiken naturel · RAL 9010 · voegkleur grijs"},
+                       {id:"kleur", label:"Kleur", type:"kleur", waarde:STALEN[D.beeld.length % STALEN.length]}]})
+          .then(function(res){
+            if (!res) return;
+            D.beeld.push({id:uid(), ruimteId:rid, soort:"staal",
+                          naam:res.naam.trim(), kleur:res.kleur});
+            bewaar(); tekenTiles();
+          });
+        return;
       }
       var bw = t.closest("[data-beeldweg]");
       if (bw){
@@ -795,8 +928,11 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
       verkleinFoto(f).then(function(url){
         var id = uid();
         return fotoZet(id, url).then(function(){
-          var nm = prompt("Bijschrift (mag leeg):", "") || "";
-          D.beeld.push({id:id, ruimteId:rid, soort:"foto", naam:nm});
+          return sheet({titel:"Bijschrift", ja:"Toevoegen",
+                        uitleg:"Waar kijk je naar? Mag ook leeg blijven.",
+                        velden:[{id:"naam", label:"Bijschrift", plaats:"Vloertegel 60×60, zandkleur"}]});
+        }).then(function(res){
+          D.beeld.push({id:id, ruimteId:rid, soort:"foto", naam:res ? res.naam.trim() : ""});
           bewaar(); tekenTiles(); toast("Foto toegevoegd");
         });
       }).catch(function(){ toast("Die foto lukte niet"); });
@@ -826,12 +962,15 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
   /* ═══ onderdeel ══════════════════════════════════════════ */
   function openItem(id, ruimteVoorkeur){
     var nieuw = !id;
-    var it = nieuw
-      ? {id:uid(), naam:"", ruimteId:ruimteVoorkeur || (D.ruimtes[0]||{}).id, soort:"aanschaf",
-         status:"tekiezen", fase:null, begroot:0, betaald:0, winkel:"", artikelnr:"",
-         afmetingen:"", nodigWk:null, leverWk:0, notitie:"", links:[]}
+    var bron = nieuw
+      ? {id:uid(), naam:"", ruimteId:ruimteVoorkeur || D.laatsteRuimte || (D.ruimtes[0]||{}).id,
+         soort:"aanschaf", status:"tekiezen", fase:null, begroot:0, betaald:0, winkel:"",
+         artikelnr:"", afmetingen:"", nodig:"", leverWk:0, notitie:"", links:[]}
       : D.items.filter(function(x){ return x.id === id; })[0];
-    if (!it) return;
+    if (!bron) return;
+    /* Op een kopie werken: druk je op terug in plaats van opslaan, dan
+       hoort er niets veranderd te zijn. */
+    var it = JSON.parse(JSON.stringify(bron));
     it.links = it.links || [];
 
     var html =
@@ -859,7 +998,7 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
         '<label class="field"><span>Betaald (€)</span><input id="i-betaald" type="number" inputmode="numeric" min="0" step="10" value="' + (Number(it.betaald)||"") + '"></label>' +
       "</div>" +
       '<div class="duo">' +
-        '<label class="field"><span>Nodig op</span><input id="i-nodig" type="date" value="' + iso(weekNaarDatum(it.nodigWk)) + '"></label>' +
+        '<label class="field"><span>Nodig op</span><input id="i-nodig" type="date" value="' + esc(it.nodig || "") + '"></label>' +
         '<label class="field"><span>Levertijd (weken)</span><input id="i-lever" type="number" inputmode="numeric" min="0" max="99" value="' + (Number(it.leverWk)||"") + '"></label>' +
       "</div>" +
       '<div class="field" id="i-bestel"></div>' +
@@ -884,10 +1023,6 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
     function tekenBestel(){
       var el = $("#i-bestel", p);
       var nodig = $("#i-nodig", p).value, lever = Number($("#i-lever", p).value) || 0;
-      if (!sleutel()){
-        el.innerHTML = '<span class="hint">Vul eerst een sleuteldatum in bij de instellingen, dan rekent de app besteldeadlines uit.</span>';
-        return;
-      }
       if (!nodig){
         el.innerHTML = '<span class="hint">Vul een datum in bij “Nodig op” om de uiterste besteldatum te berekenen.</span>';
         return;
@@ -900,7 +1035,9 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
       el.innerHTML = "<span>Uiterste besteldatum</span>" +
         '<div class="linkrow" style="margin:0"><b style="flex:1; font-family:var(--mono); font-size:14px">' + fmt(b) + "</b>" +
         '<span class="pill ' + kleur + '">' + (dg < 0 ? Math.abs(dg) + " dgn te laat" : "nog " + dg + " dgn") + "</span></div>" +
-        '<span class="hint">Dat is week ' + (wk >= 0 ? "+" : "") + wk + " ten opzichte van de sleutel. Schuift de sleuteldatum, dan schuift deze mee.</span>";
+        '<span class="hint">' + (wk == null
+          ? "Vul een sleuteldatum in bij de instellingen om dit in weken te zien."
+          : "Dat is week " + (wk >= 0 ? "+" : "") + wk + " ten opzichte van de sleutel.") + "</span>";
     }
     function tekenILinks(){
       $("#i-links", p).innerHTML = it.links.length ? it.links.map(function(l){
@@ -929,17 +1066,19 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
         return;
       }
       if (e.target.closest("[data-ilink]")){
-        var url = prompt("Plak de link:"); if (!url) return;
-        if (!/^https?:\/\//i.test(url)) url = "https://" + url;
-        var naam = prompt("Hoe wil je 'm noemen?", "") || url.replace(/^https?:\/\/(www\.)?/i,"").split("/")[0];
-        it.links.push({id:uid(), naam:naam, url:url}); tekenILinks(); return;
+        vraagLink().then(function(l){ if (l){ it.links.push(l); tekenILinks(); } });
+        return;
       }
       var lw = e.target.closest("[data-ilinkweg]");
       if (lw){ it.links = it.links.filter(function(l){ return l.id !== lw.dataset.ilinkweg; }); tekenILinks(); return; }
       if (e.target.closest("[data-weg]")){
-        if (!confirm("“" + it.naam + "” verwijderen?")) return;
-        D.items = D.items.filter(function(x){ return x.id !== it.id; });
-        bewaar(); sluitPaneel(p); toast("Verwijderd"); return;
+        bevestig("“" + (it.naam || "Dit onderdeel") + "” verwijderen?", "Dit kan niet ongedaan gemaakt worden.")
+          .then(function(ja){
+            if (!ja) return;
+            D.items = D.items.filter(function(x){ return x.id !== it.id; });
+            bewaar(); sluitPaneel(p); toast("Verwijderd");
+          });
+        return;
       }
       if (e.target.closest("[data-opslaan]")){
         var naam2 = $("#i-naam", p).value.trim();
@@ -951,13 +1090,15 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
         it.afmetingen = $("#i-afm", p).value.trim();
         it.winkel = $("#i-winkel", p).value.trim();
         it.artikelnr = $("#i-art", p).value.trim();
-        it.begroot = Number($("#i-begroot", p).value) || 0;
-        it.betaald = Number($("#i-betaald", p).value) || 0;
-        it.leverWk = Number($("#i-lever", p).value) || 0;
-        it.nodigWk = datumNaarWeek($("#i-nodig", p).value);
+        it.begroot = klem($("#i-begroot", p).value, 0, 9999999);
+        it.betaald = klem($("#i-betaald", p).value, 0, 9999999);
+        it.leverWk = klem($("#i-lever", p).value, 0, 99);
+        it.nodig = $("#i-nodig", p).value || "";
         it.notitie = $("#i-notitie", p).value;
         it.gewijzigd = Date.now();
+        D.laatsteRuimte = it.ruimteId;
         if (nieuw) D.items.push(it);
+        else D.items = D.items.map(function(x){ return x.id === it.id ? it : x; });
         bewaar(); sluitPaneel(p); toast(nieuw ? "Toegevoegd" : "Opgeslagen");
         return;
       }
@@ -1053,25 +1194,57 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
 
     p.addEventListener("click", function(e){
       if (e.target.closest("[data-psave]")){
+        var oud = D.project.sleutel, nieuw2 = $("#p-datum", p).value;
         D.project.naam = $("#p-naam", p).value.trim() || "Mijn woning";
-        D.project.sleutel = $("#p-datum", p).value;
-        D.project.budget = Number($("#p-budget", p).value) || 0;
+        D.project.sleutel = nieuw2;
+        D.project.budget = klem($("#p-budget", p).value, 0, 99999999);
+        var metDatum = D.items.filter(function(i){ return i.nodig; }).length;
+        var delta = 0;
+        if (oud && nieuw2 && oud !== nieuw2){
+          delta = Math.round((new Date(nieuw2 + "T12:00:00") - new Date(oud + "T12:00:00")) / 86400000);
+        }
+        if (delta && metDatum){
+          var wk = Math.abs(Math.round(delta/7));
+          var weken = wk === 1 ? "een week" : wk + " weken";
+          var richting = delta > 0 ? "later" : "eerder";
+          var stuks = metDatum === 1 ? "het onderdeel dat" : "de " + metDatum + " onderdelen die";
+          bevestig("Alle deadlines meeschuiven?",
+                   "De sleutel ligt " + weken + " " + richting + ". Wil je " + stuks +
+                   " een datum " + (metDatum === 1 ? "heeft" : "hebben") + " evenveel mee laten schuiven?",
+                   "Ja, meeschuiven")
+            .then(function(ja){
+              if (ja) schuifDatums(delta);
+              bewaar(); tekenKop();
+              toast(ja ? "Alles " + weken + " " + richting + " gezet" : "Opgeslagen");
+            });
+          return;
+        }
         bewaar(); toast("Opgeslagen"); tekenKop(); return;
       }
       if (e.target.closest("[data-rnieuw]")){
-        var n = prompt("Naam van de ruimte:"); if (!n || !n.trim()) return;
-        D.ruimtes.push({id:uid(), naam:n.trim(), volgorde:D.ruimtes.length});
-        bewaar(); tekenR(); return;
+        sheet({titel:"Ruimte toevoegen", ja:"Toevoegen",
+               velden:[{id:"naam", label:"Naam", plaats:"Werkkamer"}]}).then(function(res){
+          if (!res || !res.naam.trim()) return;
+          D.ruimtes.push({id:uid(), naam:res.naam.trim(), volgorde:D.ruimtes.length});
+          bewaar(); tekenR();
+        });
+        return;
       }
       var rw = e.target.closest("[data-rweg]");
       if (rw){
         var rid = rw.dataset.rweg, r = ruimteVan(rid), aantal = itemsVan(rid).length;
-        if (!confirm("“" + r.naam + "” verwijderen?" + (aantal ? " Ook " + aantal + " onderdelen." : ""))) return;
-        D.items = D.items.filter(function(i){ return i.ruimteId !== rid; });
-        beeldVan(rid).forEach(function(b){ if (b.soort !== "staal") fotoWeg(b.id); });
-        D.beeld = D.beeld.filter(function(b){ return b.ruimteId !== rid; });
-        D.ruimtes = D.ruimtes.filter(function(x){ return x.id !== rid; });
-        bewaar(); tekenR(); return;
+        bevestig("“" + r.naam + "” verwijderen?",
+                 aantal ? "Ook " + aantal + (aantal === 1 ? " onderdeel verdwijnt" : " onderdelen verdwijnen") + "."
+                        : "Dit kan niet ongedaan gemaakt worden.")
+          .then(function(ja){
+            if (!ja) return;
+            D.items = D.items.filter(function(i){ return i.ruimteId !== rid; });
+            beeldVan(rid).forEach(function(b){ if (b.soort !== "staal") fotoWeg(b.id); });
+            D.beeld = D.beeld.filter(function(b){ return b.ruimteId !== rid; });
+            D.ruimtes = D.ruimtes.filter(function(x){ return x.id !== rid; });
+            bewaar(); tekenR();
+          });
+        return;
       }
       if (e.target.closest("[data-export]")) return exporteer();
       if (e.target.closest("[data-import]")) return $("#p-file", p).click();
@@ -1080,12 +1253,18 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
       var f = e.target.files && e.target.files[0]; if (!f) return;
       var fr = new FileReader();
       fr.onload = function(){
+        var n;
         try {
-          var n = JSON.parse(fr.result);
+          n = JSON.parse(fr.result);
           if (!n || !n.versie) throw new Error("bad");
-          if (!confirm("Dit vervangt alles wat er nu in staat. Doorgaan?")) return;
-          D = n; bewaar(); sluitAlle(); tekenAlles(); toast("Teruggezet");
-        } catch(err){ toast("Dat bestand kon ik niet lezen"); }
+        } catch(err){ return toast("Dat bestand kon ik niet lezen"); }
+        bevestig("Alles vervangen?",
+                 "Wat er nu in de app staat wordt overschreven door " +
+                 (n.items || []).length + " onderdelen uit dit bestand.", "Ja, terugzetten")
+          .then(function(ja){
+            if (!ja) return;
+            D = n; bewaar(); sluitAlle(); tekenAlles(); toast("Teruggezet");
+          });
       };
       fr.readAsText(f);
     });
