@@ -26,9 +26,14 @@ node build.mjs
 
 ## Status
 
-**v0.1 — intake.** De app verzamelt nu de projectgegevens en de scope-keuzes.
-Zodra de intake ingevuld is, wordt dit een echte projecttracker: ruimtes, taken,
-budget, levertijden en deadlines.
+**v0.2 — concept.** De app toont de opzet met verzonnen voorbeelddata: vier schermen
+(Nu, Ruimtes, Inkoop, Beeld) als vensters op één lijst met onderdelen. Nog geen opslag,
+nog geen echte projectdata — eerst het interview afronden.
 
-Gegevens staan in `localStorage` op het apparaat zelf. Nog geen synchronisatie
-tussen telefoon en laptop — dat is een expliciete keuze in de intake (blok I).
+De vragenlijst uit v0.1 is verwijderd: dat is gereedschap voor requirements, geen
+functionaliteit. Die staat nu in .
+
+| | |
+| --- | --- |
+| Prototype | https://claude.ai/code/artifact/d3a4ece3-ec9b-4e91-9423-f7419b0d4365 |
+| Requirements | https://claude.ai/code/artifact/5133bd49-1d15-441f-a910-3079ecf5edd4 |
