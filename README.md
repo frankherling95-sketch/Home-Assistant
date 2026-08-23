@@ -31,7 +31,7 @@ node build.mjs
 nog geen echte projectdata — eerst het interview afronden.
 
 De vragenlijst uit v0.1 is verwijderd: dat is gereedschap voor requirements, geen
-functionaliteit. Die staat nu in .
+functionaliteit. Die staat nu in `docs/Requirements-Staartploeg.md`.
 
 | | |
 | --- | --- |
