@@ -26,14 +26,16 @@ node build.mjs
 
 ## Status
 
-**v0.2 — concept.** De app toont de opzet met verzonnen voorbeelddata: vier schermen
-(Nu, Ruimtes, Inkoop, Beeld) als vensters op één lijst met onderdelen. Nog geen opslag,
-nog geen echte projectdata — eerst het interview afronden.
+**v0.3 — werkend.** Ruimte-eerst: de app opent op de kamerlijst. Per ruimte staan de
+onderdelen, een moodboard met foto's en materiaalstalen, de winkellinks en een
+materiaalcalculator op basis van m2 en omtrek. Daarnaast: de achtstaps werkvolgorde,
+een Nu-scherm met besteldeadlines die terugrekenen, en een inkooplijst per winkel.
 
-De vragenlijst uit v0.1 is verwijderd: dat is gereedschap voor requirements, geen
-functionaliteit. Die staat nu in `docs/Requirements-Staartploeg.md`.
+Gegevens staan in localStorage; foto's in IndexedDB. Nog geen synchronisatie tussen
+apparaten — dat is een bewuste keuze (zie de requirements, B11). Export en import van
+JSON is de brug naar een gedeelde versie later.
 
 | | |
 | --- | --- |
-| Prototype | https://claude.ai/code/artifact/d3a4ece3-ec9b-4e91-9423-f7419b0d4365 |
+| App | https://claude.ai/code/artifact/d3a4ece3-ec9b-4e91-9423-f7419b0d4365 |
 | Requirements | https://claude.ai/code/artifact/5133bd49-1d15-441f-a910-3079ecf5edd4 |

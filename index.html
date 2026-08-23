@@ -17,7 +17,7 @@
 /* ── tokens ─────────────────────────────────────────────── */
 :root{
   --ground:#EDEDE8; --surface:#F9F9F6; --surface-2:#E4E5DE; --line:#D2D4CA;
-  --ink:#15181C; --ink-2:#4B5057; --ink-3:#787E85;
+  --ink:#15181C; --ink-2:#4B5057; --ink-3:#767C84;
   --accent:#1B49C4; --accent-ink:#FFFFFF; --accent-soft:#DFE6FA;
   --ok:#2C7A57; --ok-soft:#D6EBE0; --warn:#8F5A08; --warn-soft:#F3E4C4;
   --crit:#B5352A; --crit-soft:#F6DCD8;
@@ -47,10 +47,7 @@
 }
 
 *,*::before,*::after{box-sizing:border-box}
-body{
-  margin:0; background:var(--ground); color:var(--ink);
-  font-family:var(--body); font-size:16px; line-height:1.5; -webkit-text-size-adjust:100%;
-}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:var(--body); font-size:16px; line-height:1.5; -webkit-text-size-adjust:100%}
 h1,h2,h3{font-family:var(--display); text-wrap:balance; margin:0; letter-spacing:-.015em}
 p{margin:0}
 button,input,textarea,select{font:inherit; color:inherit}
@@ -61,71 +58,59 @@ button,input,textarea,select{font:inherit; color:inherit}
 
 /* ── header ─────────────────────────────────────────────── */
 .top{position:sticky; top:0; z-index:30; background:var(--ground); border-bottom:1px solid var(--line); padding:13px 16px 12px}
-.brandrow{display:flex; align-items:center; justify-content:space-between; gap:12px}
-.brand{font-family:var(--display); font-weight:800; font-size:21px; letter-spacing:-.03em}
+.brandrow{display:flex; align-items:center; gap:4px}
+.brand{font-family:var(--display); font-weight:800; font-size:21px; letter-spacing:-.03em; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .brand .dot{color:var(--accent)}
-.badge{
-  font-family:var(--mono); font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:.1em;
-  color:var(--warn); background:var(--warn-soft); padding:4px 8px; border-radius:99px; white-space:nowrap;
-}
 .hdrstats{display:flex; gap:8px; margin-top:11px}
-.stat{
-  flex:1; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:9px 11px; min-width:0;
-}
-.stat b{display:block; font-family:var(--mono); font-size:19px; font-weight:600; font-variant-numeric:tabular-nums; line-height:1.15}
-.stat span{display:block; font-family:var(--mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-3); margin-top:3px}
-.stat.accent b{color:var(--accent)}
-.stat.crit b{color:var(--crit)}
+.stat{flex:1; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:9px 11px; min-width:0; text-align:left; cursor:pointer}
+.stat b{display:block; font-family:var(--mono); font-size:18px; font-weight:600; font-variant-numeric:tabular-nums; line-height:1.15}
+.stat span{display:block; font-family:var(--mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-3); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.stat.accent b{color:var(--accent)} .stat.crit b{color:var(--crit)}
 
 /* ── nav ────────────────────────────────────────────────── */
-.nav{
-  position:fixed; bottom:0; left:0; right:0; z-index:40; display:grid; grid-template-columns:repeat(4,1fr);
-  background:var(--surface); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom);
-}
-.nav button{
-  appearance:none; background:none; border:0; padding:9px 4px 11px; cursor:pointer;
-  display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--ink-3);
-  border-top:2px solid transparent; margin-top:-1px;
-}
+.nav{position:fixed; bottom:0; left:0; right:0; z-index:40; display:grid; grid-template-columns:repeat(4,1fr); background:var(--surface); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom)}
+.nav button{appearance:none; background:none; border:0; padding:9px 4px 11px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--ink-3); border-top:2px solid transparent; margin-top:-1px}
 .nav button[aria-selected="true"]{color:var(--accent); border-top-color:var(--accent)}
-.nav .glyph{width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+.glyph{width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
 .nav .lbl{font-family:var(--mono); font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; font-weight:500}
-main{flex:1; padding:18px 16px 96px}
+main{flex:1; padding:18px 16px 100px}
 @media (min-width:760px){
   .nav{position:sticky; bottom:auto; top:0; border-top:0; border-bottom:1px solid var(--line); max-width:760px; margin:0 auto}
   .nav button{flex-direction:row; gap:8px; padding:12px; border-top:0; border-bottom:2px solid transparent; margin-top:0}
   .nav button[aria-selected="true"]{border-bottom-color:var(--accent)}
-  main{padding-bottom:56px}
+  main{padding-bottom:60px}
 }
 
-/* ── generic ────────────────────────────────────────────── */
+/* ── generieke bouwstenen ───────────────────────────────── */
 .stack{display:flex; flex-direction:column; gap:22px}
 .eyebrow{font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); font-weight:600}
 h2.sec{font-size:18px; font-weight:600; margin-top:3px}
 .lede{color:var(--ink-2); font-size:14px; max-width:62ch; margin-top:5px}
-.demo-note{
-  font-size:12.5px; color:var(--ink-2); background:var(--warn-soft); border-radius:9px;
-  padding:11px 13px; max-width:64ch; border-left:3px solid var(--warn);
-}
-.demo-note b{color:var(--ink); font-weight:600}
-.hr{height:1px; background:var(--line); border:0; margin:0}
+.btn{appearance:none; border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:9px; padding:11px 15px; font-size:14px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:7px; justify-content:center}
+.btn:hover{border-color:var(--ink-3)}
+.btn-primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-ghost{background:transparent; border-color:transparent; color:var(--ink-2)}
+.btn-danger{color:var(--crit); border-color:var(--crit-soft)}
+.btn-row{display:flex; gap:8px; flex-wrap:wrap}
+.btn-wide{width:100%}
+.empty{text-align:center; padding:26px 16px; color:var(--ink-3); font-size:13.5px; border:1px dashed var(--line); border-radius:var(--r)}
+.pill{display:inline-block; font-family:var(--mono); font-size:10px; font-weight:600; padding:3px 7px; border-radius:99px; white-space:nowrap; text-transform:uppercase; letter-spacing:.05em}
+.pill.ok{background:var(--ok-soft); color:var(--ok)}
+.pill.warn{background:var(--warn-soft); color:var(--warn)}
+.pill.crit{background:var(--crit-soft); color:var(--crit)}
+.pill.idle{background:var(--surface-2); color:var(--ink-3)}
+.pill.acc{background:var(--accent-soft); color:var(--accent)}
+.money{font-family:var(--mono); font-size:13px; font-weight:500; font-variant-numeric:tabular-nums; color:var(--ink-2); white-space:nowrap}
+.hr{height:1px; background:var(--line); border:0; margin:24px 0}
+.sectitle{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:2px}
 
 /* ── rijen ──────────────────────────────────────────────── */
 .rows{display:flex; flex-direction:column; gap:7px; margin-top:11px}
-.row{
-  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:11px;
-  background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--line);
-  border-radius:var(--r); padding:11px 13px; text-align:left; width:100%;
-  font:inherit; cursor:pointer; appearance:none;
-}
-.row:hover{border-color:var(--ink-3); border-left-color:var(--accent)}
-.row.crit{border-left-color:var(--crit)}
-.row.warn{border-left-color:var(--warn)}
-.row.ok{border-left-color:var(--ok)}
-.row .mark{
-  width:22px; height:22px; border-radius:6px; border:1.5px solid var(--line); background:var(--ground);
-  display:grid; place-items:center; flex:none;
-}
+.row{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:11px; background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--line); border-radius:var(--r); padding:11px 13px; text-align:left; width:100%; font:inherit; cursor:pointer; appearance:none}
+.row:hover{border-color:var(--ink-3)}
+.row.crit{border-left-color:var(--crit)} .row.warn{border-left-color:var(--warn)} .row.ok{border-left-color:var(--ok)} .row.acc{border-left-color:var(--accent)}
+.row .mark{width:23px; height:23px; border-radius:6px; border:1.5px solid var(--line); background:var(--ground); display:grid; place-items:center; flex:none}
 .row .mark svg{width:13px; height:13px; stroke:var(--ground); fill:none; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round}
 .row[data-done="1"] .mark{background:var(--ok); border-color:var(--ok)}
 .row[data-done="1"] .mark svg{stroke:var(--surface)}
@@ -134,472 +119,1076 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
 .row[data-done="1"] .txt b{text-decoration:line-through; color:var(--ink-3)}
 .row .txt span{display:block; font-size:12.5px; color:var(--ink-3); margin-top:2px}
 .row .txt span em{font-style:normal; color:var(--ink-2)}
-.row .right{text-align:right; flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:4px}
-.money{font-family:var(--mono); font-size:13px; font-weight:500; font-variant-numeric:tabular-nums; color:var(--ink-2); white-space:nowrap}
+.row .right{flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:4px}
 
-.pill{display:inline-block; font-family:var(--mono); font-size:10px; font-weight:600; padding:3px 7px; border-radius:99px; white-space:nowrap; text-transform:uppercase; letter-spacing:.05em}
-.pill.ok{background:var(--ok-soft); color:var(--ok)}
-.pill.warn{background:var(--warn-soft); color:var(--warn)}
-.pill.crit{background:var(--crit-soft); color:var(--crit)}
-.pill.idle{background:var(--surface-2); color:var(--ink-3)}
-.pill.acc{background:var(--accent-soft); color:var(--accent)}
+/* ── ruimtekaarten ──────────────────────────────────────── */
+.rcards{display:flex; flex-direction:column; gap:9px; margin-top:11px}
+.rcard{display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:13px 14px; width:100%; text-align:left; font:inherit; cursor:pointer}
+.rcard:hover{border-color:var(--accent)}
+.rcard strong{display:block; font-family:var(--display); font-size:16px; font-weight:600; letter-spacing:-.012em}
+.rbar{height:5px; background:var(--surface-2); border-radius:99px; overflow:hidden; margin-top:8px}
+.rbar i{display:block; height:100%; background:var(--accent); border-radius:99px; transition:width .3s}
+.rmeta{font-family:var(--mono); font-size:10.5px; color:var(--ink-3); margin-top:6px; letter-spacing:.02em}
+.rpct{font-family:var(--mono); font-size:16px; font-weight:600; font-variant-numeric:tabular-nums; color:var(--accent); flex:none}
+.rcard .thumbs{display:flex; gap:3px; margin-top:7px}
+.rcard .thumbs i{width:16px; height:16px; border-radius:4px; display:block; border:1px solid var(--line); background-size:cover; background-position:center}
 
-/* ── ruimtes ────────────────────────────────────────────── */
-.ruimtes{display:flex; flex-direction:column; gap:9px; margin-top:11px}
-details.ruimte{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
-details.ruimte>summary{list-style:none; cursor:pointer; padding:13px 14px; display:flex; align-items:center; gap:12px}
-details.ruimte>summary::-webkit-details-marker{display:none}
-.rm-txt{flex:1; min-width:0}
-.rm-txt strong{display:block; font-family:var(--display); font-size:15.5px; font-weight:600; letter-spacing:-.01em}
-.rm-bar{height:5px; background:var(--surface-2); border-radius:99px; overflow:hidden; margin-top:7px}
-.rm-bar i{display:block; height:100%; background:var(--accent); border-radius:99px}
-.rm-meta{font-family:var(--mono); font-size:10.5px; color:var(--ink-3); margin-top:5px; letter-spacing:.02em}
-.rm-pct{font-family:var(--mono); font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; color:var(--accent); flex:none}
-.chev{width:15px; height:15px; stroke:var(--ink-3); fill:none; stroke-width:2; stroke-linecap:round; flex:none; transition:transform .2s}
-details[open]>summary .chev{transform:rotate(180deg)}
-.rm-body{border-top:1px solid var(--line); padding:12px 14px 14px}
-.rm-body .rows{margin-top:0}
-.rm-body .row{background:var(--ground)}
+/* ── stappenplan ────────────────────────────────────────── */
+.fase{display:grid; grid-template-columns:auto 1fr; gap:0 14px}
+.fase .rail{display:flex; flex-direction:column; align-items:center}
+.fase .pip{width:28px; height:28px; border-radius:50%; flex:none; display:grid; place-items:center; font-family:var(--mono); font-size:12px; font-weight:600; background:var(--surface); color:var(--ink-2); border:1.5px solid var(--line)}
+.fase.actief .pip{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.fase.af .pip{background:var(--ok); color:var(--surface); border-color:var(--ok)}
+.fase .wire{width:0; flex:1; border-left:2px dotted var(--line); margin:5px 0}
+.fase .body{padding-bottom:22px; min-width:0}
+.fase h3{font-size:16px; font-weight:600}
+.fase .waarom{font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-top:4px; line-height:1.45}
+.fase .telling{font-family:var(--mono); font-size:11px; color:var(--ink-3); margin-top:7px}
 
-/* ── inkoop ─────────────────────────────────────────────── */
-.shop{margin-top:16px}
-.shop-h{display:flex; align-items:baseline; justify-content:space-between; gap:10px; padding:0 2px 7px}
-.shop-h strong{font-family:var(--display); font-size:14.5px; font-weight:600}
-.shop-h span{font-family:var(--mono); font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums}
-.linkchips{display:flex; flex-wrap:wrap; gap:6px; margin-top:9px}
-.chip{
-  display:inline-flex; align-items:center; gap:5px; font-family:var(--mono); font-size:11px; font-weight:500;
-  background:var(--surface-2); color:var(--ink-2); border-radius:99px; padding:5px 10px; text-decoration:none;
-}
-.chip svg{width:11px; height:11px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round}
-.quickadd{display:flex; gap:7px; margin-top:11px}
-.quickadd input{
-  flex:1; min-width:0; background:var(--surface); border:1px solid var(--line); border-radius:9px;
-  padding:11px 13px; font-size:15px;
-}
-.quickadd input:focus{border-color:var(--accent); outline:none}
-.btn{
-  appearance:none; border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:9px;
-  padding:11px 15px; font-size:14px; font-weight:600; cursor:pointer;
-  display:inline-flex; align-items:center; gap:7px; justify-content:center;
-}
-.btn-primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
-.btn-primary:hover{filter:brightness(1.08)}
+/* ── paneel ─────────────────────────────────────────────── */
+.panel{position:fixed; inset:0; z-index:60; background:var(--ground); display:flex; flex-direction:column; overflow:hidden}
+.panel-top{position:sticky; top:0; background:var(--ground); border-bottom:1px solid var(--line); padding:11px 12px; display:flex; align-items:center; gap:8px; flex:none}
+.panel-top h2{flex:1; font-size:17px; font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.iconbtn{appearance:none; background:none; border:0; padding:8px; cursor:pointer; color:var(--ink-2); display:grid; place-items:center; border-radius:8px; flex:none}
+.iconbtn:hover{background:var(--surface-2)}
+.panel-body{flex:1; overflow-y:auto; padding:16px 16px 40px; max-width:760px; width:100%; margin:0 auto; -webkit-overflow-scrolling:touch}
 
-/* ── moodboard ──────────────────────────────────────────── */
-.mood{margin-top:14px}
-.mood h3{font-family:var(--display); font-size:14.5px; font-weight:600; margin-bottom:9px}
-.swatches{display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:8px}
-.sw{border-radius:9px; overflow:hidden; border:1px solid var(--line); background:var(--surface)}
-.sw .fill{height:66px; display:block}
-.sw .cap{padding:7px 8px 8px}
-.sw .cap b{display:block; font-size:11.5px; font-weight:600; line-height:1.25}
-.sw .cap span{display:block; font-family:var(--mono); font-size:9.5px; color:var(--ink-3); margin-top:2px; letter-spacing:.03em}
-.sw.add{border-style:dashed; display:grid; place-items:center; min-height:106px; color:var(--ink-3); cursor:pointer}
-.sw.add .plus{font-size:22px; line-height:1; font-family:var(--mono)}
-.sw.add small{display:block; font-family:var(--mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.08em; margin-top:5px}
+/* ── formulier ──────────────────────────────────────────── */
+.field{display:block; margin-bottom:15px}
+.field>span{display:block; font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-3); font-weight:600; margin-bottom:5px}
+.field input, .field textarea, .field select{width:100%; background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:11px 12px; font-size:16px}
+.field textarea{min-height:76px; resize:vertical; line-height:1.45}
+.field input:focus, .field textarea:focus, .field select:focus{border-color:var(--accent); outline:none}
+.field .hint{font-size:12px; color:var(--ink-3); margin-top:5px; display:block}
+.duo{display:grid; grid-template-columns:1fr 1fr; gap:11px}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chips button{appearance:none; background:var(--surface); border:1px solid var(--line); border-radius:99px; padding:8px 13px; font-size:13px; font-weight:600; cursor:pointer; color:var(--ink-2)}
+.chips button[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+.chips.sm button{font-family:var(--mono); font-size:11px; padding:6px 11px; text-transform:uppercase; letter-spacing:.04em}
 
-/* ── model-uitleg ───────────────────────────────────────── */
-.model{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:15px; margin-top:14px}
-.model ol{margin:10px 0 0; padding-left:0; list-style:none; display:flex; flex-direction:column; gap:9px; counter-reset:m}
-.model li{display:grid; grid-template-columns:auto 1fr; gap:11px; align-items:start; font-size:13.5px; color:var(--ink-2)}
-.model li::before{
-  counter-increment:m; content:counter(m); font-family:var(--mono); font-size:10.5px; font-weight:600;
-  color:var(--accent); background:var(--accent-soft); border-radius:6px; padding:3px 7px; line-height:1.3;
-}
-.model li b{color:var(--ink); font-weight:600}
-.toast{
-  position:fixed; left:50%; transform:translateX(-50%); bottom:calc(80px + env(safe-area-inset-bottom));
-  background:var(--ink); color:var(--ground); font-size:13.5px; font-weight:500; padding:10px 17px;
-  border-radius:99px; z-index:50; box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s;
-}
+/* ── links & beeld ──────────────────────────────────────── */
+.linkrow{display:flex; align-items:center; gap:9px; background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:9px 11px; margin-bottom:6px}
+.linkrow a{flex:1; min-width:0; color:var(--accent); text-decoration:none; font-size:13.5px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.linkrow svg{width:14px; height:14px; stroke:var(--ink-3); fill:none; stroke-width:2; stroke-linecap:round; flex:none}
+.tiles{display:grid; grid-template-columns:repeat(auto-fill,minmax(98px,1fr)); gap:8px; margin-top:10px}
+.tile{position:relative; border-radius:9px; overflow:hidden; border:1px solid var(--line); background:var(--surface); aspect-ratio:1}
+.tile img{width:100%; height:100%; object-fit:cover; display:block}
+.tile .swatch{width:100%; height:100%; display:block}
+.tile .cap{position:absolute; left:0; right:0; bottom:0; background:linear-gradient(transparent,rgba(0,0,0,.75)); color:#fff; font-size:10.5px; font-weight:600; padding:15px 7px 6px; line-height:1.25}
+.tile .del{position:absolute; top:5px; right:5px; width:24px; height:24px; border-radius:50%; border:0; background:rgba(0,0,0,.55); color:#fff; font-size:15px; line-height:1; cursor:pointer; display:grid; place-items:center; padding:0}
+.tile.add{border-style:dashed; display:grid; place-items:center; cursor:pointer; color:var(--ink-3); background:transparent; text-align:center}
+.tile.add .plus{font-family:var(--mono); font-size:23px; line-height:1}
+.tile.add small{display:block; font-family:var(--mono); font-size:9px; text-transform:uppercase; letter-spacing:.08em; margin-top:4px}
+
+/* ── materiaaltabel ─────────────────────────────────────── */
+.mtab{width:100%; border-collapse:collapse; font-size:13.5px; margin-top:10px}
+.mtab th{font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-3); font-weight:600; text-align:left; padding:7px 0; border-bottom:1px solid var(--line)}
+.mtab td{padding:9px 0; border-bottom:1px solid var(--line); vertical-align:top}
+.mtab td:last-child{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:500}
+.mtab tr:last-child td{border-bottom:0}
+.mtab .sub{display:block; font-size:11.5px; color:var(--ink-3); margin-top:1px}
+
+/* ── setup ──────────────────────────────────────────────── */
+.setup{max-width:520px; margin:0 auto}
+.setup h1{font-size:26px; font-weight:800; letter-spacing:-.03em}
+
+/* ── fab & toast ────────────────────────────────────────── */
+.fab{position:fixed; right:16px; bottom:calc(74px + env(safe-area-inset-bottom)); z-index:45; width:54px; height:54px; border-radius:50%; border:0; background:var(--accent); color:var(--accent-ink); box-shadow:var(--shadow); cursor:pointer; display:grid; place-items:center; font-size:27px; line-height:1; font-family:var(--mono); padding:0 0 3px}
+@media (min-width:760px){.fab{bottom:24px}}
+.toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(84px + env(safe-area-inset-bottom)); background:var(--ink); color:var(--ground); font-size:13.5px; font-weight:500; padding:10px 17px; border-radius:99px; z-index:70; box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; max-width:88vw; text-align:center}
 .toast.on{opacity:1; transform:translateX(-50%) translateY(-6px)}
 </style>
 </head>
 <body>
-<div class="shell">
+<div class="shell" id="app" hidden>
   <header class="top">
     <div class="brandrow">
-      <div class="brand">Staartploeg<span class="dot">.</span></div>
-      <div class="badge">concept &middot; voorbeelddata</div>
+      <div class="brand" id="projectnaam">Staartploeg<span class="dot">.</span></div>
+      <button class="iconbtn" id="btn-zoek" aria-label="Zoeken">
+        <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+      </button>
+      <button class="iconbtn" id="btn-meer" aria-label="Instellingen">
+        <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="5.5" r="1.6"/><circle cx="12" cy="18.5" r="1.6"/></svg>
+      </button>
     </div>
     <div class="hdrstats">
-      <div class="stat accent"><b id="s-weken">—</b><span>weken tot sleutel</span></div>
-      <div class="stat crit"><b id="s-actie">—</b><span>vraagt actie</span></div>
-      <div class="stat"><b id="s-geld">—</b><span>van budget</span></div>
+      <div class="stat accent" data-ga="stappen"><b id="s-weken">—</b><span id="s-weken-l">weken</span></div>
+      <div class="stat crit" data-ga="nu"><b id="s-actie">0</b><span>vraagt actie</span></div>
+      <div class="stat" data-ga="inkoop"><b id="s-geld">—</b><span id="s-geld-l">begroot</span></div>
     </div>
   </header>
 
   <nav class="nav" role="tablist" aria-label="Secties">
-    <button role="tab" id="tab-vandaag" aria-selected="true" aria-controls="p-vandaag" data-pane="vandaag">
-      <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
-      <span class="lbl">Nu</span>
-    </button>
-    <button role="tab" id="tab-ruimtes" aria-selected="false" aria-controls="p-ruimtes" data-pane="ruimtes">
+    <button role="tab" aria-selected="true" data-pane="ruimtes">
       <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9.5 21v-6h5v6"/></svg>
       <span class="lbl">Ruimtes</span>
     </button>
-    <button role="tab" id="tab-inkoop" aria-selected="false" aria-controls="p-inkoop" data-pane="inkoop">
+    <button role="tab" aria-selected="false" data-pane="stappen">
+      <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><path d="M6 8.4v7.2M11 6h9M11 18h9"/></svg>
+      <span class="lbl">Stappen</span>
+    </button>
+    <button role="tab" aria-selected="false" data-pane="nu">
+      <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
+      <span class="lbl">Nu</span>
+    </button>
+    <button role="tab" aria-selected="false" data-pane="inkoop">
       <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 5h2l2.2 10.2a1.5 1.5 0 0 0 1.5 1.2h8.1a1.5 1.5 0 0 0 1.5-1.2L20.5 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="17.5" cy="20" r="1.3"/></svg>
       <span class="lbl">Inkoop</span>
-    </button>
-    <button role="tab" id="tab-beeld" aria-selected="false" aria-controls="p-beeld" data-pane="beeld">
-      <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m4.5 17 4.8-4.4 3.3 3 2.7-2.3 4.2 3.7"/></svg>
-      <span class="lbl">Beeld</span>
     </button>
   </nav>
 
   <main>
-    <!-- ══ NU ══ -->
-    <section id="p-vandaag" role="tabpanel" aria-labelledby="tab-vandaag">
-      <div class="stack">
-        <div class="demo-note">
-          <b>Dit is een concept met verzonnen voorbeelddata.</b> Bedoeld om te reageren, niet om te gebruiken.
-          De opzet klopt pas als jouw echte project erin staat &mdash; daarvoor loopt het interview in de chat.
-        </div>
-
-        <div>
-          <p class="eyebrow">Het idee</p>
-          <h2 class="sec">Eén lijst, zes manieren van kijken</h2>
-          <p class="lede">Planning, checklist, boodschappenlijst en moodboard zijn geen aparte lijstjes die je apart moet bijhouden. Het is één verzameling onderdelen, die je op zes manieren bekijkt.</p>
-          <div class="model">
-            <ol>
-              <li><span><b>Nu</b> &mdash; alleen wat deze week moet. Het scherm dat je bij openen ziet.</span></li>
-              <li><span><b>Ruimtes</b> &mdash; alles gegroepeerd per kamer, met voortgang en budget.</span></li>
-              <li><span><b>Inkoop</b> &mdash; alles wat besteld of gehaald moet worden, gegroepeerd per winkel.</span></li>
-              <li><span><b>Beeld</b> &mdash; foto&rsquo;s, kleuren en materialen per ruimte, met de winkellinks erbij.</span></li>
-              <li><span><b>Planning</b> &mdash; dezelfde onderdelen op een tijdlijn, met wat waarvan afhangt.</span></li>
-              <li><span><b>Budget</b> &mdash; begroot naast geoffreerd naast betaald.</span></li>
-            </ol>
-          </div>
-        </div>
-
-        <div>
-          <p class="eyebrow">Loopt af</p>
-          <h2 class="sec">Dit kan niet wachten</h2>
-          <div class="rows" id="r-urgent"></div>
-        </div>
-
-        <div>
-          <p class="eyebrow">Deze week</p>
-          <h2 class="sec">Ingepland</h2>
-          <div class="rows" id="r-week"></div>
-        </div>
-
-        <div>
-          <p class="eyebrow">Vastgelopen</p>
-          <h2 class="sec">Wacht op een beslissing</h2>
-          <p class="lede">Zolang hier iets staat, staat er verderop iets stil.</p>
-          <div class="rows" id="r-besluit"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ══ RUIMTES ══ -->
-    <section id="p-ruimtes" role="tabpanel" aria-labelledby="tab-ruimtes" hidden>
-      <div class="stack">
-        <div>
-          <p class="eyebrow">Per kamer</p>
-          <h2 class="sec">Waar staan we?</h2>
-          <p class="lede">Je denkt in kamers, dus de app ook. Tik een ruimte open voor de onderdelen die erbij horen.</p>
-          <div class="ruimtes" id="r-ruimtes"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ══ INKOOP ══ -->
-    <section id="p-inkoop" role="tabpanel" aria-labelledby="tab-inkoop" hidden>
-      <div class="stack">
-        <div>
-          <p class="eyebrow">Bestellen</p>
-          <h2 class="sec">De grote inkoop</h2>
-          <p class="lede">Onderdelen die nog besteld moeten worden, gegroepeerd per leverancier. Zo doe je één bestelling in plaats van zeven.</p>
-          <div id="r-shops"></div>
-        </div>
-
-        <hr class="hr">
-
-        <div>
-          <p class="eyebrow">Meenemen</p>
-          <h2 class="sec">Bouwmarktlijstje</h2>
-          <p class="lede">Het andere soort boodschappenlijst: kleine spullen die je onderweg meeneemt. Snel toevoegen, afvinken in de winkel.</p>
-          <div class="quickadd">
-            <input id="q-add" type="text" placeholder="Kit, schuurpapier, 4× tl-buis…" aria-label="Toevoegen aan bouwmarktlijst">
-            <button class="btn btn-primary" id="q-btn">Zet erbij</button>
-          </div>
-          <div class="rows" id="r-klus"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ══ BEELD ══ -->
-    <section id="p-beeld" role="tabpanel" aria-labelledby="tab-beeld" hidden>
-      <div class="stack">
-        <div>
-          <p class="eyebrow">Moodboard</p>
-          <h2 class="sec">Kleur, materiaal en waar je het vindt</h2>
-          <p class="lede">Per ruimte de gekozen materialen met de winkellinks eraan vast. Hier komen ook je eigen foto&rsquo;s en screenshots &mdash; de vlakken hieronder zijn kleur- en materiaalstalen, geen echte afbeeldingen.</p>
-          <div id="r-mood"></div>
-        </div>
-      </div>
-    </section>
+    <section data-view="ruimtes"></section>
+    <section data-view="stappen" hidden></section>
+    <section data-view="nu" hidden></section>
+    <section data-view="inkoop" hidden></section>
   </main>
 </div>
+
+<button class="fab" id="fab" hidden aria-label="Onderdeel toevoegen">+</button>
+<div id="panel-host"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="shell" id="setup" hidden>
+  <main>
+    <div class="setup stack">
+      <div>
+        <div class="brand" style="font-size:26px; margin-bottom:14px">Staartploeg<span class="dot">.</span></div>
+        <h1>Laten we je huis erin zetten.</h1>
+        <p class="lede">Drie dingen, daarna kun je aan de slag. Alles is later aan te passen.</p>
+      </div>
+      <div>
+        <label class="field"><span>Hoe noem je het project?</span>
+          <input id="su-naam" type="text" placeholder="Bouwnummer 34" autocomplete="off"></label>
+        <label class="field"><span>Wanneer krijg je de sleutel?</span>
+          <input id="su-datum" type="date">
+          <span class="hint">Bij benadering is prima. Alle deadlines rekenen hiervandaan, dus als de datum schuift, schuift de rest mee.</span></label>
+        <label class="field"><span>Budget voor afbouw en inrichting</span>
+          <input id="su-budget" type="number" inputmode="numeric" placeholder="45000" min="0" step="500">
+          <span class="hint">Mag ruw. Laat leeg als je het nog niet weet.</span></label>
+      </div>
+      <div>
+        <div class="sectitle"><p class="eyebrow">Ruimtes</p><span class="money" id="su-tel">0 gekozen</span></div>
+        <h2 class="sec">Welke kamers heeft het huis?</h2>
+        <p class="lede">Tik aan wat van toepassing is. Namen wijzigen kan later.</p>
+        <div class="chips" id="su-ruimtes" style="margin-top:12px"></div>
+        <div class="duo" style="margin-top:11px">
+          <input id="su-eigen" type="text" placeholder="Eigen ruimte…" autocomplete="off" style="background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:11px 12px; font-size:16px; width:100%">
+          <button class="btn" id="su-add">Toevoegen</button>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-wide" id="su-start" style="padding:14px">Aan de slag</button>
+    </div>
+  </main>
+</div>
 
 <script>
 (function(){
   "use strict";
 
-  /* ── het model ────────────────────────────────────────────
-     Eén soort object. Alle schermen zijn filters hierop.
-     soort:   aanschaf | klus | beide
-     status:  idee gekozen offerte besteld geleverd | tedoen ingepland bezig | klaar
-     wk:      week na sleuteloverdracht waarin het nodig is
-     lever:   levertijd in weken (0 = niet van toepassing)
-  ─────────────────────────────────────────────────────────── */
-  var ITEMS = [
-    {id:"keuken",   naam:"Keuken",                     ruimte:"Keuken",      soort:"beide",    status:"offerte",  budget:14500, winkel:"Keukenstudio",   wk:9,  lever:12, besluit:""},
-    {id:"apparaat", naam:"Inbouwapparatuur",           ruimte:"Keuken",      soort:"aanschaf", status:"idee",     budget:3400,  winkel:"Keukenstudio",   wk:9,  lever:4,  besluit:"Via de keuken of los kopen?"},
-    {id:"vloerwk",  naam:"PVC-vloer woonkamer",        ruimte:"Woonkamer",   soort:"beide",    status:"gekozen",  budget:3200,  winkel:"Vloerenwinkel",  wk:10, lever:3,  besluit:""},
-    {id:"stuc",     naam:"Wanden latex spuiten",       ruimte:"Hele huis",   soort:"klus",     status:"ingepland",budget:2800,  winkel:"",               wk:5,  lever:0,  besluit:""},
-    {id:"plafond",  naam:"Plafonds spuiten",           ruimte:"Hele huis",   soort:"klus",     status:"offerte",  budget:1600,  winkel:"",               wk:4,  lever:0,  besluit:""},
-    {id:"sanitair", naam:"Sanitair badkamer",          ruimte:"Badkamer",    soort:"aanschaf", status:"besteld",  budget:2900,  winkel:"Sanitairwinkel", wk:5,  lever:6,  besluit:""},
-    {id:"tegels",   naam:"Wand- en vloertegels",       ruimte:"Badkamer",    soort:"aanschaf", status:"gekozen",  budget:1450,  winkel:"Tegelhandel",    wk:4,  lever:3,  besluit:""},
-    {id:"douche",   naam:"Douchewand op maat",         ruimte:"Badkamer",    soort:"aanschaf", status:"idee",     budget:750,   winkel:"Sanitairwinkel", wk:6,  lever:5,  besluit:"Nis of hoekopstelling?"},
-    {id:"bank",     naam:"Bank",                       ruimte:"Woonkamer",   soort:"aanschaf", status:"idee",     budget:2600,  winkel:"Meubelzaak",     wk:15, lever:16, besluit:"Stof of leer &mdash; hier zijn jullie het nog niet over eens"},
-    {id:"eettafel", naam:"Eettafel en stoelen",        ruimte:"Woonkamer",   soort:"aanschaf", status:"gekozen",  budget:1900,  winkel:"Meubelzaak",     wk:15, lever:10, besluit:""},
-    {id:"raamdec",  naam:"Raamdecoratie hele huis",    ruimte:"Hele huis",   soort:"aanschaf", status:"idee",     budget:2200,  winkel:"Raamdecoratie",  wk:14, lever:6,  besluit:"Inmeten kan pas na afwerking"},
-    {id:"spots",    naam:"Inbouwspots plaatsen",       ruimte:"Woonkamer",   soort:"klus",     status:"tedoen",   budget:400,   winkel:"Bouwmarkt",      wk:4,  lever:1,  besluit:""},
-    {id:"hanglamp", naam:"Hanglamp boven eettafel",    ruimte:"Woonkamer",   soort:"aanschaf", status:"idee",     budget:350,   winkel:"Verlichting",    wk:13, lever:3,  besluit:""},
-    {id:"trap",     naam:"Traprenovatie",              ruimte:"Hal & trap",  soort:"beide",    status:"offerte",  budget:2400,  winkel:"Trapspecialist", wk:12, lever:7,  besluit:""},
-    {id:"kast",     naam:"Inbouwkast slaapkamer",      ruimte:"Slaapkamer",  soort:"aanschaf", status:"idee",     budget:2100,  winkel:"Kastenmaker",    wk:14, lever:11, besluit:""},
-    {id:"bed",      naam:"Bed en matras",              ruimte:"Slaapkamer",  soort:"aanschaf", status:"besteld",  budget:1400,  winkel:"Meubelzaak",     wk:13, lever:5,  besluit:""},
-    {id:"verf",     naam:"Kozijnen schilderen",        ruimte:"Hele huis",   soort:"klus",     status:"tedoen",   budget:300,   winkel:"Bouwmarkt",      wk:12, lever:0,  besluit:""},
-    {id:"bestrat",  naam:"Bestrating terras",          ruimte:"Tuin",        soort:"beide",    status:"idee",     budget:3800,  winkel:"Hovenier",       wk:24, lever:9,  besluit:"Tegels of gebakken klinkers?"},
-    {id:"schutting",naam:"Schutting achtertuin",       ruimte:"Tuin",        soort:"beide",    status:"idee",     budget:1700,  winkel:"Bouwmarkt",      wk:22, lever:4,  besluit:""},
-    {id:"internet", naam:"Glasvezel aanvragen",        ruimte:"Hele huis",   soort:"klus",     status:"tedoen",   budget:0,     winkel:"",               wk:13, lever:6,  besluit:""},
-    {id:"meterkast",naam:"Meterkast afmonteren",       ruimte:"Hele huis",   soort:"klus",     status:"klaar",    budget:250,   winkel:"",               wk:2,  lever:0,  besluit:""},
-    {id:"opnames",  naam:"Opleverpunten doorgeven",    ruimte:"Hele huis",   soort:"klus",     status:"klaar",    budget:0,     winkel:"",               wk:0,  lever:0,  besluit:""}
-  ];
+  /* ═══ opslag ═════════════════════════════════════════════
+     Eén JSON-object in localStorage; foto's apart in IndexedDB
+     omdat ze niet in localStorage passen. Bewust één platte
+     structuur: als we later naar een gedeelde database gaan,
+     is dit één keer uploaden en klaar.
+  ═════════════════════════════════════════════════════════ */
+  var KEY = "staartploeg.data.v1", DB_NAAM = "staartploeg", DB_STORE = "beelden";
+  var D = null, dbp = null;
 
-  var KLUSLIJST = [
-    {id:"k1", naam:"Kit (sanitair, wit)", done:false},
-    {id:"k2", naam:"Schuurpapier korrel 120 + 180", done:false},
-    {id:"k3", naam:"Afplaktape 50 mm, 4 rollen", done:true},
-    {id:"k4", naam:"Verlengsnoer 25 m", done:false}
-  ];
+  function leeg(){ return {versie:1, project:{naam:"", sleutel:"", budget:0}, ruimtes:[], items:[], klusjes:[], beeld:[]}; }
+  function laad(){
+    try { var r = JSON.parse(localStorage.getItem(KEY)); return r && r.versie ? r : leeg(); }
+    catch(e){ return leeg(); }
+  }
+  var bewaarT;
+  function bewaar(){
+    clearTimeout(bewaarT);
+    bewaarT = setTimeout(function(){
+      try { localStorage.setItem(KEY, JSON.stringify(D)); }
+      catch(e){ toast("Opslaan mislukt — geheugen vol?"); }
+    }, 120);
+  }
+  function db(){
+    if (dbp) return dbp;
+    dbp = new Promise(function(res, rej){
+      var rq = indexedDB.open(DB_NAAM, 1);
+      rq.onupgradeneeded = function(){ rq.result.createObjectStore(DB_STORE); };
+      rq.onsuccess = function(){ res(rq.result); };
+      rq.onerror = function(){ rej(rq.error); };
+    });
+    return dbp;
+  }
+  function fotoZet(id, url){
+    return db().then(function(d){ return new Promise(function(res, rej){
+      var t = d.transaction(DB_STORE, "readwrite");
+      t.objectStore(DB_STORE).put(url, id);
+      t.oncomplete = res; t.onerror = function(){ rej(t.error); };
+    }); });
+  }
+  function fotoHaal(id){
+    return db().then(function(d){ return new Promise(function(res){
+      var rq = d.transaction(DB_STORE, "readonly").objectStore(DB_STORE).get(id);
+      rq.onsuccess = function(){ res(rq.result || null); };
+      rq.onerror = function(){ res(null); };
+    }); }).catch(function(){ return null; });
+  }
+  function fotoWeg(id){
+    return db().then(function(d){
+      d.transaction(DB_STORE, "readwrite").objectStore(DB_STORE).delete(id);
+    }).catch(function(){});
+  }
 
-  var MOOD = [
-    {ruimte:"Woonkamer", links:[["Vloerenwinkel","#"],["Meubelzaak","#"]], sw:[
-      ["#B99A6B","Eiken naturel","pvc-vloer"],
-      ["#E8E4DB","Kalkwit","wanden"],
-      ["#2B2E33","Mat antraciet","kozijnen"],
-      ["#7E8B7A","Saliegroen","accentwand"]
-    ]},
-    {ruimte:"Keuken", links:[["Keukenstudio","#"]], sw:[
-      ["#1D2A2C","Diepgroen","fronten"],
-      ["#C8C3B8","Beton-look","blad"],
-      ["#8C6A45","Warm eiken","open kast"]
-    ]},
-    {ruimte:"Badkamer", links:[["Tegelhandel","#"],["Sanitairwinkel","#"]], sw:[
-      ["#D9D5CC","Zandtegel 60×60","vloer"],
-      ["#F1EFEA","Mat wit","wandtegel"],
-      ["#3A3D42","Zwart mat","kranen"]
-    ]},
-    {ruimte:"Tuin", links:[["Hovenier","#"]], sw:[
-      ["#9A9186","Grijs gebakken","bestrating"],
-      ["#6E5A44","Douglas hout","schutting"]
-    ]}
-  ];
-
-  var ORDER = ["Woonkamer","Keuken","Badkamer","Slaapkamer","Hal & trap","Tuin","Hele huis"];
-  var LABEL = {
-    idee:"idee", gekozen:"gekozen", offerte:"offerte", besteld:"besteld",
-    geleverd:"geleverd", tedoen:"te doen", ingepland:"ingepland", bezig:"bezig", klaar:"klaar"
+  /* ═══ model ══════════════════════════════════════════════ */
+  var STATUS = {
+    aanschaf:["tekiezen","gekozen","besteld","geleverd","gemonteerd"],
+    klus:["tedoen","ingepland","bezig","klaar"],
+    beide:["tekiezen","gekozen","besteld","geleverd","gemonteerd"]
   };
-  var TEBESTELLEN = {idee:1, gekozen:1, offerte:1};
+  var LABEL = {tekiezen:"Te kiezen", gekozen:"Gekozen", besteld:"Besteld",
+               geleverd:"Geleverd op bouw", gemonteerd:"Gemonteerd",
+               tedoen:"Te doen", ingepland:"Ingepland", bezig:"Bezig", klaar:"Klaar"};
+  var KORT  = {tekiezen:"te kiezen", gekozen:"gekozen", besteld:"besteld",
+               geleverd:"geleverd", gemonteerd:"gemonteerd",
+               tedoen:"te doen", ingepland:"ingepland", bezig:"bezig", klaar:"klaar"};
+  var SOORT = {aanschaf:"Kopen", klus:"Klus", beide:"Kopen én doen"};
+  var AF = {gemonteerd:1, klaar:1};
+  var TEBESTELLEN = {tekiezen:1, gekozen:1};
 
-  /* ── helpers ──────────────────────────────────────────── */
+  /* De werkvolgorde bij afbouw. Stof, vocht en zware werkzaamheden
+     bepalen de volgorde — niet wat je het leukste vindt. */
+  var FASES = [
+    ["Voorbereiding, ruwbouw & leidingwerk", "Voordat er ook maar iets wordt afgewerkt"],
+    ["Waterdichting & natte voorbereiding", "Essentieel voor de badkamer"],
+    ["Stucwerk & wandafwerking (droge ruimtes)", "Vóórdat de vloeren erin gaan, vanwege veel vocht en stof"],
+    ["Tegelwerk & voegen", "Badkamer, toilet en eventuele tegelvloeren"],
+    ["Schilderwerk & spuiten", "Wanden en plafonds afwerken"],
+    ["Vloeren leggen (woon- & slaapkamers)", "Pas als alle zware en natte werkzaamheden klaar zijn"],
+    ["Montage & installatie", "Keuken, binnendeuren en sanitair"],
+    ["Afkitten & fijnafwerking", "De laatste stap"]
+  ];
+
+  var STANDAARD = ["Entree & hal","Woonkamer","Keuken","Toilet","Badkamer","Slaapkamer 1",
+                   "Slaapkamer 2","Slaapkamer 3","Trap & overloop","Bijkeuken","Zolder",
+                   "Tuin","Berging","Hele huis","Administratie"];
+  var STALEN = ["#B99A6B","#E8E4DB","#2B2E33","#7E8B7A","#1D2A2C","#C8C3B8","#8C6A45",
+                "#D9D5CC","#3A3D42","#9A9186","#6E5A44","#A8452F"];
+
+  /* Richtgetallen per m². Altijd het etiket van het product laten
+     winnen — dit is een schatting om mee naar de bouwmarkt te gaan. */
+  var MATERIAAL = [
+    ["vloer", 1.07, "Vloermateriaal", "m²", "inclusief 7% snijverlies; reken 10% bij visgraat of diagonaal"],
+    ["vloer", 4.5,  "Egaline", "kg", "bij circa 3 mm laagdikte"],
+    ["vloer", 5,    "Tegellijm vloer", "kg", "alleen bij een tegelvloer"],
+    ["vloer", 0.8,  "Voegmortel", "kg", "hangt sterk af van tegelmaat en voegbreedte"],
+    ["wand",  0.15, "Voorstrijk", "L", "op zuigende ondergrond"],
+    ["wand",  0.30, "Muurverf", "L", "twee lagen"],
+    ["wand",  4,    "Tegellijm wand", "kg", "alleen bij wandtegels"],
+    ["plafond", 0.30, "Plafondverf", "L", "twee lagen"],
+    ["omtrek", 1.05, "Plinten", "m", "min de deuropeningen, plus 5% zaagverlies"],
+    ["omtrek", 1,   "Kimband", "m", "alleen in de natte zone"]
+  ];
+
+  /* ═══ helpers ════════════════════════════════════════════ */
   var $ = function(s,r){ return (r||document).querySelector(s); };
-  var esc = function(s){ return String(s).replace(/[&<>"]/g, function(c){
+  var $$ = function(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); };
+  var esc = function(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); };
-  var euro = function(n){ return "€" + n.toLocaleString("nl-NL"); };
+  var uid = function(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); };
+  var euro = function(n){ return "€" + (Number(n)||0).toLocaleString("nl-NL"); };
+  var kort = function(n){ n = Number(n)||0; return n >= 10000 ? "€" + Math.round(n/1000) + "k" : euro(n); };
   var CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
-  var LINKGLYPH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 10.5 21 3.5M15 3.5h6v6M19 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>';
+  var EXT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 10.5 21 3.5M15 3.5h6v6M19 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>';
 
   var toastEl = $("#toast"), toastT;
   function toast(m){
     toastEl.textContent = m; toastEl.classList.add("on");
-    clearTimeout(toastT); toastT = setTimeout(function(){ toastEl.classList.remove("on"); }, 2000);
+    clearTimeout(toastT); toastT = setTimeout(function(){ toastEl.classList.remove("on"); }, 2200);
   }
-
-  /* Voorbeeldproject: de sleutel komt over twee weken. Dat is het moment
-     waarop de app pijn doet — je huis is nog leeg, maar een deel van de
-     besteldeadlines is al gepasseerd. Relatief gerekend, dus altijd actueel. */
-  var WK_TOT_SLEUTEL = 2;
-  var SLEUTEL = new Date(); SLEUTEL.setHours(12,0,0,0);
-  SLEUTEL.setDate(SLEUTEL.getDate() + WK_TOT_SLEUTEL*7);
-  var NU = new Date(); NU.setHours(0,0,0,0);
-
-  function nodigOp(it){ var d = new Date(SLEUTEL); d.setDate(d.getDate() + it.wk*7); return d; }
-  function bestelUiterlijk(it){ var d = nodigOp(it); d.setDate(d.getDate() - it.lever*7); return d; }
-  function dagenTot(d){ return Math.round((d - NU) / 86400000); }
-  function fmt(d){ return d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"}); }
-
-  /* ── tabs ─────────────────────────────────────────────── */
-  var panes = {vandaag:$("#p-vandaag"), ruimtes:$("#p-ruimtes"), inkoop:$("#p-inkoop"), beeld:$("#p-beeld")};
-  Array.prototype.forEach.call(document.querySelectorAll(".nav button"), function(b){
-    b.addEventListener("click", function(){
-      Array.prototype.forEach.call(document.querySelectorAll(".nav button"), function(o){
-        o.setAttribute("aria-selected", String(o === b));
-      });
-      Object.keys(panes).forEach(function(k){ panes[k].hidden = (k !== b.dataset.pane); });
-      window.scrollTo({top:0, behavior:"instant"});
-    });
-  });
-
-  /* ── rij-renderer ─────────────────────────────────────── */
-  function rij(it, sub, tone, rechts){
-    return '<button class="row ' + tone + '" data-id="' + it.id + '" data-done="' +
-      (it.status === "klaar" ? 1 : 0) + '" type="button">' +
-      '<span class="mark">' + CHECK + "</span>" +
-      '<span class="txt"><b>' + esc(it.naam) + "</b><span>" + sub + "</span></span>" +
-      '<span class="right">' + rechts + "</span></button>";
+  function vandaag(){ var d = new Date(); d.setHours(0,0,0,0); return d; }
+  function sleutel(){
+    if (!D.project.sleutel) return null;
+    var d = new Date(D.project.sleutel + "T12:00:00");
+    return isNaN(d) ? null : d;
   }
-
-  /* ── NU ───────────────────────────────────────────────── */
+  function weekNaarDatum(wk){
+    var s = sleutel(); if (!s || wk == null || wk === "") return null;
+    var d = new Date(s); d.setDate(d.getDate() + Math.round(wk*7)); return d;
+  }
+  function datumNaarWeek(str){
+    var s = sleutel(); if (!s || !str) return null;
+    var d = new Date(str + "T12:00:00"); if (isNaN(d)) return null;
+    return Math.round((d - s)/(7*86400000));
+  }
+  function iso(d){
+    return d ? d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0") : "";
+  }
+  function fmt(d){ return d ? d.toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"2-digit"}) : "—"; }
+  function bestelDatum(it){
+    var n = weekNaarDatum(it.nodigWk); if (!n) return null;
+    var d = new Date(n); d.setDate(d.getDate() - (Number(it.leverWk)||0)*7); return d;
+  }
+  function dagenTot(d){ return d ? Math.round((d - vandaag())/86400000) : null; }
+  function ruimteVan(id){
+    for (var i=0;i<D.ruimtes.length;i++) if (D.ruimtes[i].id === id) return D.ruimtes[i];
+    return null;
+  }
+  function itemsVan(rid){ return D.items.filter(function(i){ return i.ruimteId === rid; }); }
+  function beeldVan(rid){ return D.beeld.filter(function(b){ return b.ruimteId === rid; }); }
   function urgentie(it){
-    if (it.status === "klaar" || !TEBESTELLEN[it.status]) return null;
-    var d = dagenTot(bestelUiterlijk(it));
-    if (d < 0)   return {tone:"crit", pill:'<span class="pill crit">' + Math.abs(d) + " dgn te laat</span>", d:d};
-    if (d <= 45) return {tone:"warn", pill:'<span class="pill warn">nog ' + d + " dgn</span>", d:d};
+    if (AF[it.status] || !TEBESTELLEN[it.status]) return null;
+    var b = bestelDatum(it); if (!b) return null;
+    var d = dagenTot(b);
+    if (d < 0)   return {tone:"crit", tekst:Math.abs(d) + " dgn te laat", d:d};
+    if (d <= 45) return {tone:"warn", tekst:"nog " + d + " dgn", d:d};
     return null;
   }
 
-  var urgent = [], besluiten = [], week = [];
-  ITEMS.forEach(function(it){
-    var u = urgentie(it);
-    if (u) urgent.push({it:it, u:u});
-    if (it.besluit) besluiten.push(it);
-    if (it.status === "ingepland" || it.status === "bezig") week.push(it);
-  });
-  urgent.sort(function(a,b){ return a.u.d - b.u.d; });
-
-  $("#r-urgent").innerHTML = urgent.map(function(x){
-    var sub = "bestellen vóór <em>" + fmt(bestelUiterlijk(x.it)) + "</em> · levertijd " + x.it.lever + " wk · " + esc(x.it.ruimte);
-    return rij(x.it, sub, x.u.tone, x.u.pill + '<span class="money">' + euro(x.it.budget) + "</span>");
-  }).join("") || '<p class="lede">Niets urgent.</p>';
-
-  $("#r-week").innerHTML = week.map(function(it){
-    return rij(it, esc(it.ruimte) + " · " + LABEL[it.status], "ok",
-      '<span class="pill ok">' + LABEL[it.status] + "</span>");
-  }).join("") || '<p class="lede">Deze week staat er niets ingepland.</p>';
-
-  $("#r-besluit").innerHTML = besluiten.map(function(it){
-    return rij(it, it.besluit + " · " + esc(it.ruimte), "warn", '<span class="pill warn">besluit</span>');
-  }).join("");
-
-  /* ── RUIMTES ──────────────────────────────────────────── */
-  var perRuimte = {};
-  ITEMS.forEach(function(it){ (perRuimte[it.ruimte] = perRuimte[it.ruimte] || []).push(it); });
-
-  $("#r-ruimtes").innerHTML = ORDER.filter(function(r){ return perRuimte[r]; }).map(function(r){
-    var list = perRuimte[r];
-    var klaar = list.filter(function(i){ return i.status === "klaar"; }).length;
-    var pct = Math.round(klaar / list.length * 100);
-    var geld = list.reduce(function(a,i){ return a + i.budget; }, 0);
-    var rows = list.map(function(it){
-      var tone = it.status === "klaar" ? "ok" : (TEBESTELLEN[it.status] ? "" : "warn");
-      return rij(it, LABEL[it.status] + (it.winkel ? " · " + esc(it.winkel) : ""), tone,
-        '<span class="money">' + euro(it.budget) + "</span>");
-    }).join("");
-    return '<details class="ruimte"><summary>' +
-      '<span class="rm-txt"><strong>' + esc(r) + "</strong>" +
-      '<span class="rm-bar"><i style="width:' + pct + '%"></i></span>' +
-      '<span class="rm-meta">' + klaar + " van " + list.length + " klaar · " + euro(geld) + "</span></span>" +
-      '<span class="rm-pct">' + pct + "%</span>" +
-      '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>' +
-      '</summary><div class="rm-body"><div class="rows">' + rows + "</div></div></details>";
-  }).join("");
-
-  /* ── INKOOP ───────────────────────────────────────────── */
-  var perWinkel = {};
-  ITEMS.forEach(function(it){
-    if (!TEBESTELLEN[it.status] || !it.winkel) return;
-    (perWinkel[it.winkel] = perWinkel[it.winkel] || []).push(it);
-  });
-
-  $("#r-shops").innerHTML = Object.keys(perWinkel).sort().map(function(w){
-    var list = perWinkel[w];
-    var som = list.reduce(function(a,i){ return a + i.budget; }, 0);
-    var rows = list.map(function(it){
-      var d = dagenTot(bestelUiterlijk(it));
-      var tone = d < 0 ? "crit" : (d <= 45 ? "warn" : "");
-      return rij(it, "nodig " + fmt(nodigOp(it)) + " · " + esc(it.ruimte), tone,
-        '<span class="pill ' + (tone || "idle") + '">' + LABEL[it.status] + "</span>" +
-        '<span class="money">' + euro(it.budget) + "</span>");
-    }).join("");
-    return '<div class="shop"><div class="shop-h"><strong>' + esc(w) + "</strong>" +
-      "<span>" + list.length + " · " + euro(som) + "</span></div>" +
-      '<div class="rows">' + rows + "</div>" +
-      '<div class="linkchips"><a class="chip" href="#" onclick="return false">' + LINKGLYPH +
-      "Webshop</a><a class=\"chip\" href=\"#\" onclick=\"return false\">" + LINKGLYPH + "Offerte</a></div></div>";
-  }).join("");
-
-  function renderKlus(){
-    $("#r-klus").innerHTML = KLUSLIJST.map(function(k){
-      return '<button class="row ' + (k.done ? "ok" : "") + '" data-klus="' + k.id +
-        '" data-done="' + (k.done ? 1 : 0) + '" type="button">' +
-        '<span class="mark">' + CHECK + "</span>" +
-        '<span class="txt"><b>' + esc(k.naam) + "</b></span><span class=\"right\"></span></button>";
-    }).join("");
+  /* ═══ setup ══════════════════════════════════════════════ */
+  var suGekozen = {};
+  function toonSetup(){
+    $("#setup").hidden = false; $("#app").hidden = true; $("#fab").hidden = true;
+    STANDAARD.forEach(function(n){ if (!(n in suGekozen)) suGekozen[n] = false; });
+    ["Entree & hal","Woonkamer","Keuken","Badkamer","Slaapkamer 1","Hele huis"].forEach(function(n){ suGekozen[n] = true; });
+    tekenSetupRuimtes();
   }
-  renderKlus();
-
-  $("#r-klus").addEventListener("click", function(e){
-    var b = e.target.closest("[data-klus]"); if (!b) return;
-    var k = KLUSLIJST.filter(function(x){ return x.id === b.dataset.klus; })[0];
-    k.done = !k.done; renderKlus();
-  });
-  function addKlus(){
-    var v = $("#q-add").value.trim(); if (!v) return;
-    KLUSLIJST.push({id:"k" + (KLUSLIJST.length + 1), naam:v, done:false});
-    $("#q-add").value = ""; renderKlus(); toast("Toegevoegd");
+  function tekenSetupRuimtes(){
+    var namen = Object.keys(suGekozen);
+    $("#su-ruimtes").innerHTML = namen.map(function(n){
+      return '<button type="button" data-n="' + esc(n) + '" aria-pressed="' + !!suGekozen[n] + '">' + esc(n) + "</button>";
+    }).join("");
+    $("#su-tel").textContent = namen.filter(function(n){ return suGekozen[n]; }).length + " gekozen";
   }
-  $("#q-btn").addEventListener("click", addKlus);
-  $("#q-add").addEventListener("keydown", function(e){ if (e.key === "Enter") addKlus(); });
+  $("#su-ruimtes").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-n]"); if (!b) return;
+    suGekozen[b.dataset.n] = !suGekozen[b.dataset.n]; tekenSetupRuimtes();
+  });
+  $("#su-add").addEventListener("click", function(){
+    var v = $("#su-eigen").value.trim(); if (!v) return;
+    suGekozen[v] = true; $("#su-eigen").value = ""; tekenSetupRuimtes();
+  });
+  $("#su-eigen").addEventListener("keydown", function(e){ if (e.key === "Enter"){ e.preventDefault(); $("#su-add").click(); } });
+  $("#su-start").addEventListener("click", function(){
+    var namen = Object.keys(suGekozen).filter(function(n){ return suGekozen[n]; });
+    if (!namen.length) return toast("Kies minstens één ruimte");
+    D.project.naam = $("#su-naam").value.trim() || "Mijn woning";
+    D.project.sleutel = $("#su-datum").value;
+    D.project.budget = Number($("#su-budget").value) || 0;
+    D.ruimtes = namen.map(function(n,i){ return {id:uid(), naam:n, volgorde:i}; });
+    bewaar(); $("#setup").hidden = true; start();
+  });
 
-  /* ── BEELD ────────────────────────────────────────────── */
-  $("#r-mood").innerHTML = MOOD.map(function(m){
-    var sw = m.sw.map(function(s){
-      return '<div class="sw"><span class="fill" style="background:' + s[0] + '"></span>' +
-        '<span class="cap"><b>' + esc(s[1]) + "</b><span>" + esc(s[2]) + "</span></span></div>";
+  /* ═══ panelen ════════════════════════════════════════════ */
+  var host = $("#panel-host");
+  function openPaneel(titel, html, opts){
+    opts = opts || {};
+    var el = document.createElement("div");
+    el.className = "panel";
+    el.innerHTML =
+      '<div class="panel-top"><button class="iconbtn" data-sluit aria-label="Terug">' +
+      '<svg class="glyph" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg></button>' +
+      "<h2>" + esc(titel) + "</h2>" + (opts.actie || "") +
+      '</div><div class="panel-body">' + html + "</div>";
+    host.appendChild(el);
+    el.querySelector("[data-sluit]").addEventListener("click", function(){ sluitPaneel(el); });
+    document.body.style.overflow = "hidden";
+    return el;
+  }
+  function sluitPaneel(el){
+    el.remove();
+    if (!host.children.length) document.body.style.overflow = "";
+    tekenAlles();
+  }
+  function sluitAlle(){ host.innerHTML = ""; document.body.style.overflow = ""; }
+
+  /* ═══ rij-weergave ═══════════════════════════════════════ */
+  function itemRij(it, metRuimte){
+    var u = urgentie(it), r = ruimteVan(it.ruimteId);
+    var tone = AF[it.status] ? "ok" : (u ? u.tone : "");
+    var regels = [];
+    if (metRuimte && r) regels.push(esc(r.naam));
+    regels.push(KORT[it.status] || it.status);
+    if (it.afmetingen) regels.push(esc(it.afmetingen));
+    if (it.winkel) regels.push(esc(it.winkel));
+    var b = bestelDatum(it);
+    if (u && b) regels.push("bestel vóór <em>" + fmt(b) + "</em>");
+    return '<button class="row ' + tone + '" data-item="' + it.id + '" data-done="' +
+      (AF[it.status] ? 1 : 0) + '" type="button"><span class="mark">' + CHECK + "</span>" +
+      '<span class="txt"><b>' + esc(it.naam) + "</b><span>" + regels.join(" · ") + "</span></span>" +
+      '<span class="right">' + (u ? '<span class="pill ' + u.tone + '">' + u.tekst + "</span>" : "") +
+      (Number(it.begroot) ? '<span class="money">' + kort(it.begroot) + "</span>" : "") + "</span></button>";
+  }
+
+  /* ═══ weergave: ruimtes ══════════════════════════════════ */
+  function tekenRuimtes(){
+    var el = $('[data-view="ruimtes"]');
+    if (!D.ruimtes.length){
+      el.innerHTML = '<div class="empty">Nog geen ruimtes. Voeg er een toe via het menu rechtsboven.</div>';
+      return;
+    }
+    var kaarten = D.ruimtes.map(function(r){
+      var list = itemsVan(r.id);
+      var klaar = list.filter(function(i){ return AF[i.status]; }).length;
+      var pct = list.length ? Math.round(klaar/list.length*100) : 0;
+      var geld = list.reduce(function(a,i){ return a + (Number(i.begroot)||0); }, 0);
+      var urg = list.filter(function(i){ return urgentie(i); }).length;
+      var bd = beeldVan(r.id).slice(0,6).map(function(b){
+        return b.soort === "staal"
+          ? '<i style="background:' + esc(b.kleur) + '"></i>'
+          : '<i data-thumb="' + b.id + '" style="background:var(--surface-2)"></i>';
+      }).join("");
+      var meta = list.length
+        ? klaar + " van " + list.length + " klaar · " + kort(geld) +
+          (urg ? ' · <span style="color:var(--crit)">' + urg + " urgent</span>" : "")
+        : "nog niets toegevoegd";
+      return '<button class="rcard" data-ruimte="' + r.id + '" type="button"><span><strong>' + esc(r.naam) + "</strong>" +
+        '<span class="rbar"><i style="width:' + pct + '%"></i></span>' +
+        '<span class="rmeta">' + meta + "</span>" +
+        (bd ? '<span class="thumbs">' + bd + "</span>" : "") +
+        '</span><span class="rpct">' + pct + "%</span></button>";
     }).join("");
-    var links = m.links.map(function(l){
-      return '<a class="chip" href="#" onclick="return false">' + LINKGLYPH + esc(l[0]) + "</a>";
+    el.innerHTML = '<div class="stack"><div><p class="eyebrow">Overzicht</p><h2 class="sec">Ruimtes</h2>' +
+      '<p class="lede">Tik een ruimte open voor de onderdelen, maten, foto’s en links die erbij horen.</p>' +
+      '<div class="rcards">' + kaarten + "</div></div></div>";
+    laadThumbs(el);
+  }
+  function laadThumbs(root){
+    $$("[data-thumb]", root).forEach(function(i){
+      fotoHaal(i.dataset.thumb).then(function(url){
+        if (url) i.style.backgroundImage = "url(" + url + ")";
+      });
+    });
+  }
+
+  /* ═══ weergave: stappenplan ══════════════════════════════ */
+  function tekenStappen(){
+    var el = $('[data-view="stappen"]');
+    var perFase = {};
+    D.items.forEach(function(it){
+      var f = (it.fase == null || it.fase === "") ? "x" : it.fase;
+      (perFase[f] = perFase[f] || []).push(it);
+    });
+    var eersteOpen = -1;
+    FASES.forEach(function(f, i){
+      var list = perFase[i] || [];
+      if (eersteOpen === -1 && list.some(function(it){ return !AF[it.status]; })) eersteOpen = i;
+    });
+    var blokken = FASES.map(function(f, i){
+      var list = perFase[i] || [];
+      var klaar = list.filter(function(it){ return AF[it.status]; }).length;
+      var af = list.length > 0 && klaar === list.length;
+      var cls = af ? "af" : (i === eersteOpen ? "actief" : "");
+      var telling = list.length
+        ? klaar + " van " + list.length + " klaar"
+        : "nog niets ingedeeld";
+      return '<div class="fase ' + cls + '"><div class="rail"><div class="pip">' +
+        (af ? "✓" : (i+1)) + "</div>" + (i < FASES.length-1 ? '<div class="wire"></div>' : "") + "</div>" +
+        '<div class="body"><h3>' + esc(f[0]) + "</h3>" +
+        '<div class="waarom">' + esc(f[1]) + "</div>" +
+        '<div class="telling">' + telling + "</div>" +
+        (list.length ? '<div class="rows">' + list.map(function(it){ return itemRij(it, true); }).join("") + "</div>" : "") +
+        "</div></div>";
     }).join("");
-    return '<div class="mood"><h3>' + esc(m.ruimte) + "</h3>" +
-      '<div class="swatches">' + sw +
-      '<div class="sw add" role="button" tabindex="0"><div style="text-align:center">' +
-      '<span class="plus">+</span><small>foto</small></div></div></div>' +
-      '<div class="linkchips">' + links + "</div></div>";
-  }).join("");
+    var zonder = perFase.x || [];
+    el.innerHTML = '<div class="stack"><div><p class="eyebrow">Werkvolgorde</p>' +
+      '<h2 class="sec">Stap voor stap</h2>' +
+      '<p class="lede">De volgorde wordt bepaald door stof, vocht en zware werkzaamheden. Wie de vloer te vroeg legt, legt hem twee keer.</p>' +
+      '<div style="margin-top:18px">' + blokken + "</div></div>" +
+      (zonder.length ? '<div><p class="eyebrow">Nog in te delen</p><h2 class="sec">Zonder fase</h2>' +
+        '<p class="lede">Deze onderdelen staan nog nergens in de volgorde. Open ze en kies een stap.</p>' +
+        '<div class="rows">' + zonder.map(function(it){ return itemRij(it, true); }).join("") + "</div></div>" : "") +
+      "</div>";
+  }
 
-  /* ── kopstatistiek ────────────────────────────────────── */
-  var totaal = ITEMS.reduce(function(a,i){ return a + i.budget; }, 0);
-  var vast = ITEMS.filter(function(i){ return i.status === "besteld" || i.status === "geleverd" || i.status === "klaar"; })
-                  .reduce(function(a,i){ return a + i.budget; }, 0);
-  $("#s-weken").textContent = WK_TOT_SLEUTEL;
-  $("#s-actie").textContent = urgent.length + besluiten.length;
-  $("#s-geld").innerHTML = Math.round(vast / totaal * 100) + "<span style='font-size:13px'>%</span>";
+  /* ═══ weergave: nu ═══════════════════════════════════════ */
+  function tekenNu(){
+    var el = $('[data-view="nu"]');
+    var urgent = D.items.map(function(i){ return {it:i, u:urgentie(i)}; })
+                        .filter(function(x){ return x.u; })
+                        .sort(function(a,b){ return a.u.d - b.u.d; })
+                        .map(function(x){ return x.it; });
+    var loopt = D.items.filter(function(i){ return i.status === "ingepland" || i.status === "bezig"; });
+    var geenDatum = D.items.filter(function(i){
+      return !AF[i.status] && TEBESTELLEN[i.status] && (i.nodigWk == null || !Number(i.leverWk));
+    });
+    function blok(eyebrow, titel, lede, rows, leegtekst){
+      return '<div><p class="eyebrow">' + eyebrow + '</p><h2 class="sec">' + titel + "</h2>" +
+        (lede ? '<p class="lede">' + lede + "</p>" : "") +
+        (rows.length ? '<div class="rows">' + rows.map(function(i){ return itemRij(i, true); }).join("") + "</div>"
+                     : '<div class="empty" style="margin-top:11px">' + leegtekst + "</div>") + "</div>";
+    }
+    el.innerHTML = '<div class="stack">' +
+      (!sleutel() ? '<div class="empty">Vul een sleuteldatum in bij de instellingen — dan kan de app deadlines uitrekenen.</div>' : "") +
+      blok("Loopt af", "Dit kan niet wachten",
+           "Berekend vanaf wanneer je het nodig hebt, min de levertijd.", urgent, "Niets urgent. Mooi.") +
+      blok("Onderhanden", "Loopt nu", "", loopt, "Er staat niets ingepland of in uitvoering.") +
+      blok("Onbekend", "Nog geen deadline",
+           "Zonder datum en levertijd kan de app hier niets over zeggen.", geenDatum, "Alles heeft een datum. Netjes.") +
+      "</div>";
+  }
 
-  /* ── tik op een onderdeel ─────────────────────────────── */
+  /* ═══ weergave: inkoop ═══════════════════════════════════ */
+  function tekenInkoop(){
+    var el = $('[data-view="inkoop"]');
+    var perWinkel = {};
+    D.items.forEach(function(it){
+      if (!TEBESTELLEN[it.status]) return;
+      var w = it.winkel || "Nog geen winkel";
+      (perWinkel[w] = perWinkel[w] || []).push(it);
+    });
+    var blokken = Object.keys(perWinkel).sort().map(function(w){
+      var list = perWinkel[w];
+      var som = list.reduce(function(a,i){ return a + (Number(i.begroot)||0); }, 0);
+      return '<div style="margin-top:16px"><div class="sectitle" style="padding:0 2px 4px">' +
+        '<strong style="font-family:var(--display); font-size:15px; font-weight:600">' + esc(w) + "</strong>" +
+        '<span class="money">' + list.length + " · " + kort(som) + "</span></div>" +
+        '<div class="rows">' + list.map(function(i){ return itemRij(i, true); }).join("") + "</div></div>";
+    }).join("");
+    var klusjes = D.klusjes.map(function(k){
+      return '<button class="row ' + (k.done ? "ok" : "") + '" data-klus="' + k.id + '" data-done="' +
+        (k.done ? 1 : 0) + '" type="button"><span class="mark">' + CHECK +
+        '</span><span class="txt"><b>' + esc(k.naam) + '</b></span><span class="right"></span></button>';
+    }).join("");
+    el.innerHTML = '<div class="stack">' +
+      '<div><p class="eyebrow">Bestellen</p><h2 class="sec">De grote inkoop</h2>' +
+      '<p class="lede">Alles wat nog gekozen of besteld moet worden, gegroepeerd per winkel.</p>' +
+      (blokken || '<div class="empty" style="margin-top:11px">Niets te bestellen.</div>') + "</div>" +
+      '<div><p class="eyebrow">Meenemen</p><h2 class="sec">Bouwmarktlijstje</h2>' +
+      '<p class="lede">Kleine spullen. Snel erbij, afvinken in de winkel.</p>' +
+      '<div style="display:flex; gap:7px; margin-top:12px">' +
+      '<input id="k-add" type="text" placeholder="Kit, voorstrijk, 4× tl-buis…" autocomplete="off" ' +
+      'style="flex:1; min-width:0; background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:11px 13px; font-size:16px">' +
+      '<button class="btn btn-primary" id="k-btn">Erbij</button></div>' +
+      '<div class="rows">' + klusjes + "</div>" +
+      (D.klusjes.some(function(k){ return k.done; })
+        ? '<button class="btn btn-ghost btn-wide" id="k-opruim" style="margin-top:9px">Afgevinkte wissen</button>' : "") +
+      "</div></div>";
+  }
+
+  /* ═══ ruimte-detail ══════════════════════════════════════ */
+  function openRuimte(rid){
+    var r = ruimteVan(rid); if (!r) return;
+    r.maten = r.maten || {vloer:"", wand:"", omtrek:""};
+    var html =
+      '<div class="stack">' +
+        '<div><div class="sectitle"><p class="eyebrow">Onderdelen</p>' +
+        '<button class="btn btn-ghost" data-nieuw style="padding:4px 8px; font-size:13px">+ Toevoegen</button></div>' +
+        '<div id="rd-items"></div></div>' +
+        '<div><p class="eyebrow">Moodboard</p><h2 class="sec">Kleur, materiaal en foto’s</h2>' +
+        '<div class="tiles" id="rd-tiles"></div>' +
+        '<input type="file" id="rd-file" accept="image/*" hidden></div>' +
+        '<div><p class="eyebrow">Links</p><h2 class="sec">Winkels en inspiratie</h2>' +
+        '<div id="rd-links" style="margin-top:10px"></div>' +
+        '<button class="btn btn-wide" data-link style="margin-top:6px">+ Link opslaan</button></div>' +
+        '<div><p class="eyebrow">Maten</p><h2 class="sec">Hoeveel heb je nodig?</h2>' +
+        '<p class="lede">Vul de maten in, dan reken ik de materialen uit die je meestal vergeet.</p>' +
+        '<div class="duo" style="margin-top:12px">' +
+          '<label class="field"><span>Vloer (m²)</span><input id="m-vloer" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(r.maten.vloer) + '"></label>' +
+          '<label class="field"><span>Wand (m²)</span><input id="m-wand" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(r.maten.wand) + '"></label>' +
+        "</div>" +
+        '<label class="field"><span>Omtrek (m)</span><input id="m-omtrek" type="number" inputmode="decimal" min="0" step="0.1" value="' + esc(r.maten.omtrek) + '">' +
+        '<span class="hint">Voor plinten en kimband. Laat leeg wat je niet weet.</span></label>' +
+        '<div id="rd-mat"></div></div>' +
+        '<div><button class="btn btn-danger btn-wide" data-verwijder>Ruimte verwijderen</button></div>' +
+      "</div>";
+    var p = openPaneel(r.naam, html, {
+      actie: '<button class="iconbtn" data-hernoem aria-label="Naam wijzigen"><svg class="glyph" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg></button>'
+    });
+
+    function tekenItems(){
+      var list = itemsVan(rid);
+      $("#rd-items", p).innerHTML = list.length
+        ? '<div class="rows">' + list.map(function(i){ return itemRij(i); }).join("") + "</div>"
+        : '<div class="empty" style="margin-top:11px">Nog niets in deze ruimte.</div>';
+    }
+    function tekenLinks(){
+      r.links = r.links || [];
+      $("#rd-links", p).innerHTML = r.links.length ? r.links.map(function(l){
+        return '<div class="linkrow">' + EXT + '<a href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' +
+          esc(l.naam || l.url) + '</a><button class="iconbtn" data-linkweg="' + l.id + '" aria-label="Verwijderen">×</button></div>';
+      }).join("") : '<p class="lede" style="margin:0">Nog geen links.</p>';
+    }
+    function tekenTiles(){
+      var bd = beeldVan(rid);
+      $("#rd-tiles", p).innerHTML = bd.map(function(b){
+        var inhoud = b.soort === "staal"
+          ? '<span class="swatch" style="background:' + esc(b.kleur) + '"></span>'
+          : '<img alt="' + esc(b.naam || "foto") + '" data-foto="' + b.id + '">';
+        return '<div class="tile">' + inhoud +
+          '<button class="del" data-beeldweg="' + b.id + '" aria-label="Verwijderen">×</button>' +
+          (b.naam ? '<span class="cap">' + esc(b.naam) + "</span>" : "") + "</div>";
+      }).join("") +
+        '<button class="tile add" data-foto-add type="button"><span><span class="plus">+</span><small>foto</small></span></button>' +
+        '<button class="tile add" data-staal-add type="button"><span><span class="plus">◧</span><small>staal</small></span></button>';
+      bd.filter(function(b){ return b.soort !== "staal"; }).forEach(function(b){
+        fotoHaal(b.id).then(function(url){
+          var img = $('[data-foto="' + b.id + '"]', p);
+          if (img && url) img.src = url;
+        });
+      });
+    }
+    function tekenMat(){
+      var v = Number($("#m-vloer", p).value) || 0;
+      var w = Number($("#m-wand", p).value) || 0;
+      var o = Number($("#m-omtrek", p).value) || 0;
+      var bron = {vloer:v, wand:w, plafond:v, omtrek:o};
+      var rijen = MATERIAAL.filter(function(m){ return bron[m[0]] > 0; }).map(function(m){
+        var hoeveel = bron[m[0]] * m[1];
+        var afgerond = hoeveel < 10 ? Math.round(hoeveel*10)/10 : Math.ceil(hoeveel);
+        return "<tr><td>" + esc(m[2]) + '<span class="sub">' + esc(m[4]) + "</span></td>" +
+          "<td>" + afgerond.toLocaleString("nl-NL") + " " + m[3] + "</td></tr>";
+      }).join("");
+      $("#rd-mat", p).innerHTML = rijen
+        ? '<table class="mtab"><thead><tr><th>Materiaal</th><th style="text-align:right">Schatting</th></tr></thead><tbody>' +
+          rijen + "</tbody></table>" +
+          '<p class="lede" style="font-size:12.5px">Richtgetallen om mee naar de bouwmarkt te gaan. Het etiket van het product wint altijd.</p>'
+        : '<div class="empty">Vul minstens één maat in.</div>';
+    }
+    tekenItems(); tekenLinks(); tekenTiles(); tekenMat();
+
+    p.addEventListener("input", function(e){
+      if (/^m-(vloer|wand|omtrek)$/.test(e.target.id)){
+        r.maten.vloer = $("#m-vloer", p).value;
+        r.maten.wand = $("#m-wand", p).value;
+        r.maten.omtrek = $("#m-omtrek", p).value;
+        bewaar(); tekenMat();
+      }
+    });
+    p.addEventListener("click", function(e){
+      var t = e.target;
+      if (t.closest("[data-nieuw]")) return openItem(null, rid);
+      var rij = t.closest("[data-item]");
+      if (rij) return openItem(rij.dataset.item);
+      if (t.closest("[data-hernoem]")){
+        var n = prompt("Nieuwe naam voor de ruimte:", r.naam);
+        if (n && n.trim()){ r.naam = n.trim(); bewaar(); $("h2", p).textContent = r.naam; }
+        return;
+      }
+      if (t.closest("[data-verwijder]")){
+        var aantal = itemsVan(rid).length;
+        if (!confirm("“" + r.naam + "” verwijderen?" + (aantal ? " Er " + (aantal === 1 ? "staat 1 onderdeel" : "staan " + aantal + " onderdelen") + " in dat dan ook verdwijnt." : ""))) return;
+        D.items = D.items.filter(function(i){ return i.ruimteId !== rid; });
+        beeldVan(rid).forEach(function(b){ if (b.soort !== "staal") fotoWeg(b.id); });
+        D.beeld = D.beeld.filter(function(b){ return b.ruimteId !== rid; });
+        D.ruimtes = D.ruimtes.filter(function(x){ return x.id !== rid; });
+        bewaar(); sluitPaneel(p); toast("Ruimte verwijderd"); return;
+      }
+      if (t.closest("[data-link]")){
+        var url = prompt("Plak de link:"); if (!url) return;
+        if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+        var naam = prompt("Hoe wil je 'm noemen?", "") || url.replace(/^https?:\/\/(www\.)?/i,"").split("/")[0];
+        r.links = r.links || []; r.links.push({id:uid(), naam:naam, url:url});
+        bewaar(); tekenLinks(); toast("Link opgeslagen"); return;
+      }
+      var lw = t.closest("[data-linkweg]");
+      if (lw){
+        r.links = (r.links||[]).filter(function(l){ return l.id !== lw.dataset.linkweg; });
+        bewaar(); tekenLinks(); return;
+      }
+      if (t.closest("[data-foto-add]")) return $("#rd-file", p).click();
+      if (t.closest("[data-staal-add]")){
+        var nm = prompt("Wat is dit voor materiaal of kleur?", "");
+        if (nm === null) return;
+        D.beeld.push({id:uid(), ruimteId:rid, soort:"staal", naam:nm,
+                      kleur:STALEN[D.beeld.length % STALEN.length]});
+        bewaar(); tekenTiles(); return;
+      }
+      var bw = t.closest("[data-beeldweg]");
+      if (bw){
+        var bid = bw.dataset.beeldweg;
+        var b = D.beeld.filter(function(x){ return x.id === bid; })[0];
+        if (b && b.soort !== "staal") fotoWeg(bid);
+        D.beeld = D.beeld.filter(function(x){ return x.id !== bid; });
+        bewaar(); tekenTiles(); return;
+      }
+    });
+    $("#rd-file", p).addEventListener("change", function(e){
+      var f = e.target.files && e.target.files[0]; if (!f) return;
+      e.target.value = "";
+      verkleinFoto(f).then(function(url){
+        var id = uid();
+        return fotoZet(id, url).then(function(){
+          var nm = prompt("Bijschrift (mag leeg):", "") || "";
+          D.beeld.push({id:id, ruimteId:rid, soort:"foto", naam:nm});
+          bewaar(); tekenTiles(); toast("Foto toegevoegd");
+        });
+      }).catch(function(){ toast("Die foto lukte niet"); });
+    });
+  }
+
+  function verkleinFoto(file){
+    return new Promise(function(res, rej){
+      var fr = new FileReader();
+      fr.onerror = rej;
+      fr.onload = function(){
+        var img = new Image();
+        img.onerror = rej;
+        img.onload = function(){
+          var s = Math.min(1, 1280/Math.max(img.width, img.height));
+          var c = document.createElement("canvas");
+          c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          res(c.toDataURL("image/jpeg", 0.72));
+        };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  /* ═══ onderdeel ══════════════════════════════════════════ */
+  function openItem(id, ruimteVoorkeur){
+    var nieuw = !id;
+    var it = nieuw
+      ? {id:uid(), naam:"", ruimteId:ruimteVoorkeur || (D.ruimtes[0]||{}).id, soort:"aanschaf",
+         status:"tekiezen", fase:null, begroot:0, betaald:0, winkel:"", artikelnr:"",
+         afmetingen:"", nodigWk:null, leverWk:0, notitie:"", links:[]}
+      : D.items.filter(function(x){ return x.id === id; })[0];
+    if (!it) return;
+    it.links = it.links || [];
+
+    var html =
+      '<label class="field"><span>Wat is het?</span>' +
+        '<input id="i-naam" type="text" value="' + esc(it.naam) + '" placeholder="PVC-vloer woonkamer" autocomplete="off"></label>' +
+      '<label class="field"><span>Ruimte</span><select id="i-ruimte">' +
+        D.ruimtes.map(function(r){ return '<option value="' + r.id + '"' + (r.id === it.ruimteId ? " selected" : "") + ">" + esc(r.naam) + "</option>"; }).join("") +
+      "</select></label>" +
+      '<div class="field"><span>Soort</span><div class="chips" id="i-soort">' +
+        Object.keys(SOORT).map(function(k){ return '<button type="button" data-s="' + k + '" aria-pressed="' + (it.soort === k) + '">' + SOORT[k] + "</button>"; }).join("") +
+      "</div></div>" +
+      '<div class="field"><span>Status</span><div class="chips sm" id="i-status"></div></div>' +
+      '<label class="field"><span>Stap in de werkvolgorde</span><select id="i-fase">' +
+        '<option value="">— nog niet ingedeeld —</option>' +
+        FASES.map(function(f,i){ return '<option value="' + i + '"' + (String(it.fase) === String(i) ? " selected" : "") + ">" + (i+1) + ". " + esc(f[0]) + "</option>"; }).join("") +
+      '</select><span class="hint" id="i-fasehint"></span></label>' +
+      '<label class="field"><span>Afmetingen</span>' +
+        '<input id="i-afm" type="text" value="' + esc(it.afmetingen) + '" placeholder="240 × 90 × 45 cm · 18,5 m²" autocomplete="off"></label>' +
+      '<div class="duo">' +
+        '<label class="field"><span>Winkel of leverancier</span><input id="i-winkel" type="text" value="' + esc(it.winkel) + '" placeholder="Keukenstudio" autocomplete="off"></label>' +
+        '<label class="field"><span>Artikelnummer</span><input id="i-art" type="text" value="' + esc(it.artikelnr) + '" placeholder="ART-88213" autocomplete="off"></label>' +
+      "</div>" +
+      '<div class="duo">' +
+        '<label class="field"><span>Begroot (€)</span><input id="i-begroot" type="number" inputmode="numeric" min="0" step="10" value="' + (Number(it.begroot)||"") + '"></label>' +
+        '<label class="field"><span>Betaald (€)</span><input id="i-betaald" type="number" inputmode="numeric" min="0" step="10" value="' + (Number(it.betaald)||"") + '"></label>' +
+      "</div>" +
+      '<div class="duo">' +
+        '<label class="field"><span>Nodig op</span><input id="i-nodig" type="date" value="' + iso(weekNaarDatum(it.nodigWk)) + '"></label>' +
+        '<label class="field"><span>Levertijd (weken)</span><input id="i-lever" type="number" inputmode="numeric" min="0" max="99" value="' + (Number(it.leverWk)||"") + '"></label>' +
+      "</div>" +
+      '<div class="field" id="i-bestel"></div>' +
+      '<label class="field"><span>Notitie</span><textarea id="i-notitie" placeholder="Maten, afspraken, wat je nog moet uitzoeken…">' + esc(it.notitie) + "</textarea></label>" +
+      '<div class="field"><span>Links</span><div id="i-links"></div>' +
+        '<button class="btn btn-wide" data-ilink style="margin-top:6px">+ Link opslaan</button></div>' +
+      '<div class="btn-row" style="margin-top:6px">' +
+        '<button class="btn btn-primary" data-opslaan style="flex:1; padding:14px">Opslaan</button>' +
+        (nieuw ? "" : '<button class="btn btn-danger" data-weg>Verwijderen</button>') + "</div>";
+
+    var p = openPaneel(nieuw ? "Nieuw onderdeel" : it.naam, html);
+
+    function tekenStatus(){
+      $("#i-status", p).innerHTML = STATUS[it.soort].map(function(s){
+        return '<button type="button" data-st="' + s + '" aria-pressed="' + (it.status === s) + '">' + LABEL[s] + "</button>";
+      }).join("");
+    }
+    function tekenFaseHint(){
+      var v = $("#i-fase", p).value;
+      $("#i-fasehint", p).textContent = v === "" ? "Bepaalt waar het op het Stappen-scherm terechtkomt." : FASES[Number(v)][1];
+    }
+    function tekenBestel(){
+      var el = $("#i-bestel", p);
+      var nodig = $("#i-nodig", p).value, lever = Number($("#i-lever", p).value) || 0;
+      if (!sleutel()){
+        el.innerHTML = '<span class="hint">Vul eerst een sleuteldatum in bij de instellingen, dan rekent de app besteldeadlines uit.</span>';
+        return;
+      }
+      if (!nodig){
+        el.innerHTML = '<span class="hint">Vul een datum in bij “Nodig op” om de uiterste besteldatum te berekenen.</span>';
+        return;
+      }
+      var b = new Date(nodig + "T12:00:00");
+      b.setDate(b.getDate() - lever*7);
+      var dg = dagenTot(b);
+      var kleur = dg < 0 ? "crit" : (dg <= 45 ? "warn" : "ok");
+      var wk = datumNaarWeek(nodig);
+      el.innerHTML = "<span>Uiterste besteldatum</span>" +
+        '<div class="linkrow" style="margin:0"><b style="flex:1; font-family:var(--mono); font-size:14px">' + fmt(b) + "</b>" +
+        '<span class="pill ' + kleur + '">' + (dg < 0 ? Math.abs(dg) + " dgn te laat" : "nog " + dg + " dgn") + "</span></div>" +
+        '<span class="hint">Dat is week ' + (wk >= 0 ? "+" : "") + wk + " ten opzichte van de sleutel. Schuift de sleuteldatum, dan schuift deze mee.</span>";
+    }
+    function tekenILinks(){
+      $("#i-links", p).innerHTML = it.links.length ? it.links.map(function(l){
+        return '<div class="linkrow">' + EXT + '<a href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' +
+          esc(l.naam || l.url) + '</a><button class="iconbtn" data-ilinkweg="' + l.id + '" aria-label="Verwijderen">×</button></div>';
+      }).join("") : '<span class="hint">Nog geen links.</span>';
+    }
+    tekenStatus(); tekenFaseHint(); tekenBestel(); tekenILinks();
+
+    p.addEventListener("input", function(e){
+      if (e.target.id === "i-nodig" || e.target.id === "i-lever") tekenBestel();
+    });
+    p.addEventListener("change", function(e){ if (e.target.id === "i-fase") tekenFaseHint(); });
+    p.addEventListener("click", function(e){
+      var s = e.target.closest("[data-s]");
+      if (s){
+        it.soort = s.dataset.s;
+        if (STATUS[it.soort].indexOf(it.status) === -1) it.status = STATUS[it.soort][0];
+        $$("[data-s]", p).forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.s === it.soort)); });
+        tekenStatus(); return;
+      }
+      var st = e.target.closest("[data-st]");
+      if (st){
+        it.status = st.dataset.st;
+        $$("[data-st]", p).forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.st === it.status)); });
+        return;
+      }
+      if (e.target.closest("[data-ilink]")){
+        var url = prompt("Plak de link:"); if (!url) return;
+        if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+        var naam = prompt("Hoe wil je 'm noemen?", "") || url.replace(/^https?:\/\/(www\.)?/i,"").split("/")[0];
+        it.links.push({id:uid(), naam:naam, url:url}); tekenILinks(); return;
+      }
+      var lw = e.target.closest("[data-ilinkweg]");
+      if (lw){ it.links = it.links.filter(function(l){ return l.id !== lw.dataset.ilinkweg; }); tekenILinks(); return; }
+      if (e.target.closest("[data-weg]")){
+        if (!confirm("“" + it.naam + "” verwijderen?")) return;
+        D.items = D.items.filter(function(x){ return x.id !== it.id; });
+        bewaar(); sluitPaneel(p); toast("Verwijderd"); return;
+      }
+      if (e.target.closest("[data-opslaan]")){
+        var naam2 = $("#i-naam", p).value.trim();
+        if (!naam2) return toast("Geef het een naam");
+        var fv = $("#i-fase", p).value;
+        it.naam = naam2;
+        it.ruimteId = $("#i-ruimte", p).value;
+        it.fase = fv === "" ? null : Number(fv);
+        it.afmetingen = $("#i-afm", p).value.trim();
+        it.winkel = $("#i-winkel", p).value.trim();
+        it.artikelnr = $("#i-art", p).value.trim();
+        it.begroot = Number($("#i-begroot", p).value) || 0;
+        it.betaald = Number($("#i-betaald", p).value) || 0;
+        it.leverWk = Number($("#i-lever", p).value) || 0;
+        it.nodigWk = datumNaarWeek($("#i-nodig", p).value);
+        it.notitie = $("#i-notitie", p).value;
+        it.gewijzigd = Date.now();
+        if (nieuw) D.items.push(it);
+        bewaar(); sluitPaneel(p); toast(nieuw ? "Toegevoegd" : "Opgeslagen");
+        return;
+      }
+    });
+    if (nieuw) setTimeout(function(){ $("#i-naam", p).focus(); }, 60);
+  }
+
+  /* ═══ zoeken ═════════════════════════════════════════════ */
+  function openZoek(){
+    var p = openPaneel("Zoeken",
+      '<input id="z-in" type="search" placeholder="Onderdeel, winkel, artikelnummer…" autocomplete="off" ' +
+      'style="width:100%; background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:13px 14px; font-size:16px">' +
+      '<div id="z-uit" style="margin-top:14px"></div>');
+    var inp = $("#z-in", p), uit = $("#z-uit", p);
+    function zoek(){
+      var t = inp.value.trim().toLowerCase();
+      if (!t){
+        uit.innerHTML = '<p class="lede">Handig als je in de winkel staat: typ een deel van de naam, de winkel of het artikelnummer.</p>';
+        return;
+      }
+      var hits = D.items.filter(function(i){
+        var r = ruimteVan(i.ruimteId);
+        return [i.naam, i.winkel, i.artikelnr, i.afmetingen, i.notitie, r ? r.naam : ""]
+          .join(" ").toLowerCase().indexOf(t) !== -1;
+      });
+      uit.innerHTML = '<p class="lede">' + hits.length + (hits.length === 1 ? " resultaat" : " resultaten") + "</p>" +
+        (hits.length ? '<div class="rows">' + hits.map(function(i){ return itemRij(i, true); }).join("") + "</div>" : "");
+    }
+    inp.addEventListener("input", zoek);
+    p.addEventListener("click", function(e){
+      var ri = e.target.closest("[data-item]");
+      if (ri) openItem(ri.dataset.item);
+    });
+    zoek();
+    setTimeout(function(){ inp.focus(); }, 60);
+  }
+
+  /* ═══ reservekopie ═══════════════════════════════════════
+     Op claude.ai mag een pagina niet zelf een bestand aanbieden;
+     daar gaat het via de download-toestemming van de viewer.
+     Op GitHub Pages en op je eigen domein werkt de gewone link.
+  ═════════════════════════════════════════════════════════ */
+  function exporteer(){
+    var tekst = JSON.stringify(D, null, 2);
+    var naam = "staartploeg-" + iso(vandaag()) + ".json";
+    function viaLink(){
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([tekst], {type:"application/json"}));
+      a.download = naam;
+      a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+      toast("Reservekopie gemaakt");
+    }
+    if (!(window.claude && typeof window.claude.use === "function")) return viaLink();
+    window.claude.use("downloads").then(function(dl){
+      if (!dl) return viaLink();
+      return dl.save({filename:naam, data:tekst}).then(
+        function(){ toast("Reservekopie opgeslagen"); },
+        function(err){
+          if (err && err.code === "declined") return toast("Geannuleerd");
+          if (err && (err.code === "unavailable" || err.code === "not_granted")) return viaLink();
+          toast("Opslaan lukte niet — probeer het opnieuw");
+        });
+    }).catch(viaLink);
+  }
+
+  /* ═══ instellingen ═══════════════════════════════════════ */
+  function openInstellingen(){
+    var html =
+      '<label class="field"><span>Projectnaam</span><input id="p-naam" type="text" value="' + esc(D.project.naam) + '"></label>' +
+      '<label class="field"><span>Sleuteldatum</span><input id="p-datum" type="date" value="' + esc(D.project.sleutel) + '">' +
+      '<span class="hint">Alle deadlines rekenen hiervandaan. Schuift de oplevering, pas dit dan aan — de hele planning schuift mee.</span></label>' +
+      '<label class="field"><span>Budget (€)</span><input id="p-budget" type="number" inputmode="numeric" min="0" step="500" value="' + (Number(D.project.budget)||"") + '"></label>' +
+      '<button class="btn btn-primary btn-wide" data-psave style="padding:13px">Opslaan</button>' +
+      '<hr class="hr"><div class="sectitle"><p class="eyebrow">Ruimtes</p>' +
+      '<button class="btn btn-ghost" data-rnieuw style="padding:4px 8px; font-size:13px">+ Ruimte</button></div>' +
+      '<div id="p-ruimtes" class="rows"></div>' +
+      '<hr class="hr"><p class="eyebrow">Gegevens</p>' +
+      '<p class="lede" style="margin-bottom:12px">De gegevens staan nu alleen op dit apparaat. Maak af en toe een reservekopie — dit is straks ook het bestand waarmee we naar een gedeelde versie voor jullie samen verhuizen.</p>' +
+      '<div class="btn-row"><button class="btn" data-export>Reservekopie opslaan</button>' +
+      '<button class="btn" data-import>Terugzetten</button></div>' +
+      '<input type="file" id="p-file" accept="application/json" hidden>';
+    var p = openPaneel("Instellingen", html);
+
+    function tekenR(){
+      $("#p-ruimtes", p).innerHTML = D.ruimtes.map(function(r){
+        return '<div class="row" style="cursor:default"><span class="txt" style="grid-column:1/3"><b>' + esc(r.naam) + "</b>" +
+          "<span>" + itemsVan(r.id).length + " onderdelen</span></span>" +
+          '<span class="right"><button class="iconbtn" data-rweg="' + r.id + '" aria-label="Verwijderen">×</button></span></div>';
+      }).join("") || '<div class="empty">Nog geen ruimtes.</div>';
+    }
+    tekenR();
+
+    p.addEventListener("click", function(e){
+      if (e.target.closest("[data-psave]")){
+        D.project.naam = $("#p-naam", p).value.trim() || "Mijn woning";
+        D.project.sleutel = $("#p-datum", p).value;
+        D.project.budget = Number($("#p-budget", p).value) || 0;
+        bewaar(); toast("Opgeslagen"); tekenKop(); return;
+      }
+      if (e.target.closest("[data-rnieuw]")){
+        var n = prompt("Naam van de ruimte:"); if (!n || !n.trim()) return;
+        D.ruimtes.push({id:uid(), naam:n.trim(), volgorde:D.ruimtes.length});
+        bewaar(); tekenR(); return;
+      }
+      var rw = e.target.closest("[data-rweg]");
+      if (rw){
+        var rid = rw.dataset.rweg, r = ruimteVan(rid), aantal = itemsVan(rid).length;
+        if (!confirm("“" + r.naam + "” verwijderen?" + (aantal ? " Ook " + aantal + " onderdelen." : ""))) return;
+        D.items = D.items.filter(function(i){ return i.ruimteId !== rid; });
+        beeldVan(rid).forEach(function(b){ if (b.soort !== "staal") fotoWeg(b.id); });
+        D.beeld = D.beeld.filter(function(b){ return b.ruimteId !== rid; });
+        D.ruimtes = D.ruimtes.filter(function(x){ return x.id !== rid; });
+        bewaar(); tekenR(); return;
+      }
+      if (e.target.closest("[data-export]")) return exporteer();
+      if (e.target.closest("[data-import]")) return $("#p-file", p).click();
+    });
+    $("#p-file", p).addEventListener("change", function(e){
+      var f = e.target.files && e.target.files[0]; if (!f) return;
+      var fr = new FileReader();
+      fr.onload = function(){
+        try {
+          var n = JSON.parse(fr.result);
+          if (!n || !n.versie) throw new Error("bad");
+          if (!confirm("Dit vervangt alles wat er nu in staat. Doorgaan?")) return;
+          D = n; bewaar(); sluitAlle(); tekenAlles(); toast("Teruggezet");
+        } catch(err){ toast("Dat bestand kon ik niet lezen"); }
+      };
+      fr.readAsText(f);
+    });
+  }
+
+  /* ═══ tekenen ════════════════════════════════════════════ */
+  function tekenKop(){
+    $("#projectnaam").innerHTML = esc(D.project.naam || "Staartploeg") + '<span class="dot">.</span>';
+    var s = sleutel();
+    if (s){
+      var wk = Math.round((s - vandaag())/(7*86400000));
+      $("#s-weken").textContent = Math.abs(wk);
+      $("#s-weken-l").textContent = wk >= 0 ? "weken tot sleutel" : "weken sinds sleutel";
+    } else {
+      $("#s-weken").textContent = "—"; $("#s-weken-l").textContent = "geen datum";
+    }
+    $("#s-actie").textContent = D.items.filter(function(i){ return urgentie(i); }).length;
+    var begroot = D.items.reduce(function(a,i){ return a + (Number(i.begroot)||0); }, 0);
+    if (D.project.budget){
+      $("#s-geld").textContent = Math.round(begroot / D.project.budget * 100) + "%";
+      $("#s-geld-l").textContent = "van " + kort(D.project.budget);
+    } else {
+      $("#s-geld").textContent = kort(begroot);
+      $("#s-geld-l").textContent = "begroot";
+    }
+  }
+  var actief = "ruimtes";
+  function tekenAlles(){
+    tekenKop();
+    if (actief === "ruimtes") tekenRuimtes();
+    else if (actief === "stappen") tekenStappen();
+    else if (actief === "nu") tekenNu();
+    else tekenInkoop();
+  }
+  function ga(pane){
+    var b = $('.nav button[data-pane="' + pane + '"]');
+    if (b) b.click();
+  }
+
+  /* ═══ gebeurtenissen ═════════════════════════════════════ */
+  $$(".nav button").forEach(function(b){
+    b.addEventListener("click", function(){
+      actief = b.dataset.pane;
+      $$(".nav button").forEach(function(o){ o.setAttribute("aria-selected", String(o === b)); });
+      $$("[data-view]").forEach(function(v){ v.hidden = v.dataset.view !== actief; });
+      tekenAlles();
+      window.scrollTo({top:0, behavior:"instant"});
+    });
+  });
+  $("#fab").addEventListener("click", function(){
+    if (!D.ruimtes.length) return toast("Voeg eerst een ruimte toe");
+    openItem(null, null);
+  });
+  $("#btn-meer").addEventListener("click", openInstellingen);
+  $("#btn-zoek").addEventListener("click", openZoek);
+  $(".hdrstats").addEventListener("click", function(e){
+    var s = e.target.closest(".stat"); if (s && s.dataset.ga) ga(s.dataset.ga);
+  });
+
   document.addEventListener("click", function(e){
-    var b = e.target.closest(".row[data-id]"); if (!b) return;
-    var it = ITEMS.filter(function(x){ return x.id === b.dataset.id; })[0];
-    toast(it.naam + " — " + LABEL[it.status] + (it.winkel ? " · " + it.winkel : ""));
+    if (host.children.length) return;
+    var rc = e.target.closest("[data-ruimte]");
+    if (rc) return openRuimte(rc.dataset.ruimte);
+    var ri = e.target.closest("[data-item]");
+    if (ri) return openItem(ri.dataset.item);
+    var kb = e.target.closest("[data-klus]");
+    if (kb){
+      var k = D.klusjes.filter(function(x){ return x.id === kb.dataset.klus; })[0];
+      if (k){ k.done = !k.done; bewaar(); tekenInkoop(); }
+      return;
+    }
+    if (e.target.id === "k-btn"){
+      var inp = $("#k-add"), v = inp ? inp.value.trim() : "";
+      if (!v) return;
+      D.klusjes.push({id:uid(), naam:v, done:false}); bewaar(); tekenInkoop();
+      var n = $("#k-add"); if (n) n.focus();
+      return;
+    }
+    if (e.target.id === "k-opruim"){
+      D.klusjes = D.klusjes.filter(function(k){ return !k.done; }); bewaar(); tekenInkoop(); return;
+    }
   });
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Enter" && e.target.id === "k-add"){ e.preventDefault(); var b = $("#k-btn"); if (b) b.click(); }
+    if (e.key === "Escape" && host.lastElementChild) sluitPaneel(host.lastElementChild);
+  });
+
+  /* ═══ start ══════════════════════════════════════════════ */
+  function start(){ $("#app").hidden = false; $("#fab").hidden = false; tekenAlles(); }
+  D = laad();
+  if (!D.ruimtes.length && !D.items.length) toonSetup(); else start();
 })();
 </script>
 </body>

@@ -6,67 +6,86 @@ Levend document. Groeit met elke interviewronde; ik werk het bij zodra jij antwo
 | --- | --- |
 | **Project** | Afbouw en inrichting van een nieuwbouwwoning, oplevering 2027 |
 | **Opdrachtgever** | Frank |
-| **Laatst bijgewerkt** | 23 augustus 2026 — na interviewronde 1 |
-| **Prototype** | https://claude.ai/code/artifact/d3a4ece3-ec9b-4e91-9423-f7419b0d4365 |
+| **Laatst bijgewerkt** | 23 augustus 2026 — na interviewronde 2 en oplevering v0.3 |
+| **App** | https://claude.ai/code/artifact/d3a4ece3-ec9b-4e91-9423-f7419b0d4365 |
 
-Status per regel: **VAST** = besloten · **VOORSTEL** = mijn invulling, mag omver · **OPEN** = wacht op antwoord.
+Status per regel: **GEBOUWD** = zit in v0.3 · **VAST** = besloten, nog te bouwen ·
+**VOORSTEL** = mijn invulling, mag omver · **OPEN** = wacht op antwoord.
 
 ---
 
 ## 1. Waar de app voor is
 
 **VAST** — De app ondersteunt één project: het afbouwen en inrichten van een nieuwbouwwoning.
-Niet het bouwen zelf; wel alles daarna en eromheen — keuken, badkamer, vloeren, wanden,
-verlichting, meubels, tuin, en de administratie die erbij hoort.
+Niet het bouwen zelf; wel alles daarna — keuken, badkamer, vloeren, wanden, verlichting,
+meubels, tuin, en de administratie eromheen.
 
-**VAST** — Het is een planning-, registratie-, checklist- en boodschappenlijstinstrument,
-aangevuld met beeldmateriaal en opgeslagen winkellinks.
+**VAST** — Mobiel is de hoofdvorm. De webversie is dezelfde app op een breder scherm.
 
-**VAST** — Mobiel is de hoofdvorm. De webversie is dezelfde app op een breder scherm,
-geen apart product.
+**VAST** — De app vervangt de huidige werkwijze in Google Drive en Excel. Dat is de meetlat:
+als iets in de app meer handelingen kost dan in Excel, is het ontwerp fout.
 
-**VAST** — De app vervangt de huidige werkwijze in Google Drive en Excel. Dat is het
-ijkpunt: als iets in de app omslachtiger is dan in Excel, is het ontwerp fout.
+**VAST** — De **ruimte** is het organiserende principe. Frank denkt in kamers, niet in
+deadlines: de app opent op ruimtes, beeld hangt aan een ruimte, en ruimtes waren het eerste
+dat gebouwd is.
 
-**VOORSTEL** — De app moet drie vragen in vijf seconden beantwoorden:
-*Wat moet ik nú doen? Waar staan we? Wat gaat er mis?*
+## 1b. Waar het op moet lijken
+
+Frank noemde vijf bestaande gereedschappen. De app moet daar één ding van worden:
+
+| Bron | Wat we ervan overnemen | Status |
+| --- | --- | --- |
+| **Milanote** | Visueel bord per kamer: foto's, tegels, kleurcodes, productlinks en afmetingen bij elkaar, om combinaties te zien vóór je bestelt | GEBOUWD, nog niet als vrij sleepbaar bord |
+| **Notion** | Tabel per kamer met Product, Ruimte, Link/Artikelnummer, Afmetingen, Prijs, Status | GEBOUWD |
+| **Houzz / Pinterest** | Inspiratie koppelen aan concrete materialen | Deels — links en foto's kunnen, importeren nog niet |
+| **Kluswijzers (Gamma, Praxis, Hornbach)** | Materiaalberekening per m²: voorstrijk, tegellijm, voegmortel, egaline | GEBOUWD |
+| **Klusidee** | Antwoorden op specifieke klusvragen | Niet ingebouwd; blijft een link |
 
 ---
 
 ## 2. Het model
 
-**VOORSTEL** — Er is één centraal object: het **onderdeel**. Planning, checklist,
-boodschappenlijst, budget en moodboard zijn geen aparte lijsten maar zes vensters op
+**GEBOUWD** — Er is één centraal object: het **onderdeel**. Alle schermen zijn vensters op
 dezelfde verzameling. Eén keer invoeren, overal zichtbaar.
-
-Een onderdeel heeft:
 
 | Veld | Toelichting |
 | --- | --- |
 | Naam | "PVC-vloer woonkamer" |
-| Ruimte | Woonkamer, Keuken, Hele huis, Tuin, Administratie… |
-| Soort | Aanschaf (kopen), klus (doen), of beide |
-| Status | Aanschaf: idee → gekozen → offerte → besteld → geleverd → klaar<br>Klus: te doen → ingepland → bezig → klaar |
-| Geld | Begroot / geoffreerd / betaald |
-| Tijd | Wanneer nodig + levertijd → **uiterste besteldatum wordt berekend, niet ingevoerd** |
-| Afhankelijkheid | "Kan pas na …" |
-| Beeld | Foto's, screenshots, kleur- en materiaalstalen |
-| Links | Webshop, offerte, productpagina |
+| Ruimte | Zelf te benoemen |
+| Soort | Kopen, klus, of allebei |
+| Status | Kopen: Te kiezen → Gekozen → Besteld → Geleverd op bouw → Gemonteerd<br>Klus: Te doen → Ingepland → Bezig → Klaar |
+| Stap | Welke van de acht stappen in de werkvolgorde |
+| Afmetingen | Vrij veld: "240 × 90 × 45 cm" of "18,5 m²" |
+| Winkel | Leverancier |
+| Artikelnummer | Om in de winkel terug te vinden |
+| Geld | Begroot en betaald |
+| Tijd | Nodig op (datum) + levertijd → **uiterste besteldatum wordt berekend** |
 | Notitie | Vrij veld |
-| Wie | Wie het heeft toegevoegd of gewijzigd — nodig nu er twee mensen in werken |
+| Links | Webshop, productpagina, offerte |
 
-De zes vensters:
+**GEBOUWD** — Losstaand daarvan: het **bouwmarktlijstje**. Kit, voorstrijk, verlengsnoer.
+Geen status, geen budget, geen planning — snel toevoegen en afvinken in de winkel.
 
-1. **Nu** — alleen wat deze week moet. Openingsscherm.
-2. **Ruimtes** — gegroepeerd per kamer, met voortgang en budget.
-3. **Inkoop** — wat besteld of gehaald moet worden, gegroepeerd per winkel.
-4. **Beeld** — foto's, kleuren en materialen per ruimte, met winkellinks.
-5. **Planning** — tijdlijn met afhankelijkheden en kritiek pad.
-6. **Budget** — begroot naast geoffreerd naast betaald.
+**GEBOUWD** — Beeld hangt aan een **ruimte**: foto's (camera of galerij) en kleur- of
+materiaalstalen, met de winkellinks van die ruimte ernaast.
 
-**VOORSTEL** — Naast onderdelen bestaat een tweede, veel lichter type: het
-**bouwmarktlijstje**. Kit, schuurpapier, verlengsnoer. Geen status, geen budget, geen
-planning — alleen snel toevoegen en afvinken in de winkel.
+**GEBOUWD** — Datums zijn **relatief aan de sleuteldatum** opgeslagen. Schuift de oplevering,
+dan schuiven alle deadlines automatisch mee. Dat is de reden dat de app om één sleuteldatum
+vraagt in plaats van om losse datums per onderdeel.
+
+## 2b. De werkvolgorde
+
+**VAST** — De acht stappen, in deze volgorde. Stof, vocht en zware werkzaamheden bepalen de
+volgorde; wie de vloer te vroeg legt, legt hem twee keer.
+
+1. Voorbereiding, ruwbouw & leidingwerk — *voordat er ook maar iets wordt afgewerkt*
+2. Waterdichting & natte voorbereiding — *essentieel voor de badkamer*
+3. Stucwerk & wandafwerking (droge ruimtes) — *vóórdat de vloeren erin gaan*
+4. Tegelwerk & voegen — *badkamer, toilet en eventuele tegelvloeren*
+5. Schilderwerk & spuiten — *wanden en plafonds afwerken*
+6. Vloeren leggen (woon- en slaapkamers) — *pas als al het zware en natte werk klaar is*
+7. Montage & installatie — *keuken, binnendeuren en sanitair*
+8. Afkitten & fijnafwerking — *de laatste stap*
 
 ---
 
@@ -76,51 +95,54 @@ planning — alleen snel toevoegen en afvinken in de winkel.
 
 | # | Requirement | Status |
 | --- | --- | --- |
-| F1 | Onderdeel toevoegen met minimaal een naam; alle andere velden mogen later | VOORSTEL |
-| F2 | Toevoegen moet binnen enkele seconden kunnen, staand, met één hand | VOORSTEL |
-| F3 | Status wijzigen in één tik vanuit elke lijst | VOORSTEL |
-| F4 | Onderdelen groeperen per ruimte; ruimtes zelf benoemen | VOORSTEL |
-| F5 | Vrije notities per onderdeel | VOORSTEL |
-| F26 | Zoeken over alles — ook staand in een winkel bruikbaar | VAST |
+| F1 | Onderdeel toevoegen met minimaal een naam | GEBOUWD |
+| F2 | Toevoegen in enkele seconden, met één hand | GEBOUWD |
+| F3 | Status wijzigen in één tik | GEBOUWD |
+| F4 | Groeperen per ruimte, ruimtes zelf benoemen | GEBOUWD |
+| F5 | Vrije notities, afmetingen en artikelnummer | GEBOUWD |
+| F26 | Zoeken over naam, winkel, artikelnummer, maten en notities | GEBOUWD |
 
 ### Planning en deadlines
 
 | # | Requirement | Status |
 | --- | --- | --- |
-| F6 | Terugrekenen: nodig-op-datum minus levertijd = uiterste besteldatum, automatisch | VOORSTEL |
-| F7 | Afhankelijkheden tussen onderdelen; schuift er één, dan schuift de rest zichtbaar mee | VOORSTEL |
-| F8 | Kritiek pad zichtbaar maken | VOORSTEL |
-| F9 | Aparte, harde categorie voor koperskeuze-deadlines van de aannemer | VOORSTEL |
-| F10 | Waarschuwen ruim vóór een deadline, niet erna | VOORSTEL |
-| F11 | Beslissingen met een uiterste beslisdatum ("bank kiezen vóór 3 maart") | VOORSTEL |
-| F12 | Vorm van de waarschuwing: push, e-mail, agenda of alleen in de app | UITGESTELD |
+| F6 | Terugrekenen: nodig-op minus levertijd = uiterste besteldatum | GEBOUWD |
+| F27 | Werkvolgorde in acht stappen, met onderdelen per stap | GEBOUWD |
+| F28 | Automatisch tonen welke stap nu aan de beurt is | GEBOUWD |
+| F7 | Afhankelijkheden tussen individuele onderdelen | VOORSTEL |
+| F9 | Aparte, harde categorie voor koperskeuze-deadlines | VAST |
+| F11 | Beslissingen met een uiterste beslisdatum | VAST |
+| F12 | Vorm van de waarschuwing: push, e-mail, agenda of in de app | UITGESTELD |
 
-### Checklist en boodschappen
+### Checklist, boodschappen en materiaal
 
 | # | Requirement | Status |
 | --- | --- | --- |
-| F13 | Inkooplijst: alles wat besteld moet worden, gegroepeerd per leverancier | VOORSTEL |
-| F14 | Bouwmarktlijstje: los, snel toevoegen, afvinken | VOORSTEL |
-| F15 | Klussenchecklist per ruimte, afvinkbaar | VOORSTEL |
-| F16 | Standaard checklists om over te nemen (verhuizen, nutsvoorzieningen, verzekeringen) | VOORSTEL |
+| F13 | Inkooplijst gegroepeerd per winkel | GEBOUWD |
+| F14 | Bouwmarktlijstje: los, snel toevoegen, afvinken | GEBOUWD |
+| F29 | Materiaalcalculator per ruimte op basis van m² en omtrek | GEBOUWD |
+| F30 | Berekend materiaal in één tik naar het bouwmarktlijstje | VAST |
+| F16 | Standaard checklists (verhuizen, nutsvoorzieningen, verzekeringen) | VOORSTEL |
 
 ### Beeld en links
 
 | # | Requirement | Status |
 | --- | --- | --- |
-| F17 | Foto's toevoegen vanuit camera of galerij | VAST |
-| F18 | Moodboard per ruimte: foto's, screenshots, kleur- en materiaalstalen naast elkaar | VAST |
-| F19 | Links opslaan (webshop, productpagina, offerte, Pinterest) | VAST |
-| F20 | Waar beeld en link landen bij het opslaan | OPEN → B12 |
+| F17 | Foto's toevoegen vanuit camera of galerij, automatisch verkleind | GEBOUWD |
+| F18 | Moodboard per ruimte: foto's en kleur-/materiaalstalen | GEBOUWD |
+| F19 | Links opslaan bij ruimte én bij onderdeel | GEBOUWD |
+| F31 | Vrij sleepbaar bord in plaats van een raster (à la Milanote) | VOORSTEL |
+| F32 | Eigen kleur kiezen bij een staal in plaats van automatisch | VAST |
 | F21 | Twee opties naast elkaar leggen om te kiezen | VOORSTEL |
-| F22 | Documenten koppelen (offerte, factuur, garantie) of naar Drive linken | VOORSTEL |
+| F33 | Delen vanuit een webshop rechtstreeks de app in | VOORSTEL |
+| F22 | Documenten koppelen of naar Drive linken | VOORSTEL |
 
 ### Geld
 
 | # | Requirement | Status |
 | --- | --- | --- |
-| F23 | Begroot, geoffreerd en betaald per onderdeel en per ruimte | VOORSTEL |
-| F24 | Totaal versus budget, met wat er nog te gaan is | VOORSTEL |
+| F23 | Begroot en betaald per onderdeel en per ruimte | GEBOUWD |
+| F24 | Totaal versus budget | GEBOUWD |
 | F25 | Cashflow: wanneer moet welk bedrag betaald zijn | VOORSTEL |
 
 ---
@@ -129,17 +151,16 @@ planning — alleen snel toevoegen en afvinken in de winkel.
 
 | # | Requirement | Status |
 | --- | --- | --- |
-| N1 | Mobile-first; ontworpen op 375 px, verbreedt naar desktop | VAST |
-| N2 | Te openen via een URL, installeerbaar op het beginscherm | VOORSTEL |
-| N3 | Bruikbaar met stoffige handen: grote raakvlakken, weinig typewerk | VOORSTEL |
-| N4 | ~~Offline werken~~ — **niet nodig**, er is altijd bereik | VAST |
-| N5 | Twee gebruikers: Frank en partner, allebei lezen én schrijven | VAST |
-| N6 | Wijzigingen van de één zijn zichtbaar bij de ander | VAST |
-| N7 | Gegevens exporteerbaar; geen opsluiting in één app | VOORSTEL |
+| N1 | Mobile-first, ontworpen op 375 px | GEBOUWD |
+| N4 | ~~Offline werken~~ — niet nodig, er is altijd bereik | VERVALLEN |
+| N7 | Gegevens exporteerbaar als JSON, en terug te zetten | GEBOUWD |
+| N10 | Donkere en lichte modus, contrast op AA-niveau | GEBOUWD |
+| N2 | Installeerbaar op het beginscherm | VAST |
+| N5 | Twee gebruikers, allebei lezen en schrijven | VAST, uitgesteld |
+| N6 | Wijzigingen van de één zichtbaar bij de ander | VAST, uitgesteld |
+| N9 | GitHub Pages, later eventueel eigen domein | VAST |
 | N8 | Afscherming: publiek bereikbaar of niet | OPEN |
-| N9 | Voorlopig GitHub Pages, later eventueel eigen domein | VAST |
-| N10 | Donkere en lichte modus, contrast op AA-niveau | VAST |
-| N11 | Waar de gegevens wonen | OPEN → B11 |
+| N11 | Waar de gedeelde gegevens gaan wonen | UITGESTELD → B11 |
 
 ---
 
@@ -147,54 +168,25 @@ planning — alleen snel toevoegen en afvinken in de winkel.
 
 | # | Vraag | Blokkeert |
 | --- | --- | --- |
-| ~~B1~~ | ~~Wanneer pak je de app erbij?~~ → beide momenten, zie B10 | — |
-| ~~B2~~ | ~~Waar houd je het nu bij?~~ → Drive en Excel | — |
-| ~~B3~~ | ~~Doet je partner mee?~~ → ja, volwaardig | — |
-| ~~B4~~ | ~~Offline nodig?~~ → nee, altijd bereik | — |
-| ~~B5~~ | ~~Waar komt beeld vandaan?~~ → alles: eigen foto's, screenshots, Pinterest | — |
-| ~~B6~~ | ~~Hoe gewaarschuwd worden?~~ → later beslissen | F12 |
-| **B10** | Hoe opent de app, gegeven dat je 'm zowel plannend als onderweg gebruikt | Het openingsscherm |
-| **B11** | Waar de gegevens wonen, nu er twee mensen in werken | N11, hele architectuur |
-| **B12** | Waar beeld en links landen op het moment dat je ze opslaat | F20 |
-| **B13** | Welk venster ik als eerste echt afbouw | Bouwvolgorde |
+| B11 | Waar de gegevens wonen zodra jullie samen gaan werken | N5, N6 |
 | B7 | Wanneer is de oplevering en hoeveel speling zit er? | Alle datumberekeningen |
 | B8 | Wat doet de aannemer wel en niet? | De inhoud van de lijst |
 | B9 | Ligt er vloerverwarming? | Kritiek pad rond droogstoken en vloer |
+| B14 | Moet de materiaalcalculator per klus vragen wát je doet, of alles tonen met een voorbehoud? | F29 |
+
+Afgehandeld: B1 t/m B6 (ronde 1), B10 t/m B13 (ronde 2).
 
 ---
 
-## 6. Gevolgen van ronde 1
-
-**Twee antwoorden veranderen de opzet:**
-
-*Partner doet volwaardig mee (N5) + altijd bereik (N4).* Samen betekent dat de gegevens
-niet meer op één telefoon kunnen staan. Er moet een centrale plek komen waar beide
-telefoons naartoe schrijven. Dat "altijd bereik" is daarbij goed nieuws: het maakt de
-ingewikkeldste variant — offline werken en later samenvoegen, inclusief het oplossen van
-conflicten — overbodig. Dat scheelt fors in complexiteit.
-
-Het gevolg is wel dat GitHub Pages alleen niet volstaat. Pages serveert statische
-bestanden en kan niets opslaan. Er moet iets naast. Dat is beslissing **B11**.
-
-*Nu al in Drive en Excel.* Dat is geen detail maar de meetlat. Als een handeling in de
-app meer tikken kost dan in Excel, gaat hij het niet halen. Het pleit er ook voor om
-Drive niet weg te duwen: documenten en offertes mogen daar blijven wonen, met een
-verwijzing vanuit de app.
-
----
-
-## 7. Interviewlog
+## 6. Interviewlog
 
 ### Ronde 0 — uitgangspunten (23 aug 2026)
 
-- Het gaat om afbouw en inrichting, niet om de bouw zelf.
-- Web én mobiel, met de nadruk op mobiel.
-- Ontwikkeling gebeurt grotendeels vanaf de telefoon; validatie via een online URL.
-- GitHub Pages nu, eigen domein mogelijk later.
-- De vragenlijst is een hulpmiddel voor requirements, **geen** functionaliteit van de app.
-- Gewenste kern: planning, registratie, boodschappenlijst, checklist, moodboard en links.
+Afbouw en inrichting, niet de bouw zelf. Web én mobiel, nadruk op mobiel. Ontwikkeling
+vanaf de telefoon, validatie via een online URL. GitHub Pages nu, eigen domein later.
+De vragenlijst is gereedschap voor requirements, geen functionaliteit.
 
-### Ronde 1 — hoe je de app gaat gebruiken (23 aug 2026)
+### Ronde 1 — hoe je de app gebruikt (23 aug 2026)
 
 | Vraag | Antwoord |
 | --- | --- |
@@ -205,12 +197,20 @@ verwijzing vanuit de app.
 | Waar komt beeld vandaan? | Combinatie van alles |
 | Hoe gewaarschuwd worden? | Later beslissen |
 
-**Over de werkwijze:** vanaf nu keuzevragen met concrete opties in plaats van open
-vragen. Sneller te beantwoorden en het dwingt mij scherpere voorstellen te doen.
+**Over de werkwijze:** vanaf nu keuzevragen met concrete opties in plaats van open vragen.
 
-### Ronde 2 — de vier keuzes (uitgezet 23 aug 2026)
+### Ronde 2 — vier keuzes (23 aug 2026)
 
-B10 openingsscherm · B11 opslag · B12 beeld en links · B13 bouwvolgorde.
+| Keuze | Antwoord | Gevolg |
+| --- | --- | --- |
+| Startscherm | Ruimtes eerst | App opent op de kamerlijst; zoeken zit in de kop |
+| Opslag | Eerst alleen jij | localStorage nu; export/import als brug naar later |
+| Beeld en links | Meteen aan een ruimte | Geen inbox; beeld hoort direct bij een kamer |
+| Eerst bouwen | Invoeren + Ruimtes | v0.3 |
+
+**Aanvulling van Frank:** de app moet een combinatie worden van Milanote, Notion,
+Houzz/Pinterest, de Kluswijzers van de bouwmarkten en Klusidee — plus de achtstaps
+werkvolgorde. Zie 1b en 2b.
 
 ### Ronde 3 — het project zelf (nog niet gestart)
 
