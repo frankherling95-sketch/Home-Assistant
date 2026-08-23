@@ -171,6 +171,50 @@ h2.sec{font-size:18px; font-weight:600; margin-top:3px}
 .tile.add .plus{font-family:var(--mono); font-size:23px; line-height:1}
 .tile.add small{display:block; font-family:var(--mono); font-size:9px; text-transform:uppercase; letter-spacing:.08em; margin-top:4px}
 
+/* ── bord (vrij te schikken moodboard) ──────────────────── */
+.bordwrap{position:relative; width:100%; margin-top:11px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); overflow:hidden; touch-action:none}
+.bordwrap::before{content:""; position:absolute; inset:0; background-image:radial-gradient(var(--line) 1px, transparent 1px); background-size:20px 20px; opacity:.55; pointer-events:none}
+.bord{position:absolute; top:0; left:0; width:600px; height:900px; transform-origin:0 0}
+.bt{position:absolute; width:150px; border-radius:10px; overflow:hidden; border:1px solid var(--line); background:var(--ground); box-shadow:0 2px 8px -4px rgba(0,0,0,.4); cursor:grab; user-select:none; touch-action:none}
+.bt.pak{cursor:grabbing; z-index:5; box-shadow:0 10px 24px -8px rgba(0,0,0,.55); border-color:var(--accent)}
+.bt .vlak{display:block; width:150px; height:150px; object-fit:cover}
+.bt .bijs{padding:8px 9px 9px; font-size:12px; font-weight:600; line-height:1.3}
+.bt.notitie{background:var(--warn-soft); border-color:var(--warn)}
+.bt.notitie .bijs{font-weight:500; color:var(--ink); white-space:pre-wrap; font-size:12.5px; padding:11px}
+.bt .wis{position:absolute; top:5px; right:5px; width:24px; height:24px; border-radius:50%; border:0; background:rgba(0,0,0,.55); color:#fff; font-size:15px; line-height:1; cursor:pointer; display:grid; place-items:center; padding:0; opacity:0; transition:opacity .15s}
+.bt:hover .wis, .bt.pak .wis{opacity:1}
+.bordbalk{display:flex; gap:7px; flex-wrap:wrap; margin-top:10px}
+.schakel{display:inline-flex; border:1px solid var(--line); border-radius:9px; overflow:hidden}
+.schakel button{appearance:none; background:var(--surface); border:0; border-right:1px solid var(--line); padding:7px 12px; font-family:var(--mono); font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-3); cursor:pointer}
+.schakel button:last-child{border-right:0}
+.schakel button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink)}
+
+/* ── opties vergelijken ─────────────────────────────────── */
+.opties{display:flex; gap:9px; overflow-x:auto; padding:2px 2px 8px; margin-top:10px; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch}
+.optie{flex:0 0 176px; scroll-snap-align:start; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); overflow:hidden; display:flex; flex-direction:column}
+.optie.gekozen{border-color:var(--ok); border-width:2px}
+.optie .beeldvlak{width:100%; aspect-ratio:1; background:var(--surface-2); display:block; object-fit:cover}
+.optie .leeg{width:100%; aspect-ratio:1; background:var(--surface-2); display:grid; place-items:center; color:var(--ink-3); font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.08em; cursor:pointer}
+.optie .inhoud{padding:10px 11px 11px; display:flex; flex-direction:column; gap:5px; flex:1}
+.optie .inhoud b{font-size:13.5px; font-weight:600; line-height:1.3}
+.optie .inhoud .pr{font-family:var(--mono); font-size:13px; font-weight:600; font-variant-numeric:tabular-nums}
+.optie .inhoud .nt{font-size:12px; color:var(--ink-3); line-height:1.4}
+.optie .acties{display:flex; gap:5px; margin-top:auto; padding-top:8px}
+.optie .acties button{flex:1; appearance:none; border:1px solid var(--line); background:var(--ground); border-radius:7px; padding:7px; font-family:var(--mono); font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; cursor:pointer; color:var(--ink-2)}
+.optie .acties button.kies{background:var(--ok); border-color:var(--ok); color:var(--surface)}
+.optie.gekozen .acties button.kies{background:var(--ok-soft); color:var(--ok)}
+.optie.nieuw{border-style:dashed; align-items:center; justify-content:center; min-height:150px; cursor:pointer; color:var(--ink-3); background:transparent}
+
+/* ── brede tabel (alle onderdelen) ──────────────────────── */
+.tablewrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); -webkit-overflow-scrolling:touch}
+.tablewrap table{border-collapse:collapse; width:100%; min-width:760px; font-size:13.5px}
+.tablewrap th, .tablewrap td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:middle}
+.tablewrap th{font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-3); font-weight:600; background:var(--surface-2); position:sticky; top:0; z-index:1}
+.tablewrap tbody tr:last-child td{border-bottom:0}
+.tablewrap tbody tr:hover td{background:var(--surface-2)}
+.tablewrap td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap}
+.tablewrap td b{font-weight:600}
+
 /* ── materiaaltabel ─────────────────────────────────────── */
 .mtab{width:100%; border-collapse:collapse; font-size:13.5px; margin-top:10px}
 .mtab th{font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-3); font-weight:600; text-align:left; padding:7px 0; border-bottom:1px solid var(--line)}
@@ -858,7 +902,10 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
         (bd ? '<span class="thumbs">' + bd + "</span>" : "") +
         '</span><span class="rpct">' + pct + "%</span></button>";
     }).join("");
-    el.innerHTML = '<div class="stack"><div><p class="eyebrow">Overzicht</p><h2 class="sec">Ruimtes</h2>' +
+    el.innerHTML = '<div class="stack"><div>' +
+      '<div class="sectitle"><p class="eyebrow">Overzicht</p>' +
+      '<button class="btn btn-ghost" data-open-tabel style="padding:4px 8px; font-size:13px">Als tabel</button></div>' +
+      '<h2 class="sec">Ruimtes</h2>' +
       '<p class="lede">Tik een ruimte open voor de onderdelen, maten, foto’s en links die erbij horen.</p>' +
       '<div class="rcards">' + kaarten + "</div></div></div>";
     laadThumbs(el);
@@ -982,6 +1029,67 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
         "<span>" + esc(t[2]) + "</span></span>" +
         '<span class="right"><span class="pill ' + kleur + '">' + tekst + "</span></span></div>";
     }).join("") + "</div>";
+  }
+
+  /* ═══ tabelweergave ══════════════════════════════════════ */
+  var tabelSort = {kolom:"ruimte", omgekeerd:false};
+  function openTabel(){
+    var KOLOMMEN = [
+      ["naam", "Onderdeel", function(i){ return i.naam; }],
+      ["ruimte", "Ruimte", function(i){ var r = ruimteVan(i.ruimteId); return r ? r.naam : ""; }],
+      ["status", "Status", function(i){ return LABEL[i.status] || i.status; }],
+      ["afmetingen", "Afmetingen", function(i){ return i.afmetingen || ""; }],
+      ["winkel", "Winkel", function(i){ return i.winkel || ""; }],
+      ["artikelnr", "Artikelnr.", function(i){ return i.artikelnr || ""; }],
+      ["begroot", "Prijs", function(i){ return Number(i.begroot) || 0; }],
+      ["nodig", "Nodig op", function(i){ return i.nodig || ""; }],
+      ["bestel", "Bestel vóór", function(i){ var b = bestelDatum(i); return b ? iso(b) : ""; }]
+    ];
+    var p = openPaneel("Alle onderdelen",
+      '<p class="lede" style="margin:0 0 14px">Tik op een kolomkop om te sorteren, en op een regel om het onderdeel te openen. Schuif opzij voor de rest van de kolommen.</p>' +
+      '<div id="t-uit"></div>');
+
+    function teken(){
+      var kol = KOLOMMEN.filter(function(k){ return k[0] === tabelSort.kolom; })[0] || KOLOMMEN[1];
+      var rijen = D.items.slice().sort(function(a, b){
+        var va = kol[2](a), vb = kol[2](b);
+        var r = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb), "nl");
+        return tabelSort.omgekeerd ? -r : r;
+      });
+      $("#t-uit", p).innerHTML = D.items.length
+        ? '<div class="tablewrap"><table><thead><tr>' +
+          KOLOMMEN.map(function(k){
+            var actief = k[0] === tabelSort.kolom;
+            return '<th data-sort="' + k[0] + '" style="cursor:pointer; white-space:nowrap' +
+              (actief ? "; color:var(--accent)" : "") + '">' + esc(k[1]) +
+              (actief ? (tabelSort.omgekeerd ? " ↑" : " ↓") : "") + "</th>";
+          }).join("") + "</tr></thead><tbody>" +
+          rijen.map(function(i){
+            return '<tr data-item="' + i.id + '" style="cursor:pointer">' + KOLOMMEN.map(function(k){
+              var v = k[2](i);
+              if (k[0] === "begroot") return '<td class="num">' + (v ? euro(v) : "—") + "</td>";
+              if (k[0] === "nodig" || k[0] === "bestel") return '<td class="num">' + (v ? fmt(new Date(v + "T12:00:00")) : "—") + "</td>";
+              if (k[0] === "status") return "<td>" + esc(v) + "</td>";
+              if (k[0] === "naam") return "<td><b>" + esc(v) + "</b></td>";
+              return "<td>" + (v ? esc(v) : '<span style="color:var(--ink-3)">—</span>') + "</td>";
+            }).join("") + "</tr>";
+          }).join("") + "</tbody></table></div>" +
+          '<p class="lede" style="font-size:12.5px">' + D.items.length +
+          " onderdelen · " + euro(D.items.reduce(function(a, i){ return a + (Number(i.begroot) || 0); }, 0)) + " begroot</p>"
+        : '<div class="empty">Nog geen onderdelen.</div>';
+    }
+    teken();
+
+    p.addEventListener("click", function(e){
+      var th = e.target.closest("[data-sort]");
+      if (th){
+        if (tabelSort.kolom === th.dataset.sort) tabelSort.omgekeerd = !tabelSort.omgekeerd;
+        else { tabelSort.kolom = th.dataset.sort; tabelSort.omgekeerd = false; }
+        teken(); return;
+      }
+      var tr = e.target.closest("[data-item]");
+      if (tr) openItem(tr.dataset.item);
+    });
   }
 
   /* ═══ koperskeuzes ═══════════════════════════════════════ */
@@ -1371,7 +1479,16 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
         '<button class="btn btn-ghost" data-nieuw style="padding:4px 8px; font-size:13px">+ Toevoegen</button></div>' +
         '<div id="rd-items"></div></div>' +
         '<div><p class="eyebrow">Moodboard</p><h2 class="sec">Kleur, materiaal en foto’s</h2>' +
-        '<div class="tiles" id="rd-tiles"></div>' +
+        '<p class="lede">Op het bord schuif je alles vrij naast elkaar, zodat je combinaties ziet vóór je bestelt.</p>' +
+        '<div class="bordbalk"><div class="schakel" id="rd-schakel">' +
+          '<button type="button" data-weergave="bord">Bord</button>' +
+          '<button type="button" data-weergave="raster">Raster</button>' +
+        '</div>' +
+        '<button class="btn" data-foto-add style="padding:7px 12px; font-size:13px">+ Foto</button>' +
+        '<button class="btn" data-staal-add style="padding:7px 12px; font-size:13px">+ Staal</button>' +
+        '<button class="btn" data-notitie-add style="padding:7px 12px; font-size:13px">+ Notitie</button></div>' +
+        '<div id="rd-board"></div>' +
+        '<div class="tiles" id="rd-tiles" hidden></div>' +
         '<input type="file" id="rd-file" accept="image/*" hidden></div>' +
         '<div><p class="eyebrow">Links</p><h2 class="sec">Winkels en inspiratie</h2>' +
         '<div id="rd-links" style="margin-top:10px"></div>' +
@@ -1406,22 +1523,113 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
     }
     function tekenTiles(){
       var bd = beeldVan(rid);
-      $("#rd-tiles", p).innerHTML = bd.map(function(b){
+      $("#rd-tiles", p).innerHTML = bd.length ? bd.map(function(b){
         var inhoud = b.soort === "staal"
           ? '<span class="swatch" style="background:' + esc(b.kleur) + '"></span>'
-          : '<img alt="' + esc(b.naam || "foto") + '" data-foto="' + b.id + '">';
+          : (b.soort === "notitie"
+             ? '<span class="swatch" style="background:var(--warn-soft)"></span>'
+             : '<img alt="' + esc(b.naam || "foto") + '" data-foto="' + b.id + '">');
         return '<div class="tile">' + inhoud +
           '<button class="del" data-beeldweg="' + b.id + '" aria-label="Verwijderen">×</button>' +
           (b.naam ? '<span class="cap">' + esc(b.naam) + "</span>" : "") + "</div>";
-      }).join("") +
-        '<button class="tile add" data-foto-add type="button"><span><span class="plus">+</span><small>foto</small></span></button>' +
-        '<button class="tile add" data-staal-add type="button"><span><span class="plus">◧</span><small>staal</small></span></button>';
-      bd.filter(function(b){ return b.soort !== "staal"; }).forEach(function(b){
+      }).join("") : '<div class="empty" style="grid-column:1/-1">Nog niets op het bord.</div>';
+      bd.filter(function(b){ return b.soort === "foto"; }).forEach(function(b){
         fotoHaal(b.id).then(function(url){
           var img = $('[data-foto="' + b.id + '"]', p);
           if (img && url) img.src = url;
         });
       });
+    }
+
+    /* ── het bord ──────────────────────────────────────────
+       Vaste virtuele maat van 600×900, geschaald naar de breedte
+       van het scherm. Zo blijft een plek die je op je telefoon
+       kiest ook op een laptop op dezelfde plek staan. */
+    var BW = 600, BH = 900, TW = 150;
+    function tekenBord(){
+      var bd = beeldVan(rid);
+      var wrap = $("#rd-board", p);
+      /* Nieuwe tegels krijgen het eerstvolgende vrije vak, geteld vanaf
+         wat er al ligt — anders stapelen ze allemaal op dezelfde plek. */
+      var slot = bd.filter(function(b){ return b.x != null; }).length;
+      var geplaatst = 0;
+      bd.forEach(function(b){
+        if (b.x == null){
+          b.x = 20 + (slot % 3) * 190;
+          b.y = 20 + Math.floor(slot / 3) * 200;
+          if (b.y > BH - 170){ b.y = 20 + ((slot * 37) % 300); b.x = 20 + ((slot * 53) % 400); }
+          slot++; geplaatst++;
+        }
+      });
+      if (geplaatst) bewaar();
+      wrap.innerHTML = '<div class="bordwrap" id="bw"><div class="bord" id="bd">' +
+        (bd.length ? bd.map(function(b){
+          var vlak = b.soort === "staal"
+            ? '<span class="vlak" style="background:' + esc(b.kleur) + '"></span>'
+            : (b.soort === "notitie" ? "" : '<img class="vlak" alt="" data-foto="' + b.id + '">');
+          return '<div class="bt ' + (b.soort === "notitie" ? "notitie" : "") + '" data-bt="' + b.id +
+            '" style="left:' + b.x + "px; top:" + b.y + 'px">' + vlak +
+            (b.naam ? '<div class="bijs">' + esc(b.naam) + "</div>" : "") +
+            '<button class="wis" data-beeldweg="' + b.id + '" aria-label="Verwijderen">×</button></div>';
+        }).join("") : "") +
+        "</div></div>" +
+        (bd.length ? "" : '<div class="empty" style="margin-top:-1px; border-top:0; border-radius:0 0 var(--r) var(--r)">Voeg een foto, staal of notitie toe.</div>');
+      bd.filter(function(b){ return b.soort === "foto"; }).forEach(function(b){
+        fotoHaal(b.id).then(function(url){
+          var img = $('.bt[data-bt="' + b.id + '"] img', p);
+          if (img && url) img.src = url;
+        });
+      });
+      schaalBord();
+    }
+    var schaal = 1;
+    function schaalBord(){
+      var bw = $("#bw", p), bord = $("#bd", p);
+      if (!bw || !bord) return;
+      schaal = bw.clientWidth / BW;
+      bord.style.transform = "scale(" + schaal + ")";
+      bw.style.height = (BH * schaal) + "px";
+    }
+    window.addEventListener("resize", schaalBord);
+
+    /* slepen */
+    var pak = null;
+    $("#rd-board", p).addEventListener("pointerdown", function(e){
+      var t = e.target.closest(".bt");
+      if (!t || e.target.closest(".wis")) return;
+      var b = D.beeld.filter(function(x){ return x.id === t.dataset.bt; })[0];
+      if (!b) return;
+      pak = {el:t, b:b, dx:e.clientX/schaal - b.x, dy:e.clientY/schaal - b.y, bewogen:false};
+      t.classList.add("pak");
+      t.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    $("#rd-board", p).addEventListener("pointermove", function(e){
+      if (!pak) return;
+      var nx = Math.max(0, Math.min(BW - TW, Math.round((e.clientX/schaal - pak.dx)/5)*5));
+      var ny = Math.max(0, Math.min(BH - 60, Math.round((e.clientY/schaal - pak.dy)/5)*5));
+      if (nx !== pak.b.x || ny !== pak.b.y) pak.bewogen = true;
+      pak.b.x = nx; pak.b.y = ny;
+      pak.el.style.left = nx + "px";
+      pak.el.style.top = ny + "px";
+    });
+    function los(){
+      if (!pak) return;
+      pak.el.classList.remove("pak");
+      if (pak.bewogen) bewaar();
+      pak = null;
+    }
+    $("#rd-board", p).addEventListener("pointerup", los);
+    $("#rd-board", p).addEventListener("pointercancel", los);
+
+    function zetWeergave(w){
+      r.weergave = w; bewaar();
+      $("#rd-board", p).hidden = (w !== "bord");
+      $("#rd-tiles", p).hidden = (w !== "raster");
+      $$("[data-weergave]", p).forEach(function(b){
+        b.setAttribute("aria-pressed", String(b.dataset.weergave === w));
+      });
+      if (w === "bord") schaalBord();
     }
     function tekenMat(){
       var v = Number($("#m-vloer", p).value) || 0;
@@ -1440,7 +1648,8 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
           '<p class="lede" style="font-size:12.5px">Richtgetallen om mee naar de bouwmarkt te gaan. Het etiket van het product wint altijd.</p>'
         : '<div class="empty">Vul minstens één maat in.</div>';
     }
-    tekenItems(); tekenLinks(); tekenTiles(); tekenMat();
+    tekenItems(); tekenLinks(); tekenTiles(); tekenBord(); tekenMat();
+    zetWeergave(r.weergave || "bord");
 
     p.addEventListener("input", function(e){
       if (/^m-(vloer|wand|omtrek)$/.test(e.target.id)){
@@ -1494,6 +1703,8 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
         r.links = (r.links||[]).filter(function(l){ return l.id !== lw.dataset.linkweg; });
         bewaar(); tekenLinks(); return;
       }
+      var wv = t.closest("[data-weergave]");
+      if (wv) return zetWeergave(wv.dataset.weergave);
       if (t.closest("[data-foto-add]")) return $("#rd-file", p).click();
       if (t.closest("[data-staal-add]")){
         sheet({titel:"Kleur of materiaal", ja:"Toevoegen",
@@ -1504,7 +1715,18 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
             if (!res) return;
             D.beeld.push({id:uid(), ruimteId:rid, soort:"staal",
                           naam:res.naam.trim(), kleur:res.kleur});
-            bewaar(); tekenTiles();
+            bewaar(); tekenTiles(); tekenBord();
+          });
+        return;
+      }
+      if (t.closest("[data-notitie-add]")){
+        sheet({titel:"Notitie op het bord", ja:"Toevoegen",
+               uitleg:"Handig voor maten, voegkleuren of iets wat je niet wil vergeten.",
+               velden:[{id:"tekst", label:"Tekst", plaats:"Voegkleur grijs · tegel 60×60 · legpatroon halfsteens"}]})
+          .then(function(res){
+            if (!res || !res.tekst.trim()) return;
+            D.beeld.push({id:uid(), ruimteId:rid, soort:"notitie", naam:res.tekst.trim()});
+            bewaar(); tekenTiles(); tekenBord();
           });
         return;
       }
@@ -1512,9 +1734,9 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
       if (bw){
         var bid = bw.dataset.beeldweg;
         var b = D.beeld.filter(function(x){ return x.id === bid; })[0];
-        if (b && b.soort !== "staal") fotoWeg(bid);
+        if (b && b.soort === "foto") fotoWeg(bid);
         D.beeld = D.beeld.filter(function(x){ return x.id !== bid; });
-        bewaar(); tekenTiles(); return;
+        bewaar(); tekenTiles(); tekenBord(); return;
       }
     });
     $("#rd-file", p).addEventListener("change", function(e){
@@ -1528,7 +1750,7 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
                         velden:[{id:"naam", label:"Bijschrift", plaats:"Vloertegel 60×60, zandkleur"}]});
         }).then(function(res){
           D.beeld.push({id:id, ruimteId:rid, soort:"foto", naam:res ? res.naam.trim() : ""});
-          bewaar(); tekenTiles(); toast("Foto toegevoegd");
+          bewaar(); tekenTiles(); tekenBord(); toast("Foto toegevoegd");
         });
       }).catch(function(){ toast("Die foto lukte niet"); });
     });
@@ -1597,6 +1819,10 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
         '<label class="field"><span>Levertijd (weken)</span><input id="i-lever" type="number" inputmode="numeric" min="0" max="99" value="' + (Number(it.leverWk)||"") + '"></label>' +
       "</div>" +
       '<div class="field" id="i-bestel"></div>' +
+      '<div class="field"><span>Opties vergelijken</span>' +
+        '<span class="hint" style="margin:0 0 4px">Verzamel de kandidaten naast elkaar en kies er één. De gekozen optie vult prijs, winkel en link van dit onderdeel.</span>' +
+        '<div class="opties" id="i-opties"></div>' +
+        '<input type="file" id="i-optiefoto" accept="image/*" hidden></div>' +
       '<label class="field"><span>Kluswijzer</span><select id="i-kw">' +
         '<option value="">— geen werkwijze —</option>' +
         Object.keys(KLUSWIJZERS).map(function(k){
@@ -1679,7 +1905,65 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
         '<button class="btn btn-wide" data-naarlijst style="margin-top:10px">Zet op mijn bouwmarktlijstje</button>' +
         '<span class="hint">Richtgetallen. Het etiket van het product wint altijd.</span></div>';
     }
-    tekenStatus(); tekenFaseHint(); tekenBestel(); tekenILinks(); tekenKW();
+    it.opties = it.opties || [];
+    function tekenOpties(){
+      var el = $("#i-opties", p);
+      el.innerHTML = it.opties.map(function(o){
+        var vlak = o.fotoId
+          ? '<img class="beeldvlak" alt="" data-ofoto="' + o.id + '">'
+          : '<span class="leeg" data-optiefoto="' + o.id + '">foto toevoegen</span>';
+        return '<div class="optie ' + (o.gekozen ? "gekozen" : "") + '" data-optie="' + o.id + '">' + vlak +
+          '<div class="inhoud"><b>' + esc(o.naam || "Naamloos") + "</b>" +
+          (Number(o.prijs) ? '<span class="pr">' + euro(o.prijs) + "</span>" : "") +
+          (o.winkel ? '<span class="nt">' + esc(o.winkel) + "</span>" : "") +
+          (o.notitie ? '<span class="nt">' + esc(o.notitie) + "</span>" : "") +
+          (o.url ? '<a class="chip" href="' + esc(o.url) + '" target="_blank" rel="noopener noreferrer" style="align-self:flex-start">bekijk</a>' : "") +
+          '<div class="acties"><button type="button" data-obewerk="' + o.id + '">Wijzig</button>' +
+          '<button type="button" class="kies" data-okies="' + o.id + '">' + (o.gekozen ? "Gekozen" : "Kies") + "</button>" +
+          "</div></div></div>";
+      }).join("") +
+        '<button class="optie nieuw" data-onieuw type="button"><span style="text-align:center">' +
+        '<span style="font-family:var(--mono); font-size:22px; display:block">+</span>' +
+        '<small style="font-family:var(--mono); font-size:9.5px; text-transform:uppercase; letter-spacing:.08em">optie</small></span></button>';
+      it.opties.filter(function(o){ return o.fotoId; }).forEach(function(o){
+        fotoHaal(o.fotoId).then(function(u){
+          var i = $('[data-ofoto="' + o.id + '"]', p);
+          if (i && u) i.src = u;
+        });
+      });
+    }
+    function bewerkOptie(o){
+      return sheet({
+        titel:o.naam ? "Optie wijzigen" : "Optie toevoegen", ja:"Opslaan",
+        velden:[{id:"naam", label:"Wat is het?", waarde:o.naam || "", plaats:"Eiken visgraat 14 cm"},
+                {id:"prijs", label:"Prijs (€)", type:"number", waarde:Number(o.prijs) || ""},
+                {id:"winkel", label:"Winkel", waarde:o.winkel || "", plaats:"Vloerenwinkel"},
+                {id:"url", label:"Link", type:"url", waarde:o.url || "", plaats:"gamma.nl/..."},
+                {id:"notitie", label:"Waarom wel of niet", waarde:o.notitie || "", plaats:"Mooiste kleur, wel duurder"}]
+      }).then(function(res){
+        if (!res) return false;
+        o.naam = res.naam.trim();
+        o.prijs = klem(res.prijs, 0, 9999999);
+        o.winkel = res.winkel.trim();
+        o.notitie = res.notitie.trim();
+        var u = res.url.trim();
+        o.url = u ? (/^https?:\/\//i.test(u) ? u : "https://" + u) : "";
+        return true;
+      });
+    }
+    var optieVoorFoto = null;
+    $("#i-optiefoto", p).addEventListener("change", function(e){
+      var f = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!f || !optieVoorFoto) return;
+      var o = optieVoorFoto; optieVoorFoto = null;
+      verkleinFoto(f).then(function(u){
+        var fid = uid();
+        return fotoZet(fid, u).then(function(){ o.fotoId = fid; tekenOpties(); });
+      }).catch(function(){ toast("Die foto lukte niet"); });
+    });
+
+    tekenStatus(); tekenFaseHint(); tekenBestel(); tekenILinks(); tekenKW(); tekenOpties();
 
     p.addEventListener("input", function(e){
       if (e.target.id === "i-nodig" || e.target.id === "i-lever") tekenBestel();
@@ -1700,6 +1984,46 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
       if (st){
         it.status = st.dataset.st;
         $$("[data-st]", p).forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.st === it.status)); });
+        return;
+      }
+      if (e.target.closest("[data-onieuw]")){
+        var o = {id:uid(), naam:"", prijs:0, winkel:"", url:"", notitie:"", fotoId:"", gekozen:false};
+        bewerkOptie(o).then(function(ok){ if (ok){ it.opties.push(o); tekenOpties(); } });
+        return;
+      }
+      var ob = e.target.closest("[data-obewerk]");
+      if (ob){
+        var oo = it.opties.filter(function(x){ return x.id === ob.dataset.obewerk; })[0];
+        if (oo) bewerkOptie(oo).then(function(ok){ if (ok) tekenOpties(); });
+        return;
+      }
+      var of = e.target.closest("[data-optiefoto]");
+      if (of){
+        optieVoorFoto = it.opties.filter(function(x){ return x.id === of.dataset.optiefoto; })[0];
+        $("#i-optiefoto", p).click();
+        return;
+      }
+      var ok2 = e.target.closest("[data-okies]");
+      if (ok2){
+        var gek = it.opties.filter(function(x){ return x.id === ok2.dataset.okies; })[0];
+        if (!gek) return;
+        var aanUit = !gek.gekozen;
+        it.opties.forEach(function(x){ x.gekozen = false; });
+        gek.gekozen = aanUit;
+        if (aanUit){
+          if (Number(gek.prijs)) $("#i-begroot", p).value = gek.prijs;
+          if (gek.winkel) $("#i-winkel", p).value = gek.winkel;
+          if (gek.url && !it.links.some(function(l){ return l.url === gek.url; })){
+            it.links.push({id:uid(), naam:gek.naam || gek.winkel || "Gekozen optie", url:gek.url});
+            tekenILinks();
+          }
+          if (it.status === "tekiezen"){
+            it.status = "gekozen";
+            $$("[data-st]", p).forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.st === it.status)); });
+          }
+          toast("Gekozen — prijs en winkel overgenomen");
+        }
+        tekenOpties();
         return;
       }
       if (e.target.closest("[data-naarlijst]")){
@@ -1748,6 +2072,12 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
         it.notitie = $("#i-notitie", p).value;
         it.kluswijzer = $("#i-kw", p).value || "";
         it.gewijzigd = Date.now();
+        /* Foto's van opties die zijn weggegooid ook uit de opslag halen. */
+        if (!nieuw){
+          var oudeFotos = (bron.opties || []).map(function(o){ return o.fotoId; }).filter(Boolean);
+          var nieuweFotos = it.opties.map(function(o){ return o.fotoId; }).filter(Boolean);
+          oudeFotos.forEach(function(f){ if (nieuweFotos.indexOf(f) === -1) fotoWeg(f); });
+        }
         D.laatsteRuimte = it.ruimteId;
         if (nieuw) D.items.push(it);
         else D.items = D.items.map(function(x){ return x.id === it.id ? it : x; });
@@ -1992,6 +2322,7 @@ ol.werkwijze li::before{counter-increment:s; content:counter(s); font-family:var
 
   document.addEventListener("click", function(e){
     if (host.children.length) return;
+    if (e.target.closest("[data-open-tabel]")) return openTabel();
     if (e.target.closest("[data-open-keuzes]")) return openKeuzes();
     if (e.target.closest("[data-open-oplever]")) return openOplever();
     var kz = e.target.closest("[data-keuze]");

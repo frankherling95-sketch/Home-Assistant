@@ -37,7 +37,7 @@ Frank noemde vijf bestaande gereedschappen. De app moet daar één ding van word
 
 | Bron | Wat we ervan overnemen | Status |
 | --- | --- | --- |
-| **Milanote** | Visueel bord per kamer: foto's, tegels, kleurcodes, productlinks en afmetingen bij elkaar, om combinaties te zien vóór je bestelt | GEBOUWD, nog niet als vrij sleepbaar bord |
+| **Milanote** | Visueel bord per kamer: foto's, tegels, kleurcodes, productlinks en afmetingen bij elkaar, om combinaties te zien vóór je bestelt | GEBOUWD |
 | **Notion** | Tabel per kamer met Product, Ruimte, Link/Artikelnummer, Afmetingen, Prijs, Status | GEBOUWD |
 | **Houzz / Pinterest** | Inspiratie koppelen aan concrete materialen | Deels — links en foto's kunnen, importeren nog niet |
 | **Kluswijzers (Gamma, Praxis, Hornbach)** | Materiaalberekening per m²: voorstrijk, tegellijm, voegmortel, egaline | GEBOUWD |
@@ -113,7 +113,7 @@ volgorde; wie de vloer te vroeg legt, legt hem twee keer.
 | F27 | Werkvolgorde in acht stappen, met onderdelen per stap | GEBOUWD |
 | F28 | Automatisch tonen welke stap nu aan de beurt is | GEBOUWD |
 | F7 | Afhankelijkheden tussen individuele onderdelen | VOORSTEL |
-| F9 | Aparte, harde categorie voor koperskeuze-deadlines | VAST |
+| F9 | Aparte, harde categorie voor koperskeuze-deadlines | GEBOUWD |
 | F11 | Beslissingen met een uiterste beslisdatum | VAST |
 | F12 | Vorm van de waarschuwing: push, e-mail, agenda of in de app | UITGESTELD |
 
@@ -124,7 +124,7 @@ volgorde; wie de vloer te vroeg legt, legt hem twee keer.
 | F13 | Inkooplijst gegroepeerd per winkel | GEBOUWD |
 | F14 | Bouwmarktlijstje: los, snel toevoegen, afvinken | GEBOUWD |
 | F29 | Materiaalcalculator per ruimte op basis van m² en omtrek | GEBOUWD |
-| F30 | Berekend materiaal in één tik naar het bouwmarktlijstje | VAST |
+| F30 | Berekend materiaal in één tik naar het bouwmarktlijstje | GEBOUWD |
 | F16 | Standaard checklists (verhuizen, nutsvoorzieningen, verzekeringen) | VOORSTEL |
 
 ### Beeld en links
@@ -134,9 +134,9 @@ volgorde; wie de vloer te vroeg legt, legt hem twee keer.
 | F17 | Foto's toevoegen vanuit camera of galerij, automatisch verkleind | GEBOUWD |
 | F18 | Moodboard per ruimte: foto's en kleur-/materiaalstalen | GEBOUWD |
 | F19 | Links opslaan bij ruimte én bij onderdeel | GEBOUWD |
-| F31 | Vrij sleepbaar bord in plaats van een raster (à la Milanote) | VOORSTEL |
-| F32 | Eigen kleur kiezen bij een staal in plaats van automatisch | VAST |
-| F21 | Twee opties naast elkaar leggen om te kiezen | VOORSTEL |
+| F31 | Vrij sleepbaar bord per ruimte, met foto's, stalen en notities | GEBOUWD |
+| F32 | Eigen kleur kiezen bij een staal, met snelkeuzes | GEBOUWD |
+| F21 | Opties naast elkaar leggen en er één kiezen; de keuze vult prijs, winkel en link | GEBOUWD |
 | F33 | Delen vanuit een webshop rechtstreeks de app in | VOORSTEL |
 | F22 | Documenten koppelen of naar Drive linken | VOORSTEL |
 
@@ -262,5 +262,17 @@ Alle vier gebouwd in v0.5.
 
 ### Nog niet gebouwd
 
-Milanote-bord (vrij verslepen), Notion-tabelweergave, delen vanuit een webshop,
-vergelijkscherm voor twee opties, synchronisatie tussen twee telefoons.
+Delen vanuit een webshop rechtstreeks de app in (vraagt om installatie als PWA),
+synchronisatie tussen twee telefoons, cashflow-kalender, afhankelijkheden tussen
+individuele onderdelen, standaard checklists voor verhuizen en nutsvoorzieningen.
+
+### v0.6 (23 aug 2026)
+
+Moodboard is nu een echt bord: foto's, kleurstalen en notities die je vrij versleept,
+met een rasterweergave als alternatief. Opties vergelijken per onderdeel; de gekozen
+optie vult prijs, winkel en link en zet de status op Gekozen. Tabelweergave over alle
+onderdelen met sorteren per kolom.
+
+Twee bugs gevonden tijdens deze bouw: nieuwe bordtegels stapelden allemaal op dezelfde
+plek, en de tabelstijlen bleken bij de v0.3-herbouw verwijderd, waardoor de tabel
+ongestyled rendeerde.
