@@ -13,6 +13,7 @@ Mobile-first. Eén HTML-bestand, geen build-afhankelijkheden, werkt op GitHub Pa
 | `build.mjs`     | Wikkelt `src/app.html` in een volledig HTML-document.                    |
 | `index.html`    | Gegenereerd. Dit is wat GitHub Pages serveert — niet met de hand editen. |
 | `docs/`         | Vragenlijst en projectnotities.                                          |
+| `home-assistant/` | Losstaande HA-integratie *Slim laden* (Frank Energie + Kia + Easee). Zie de README daar. |
 
 `src/app.html` bevat de marker `<!--HEAD-END-->`: alles ervoor gaat in `<head>`,
 alles erna in `<body>`. Datzelfde bestand wordt ook 1-op-1 als Artifact op claude.ai
