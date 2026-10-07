@@ -20,6 +20,8 @@ async def async_setup_entry(
 
 
 class VertrekTijd(SlimLadenEntity, TimeEntity, RestoreEntity):
+    _domain = "time"
+
     @property
     def available(self) -> bool:
         return True

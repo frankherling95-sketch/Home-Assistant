@@ -1,0 +1,157 @@
+# Energiedashboard — dezelfde kaarten als het ingebouwde Energie-paneel, aangevuld
+# met prijsinzichten. Energiekaarten lezen de bronnen uit
+# Instellingen → Dashboards → Energie (dat blijft in de UI ingesteld).
+#
+# Vereist voor de prijsgrafiek: apexcharts-card via HACS (Frontend).
+
+title: Energie
+views:
+  - title: Samenvatting
+    path: samenvatting
+    icon: mdi:view-dashboard
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        column_span: 3
+        cards:
+          - type: energy-date-selection
+            grid_options: { columns: full }
+      - type: grid
+        cards:
+          - type: heading
+            heading: Totalen
+          - type: energy-sources-table
+            grid_options: { columns: full }
+      - type: grid
+        cards:
+          - type: heading
+            heading: Vermogensbronnen
+          - type: power-sources-graph
+            grid_options: { columns: full }
+          - type: energy-distribution
+            link_dashboard: false
+            grid_options: { columns: full }
+      - type: grid
+        cards:
+          - type: heading
+            heading: Stroomprijs
+          - type: tile
+            entity: sensor.stroomprijs_nu
+            name: Nu
+          - type: tile
+            entity: sensor.stroomprijs_niveau
+            name: Niveau
+          - type: tile
+            entity: sensor.stroom_goedkoopste_moment
+            name: Goedkoopst
+          - type: tile
+            entity: sensor.stroomprijs_vandaag_gemiddeld
+            name: Gemiddeld vandaag
+
+  - title: Elektriciteit
+    path: elektriciteit
+    icon: mdi:flash
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        column_span: 3
+        cards:
+          - type: energy-date-selection
+            grid_options: { columns: full }
+      - type: grid
+        column_span: 2
+        cards:
+          - type: energy-usage-graph
+            title: Elektriciteit
+            grid_options: { columns: full }
+          - type: energy-solar-graph
+            title: Zonne-energie
+            grid_options: { columns: full }
+          - type: energy-devices-graph
+            title: Verbruik per apparaat
+            grid_options: { columns: full }
+      - type: grid
+        cards:
+          - type: energy-sankey
+            title: Energiestromen
+            grid_options: { columns: full }
+          - type: energy-self-sufficiency-gauge
+          - type: energy-solar-consumed-gauge
+          - type: energy-grid-neutrality-gauge
+          - type: energy-carbon-consumed-gauge
+
+  - title: Gas & water
+    path: gas-water
+    icon: mdi:fire
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        column_span: 2
+        cards:
+          - type: energy-date-selection
+            grid_options: { columns: full }
+      - type: grid
+        cards:
+          - type: energy-gas-graph
+            title: Gasverbruik
+            grid_options: { columns: full }
+          - type: tile
+            entity: sensor.gasprijs_nu
+            name: Gasprijs nu
+      - type: grid
+        cards:
+          - type: energy-water-graph
+            title: Waterverbruik
+            grid_options: { columns: full }
+
+  - title: Prijzen
+    path: prijzen
+    icon: mdi:currency-eur
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:apexcharts-card
+            header: { show: true, title: Stroomprijs vandaag en morgen, show_states: true, colorize_states: true }
+            graph_span: 2d
+            span: { start: day }
+            now: { show: true, label: Nu }
+            yaxis: [{ decimals: 2, apex_config: { title: { text: "€/kWh" } } }]
+            series:
+              - entity: sensor.stroomprijs_nu
+                name: All-in prijs
+                type: column
+                float_precision: 3
+                show: { in_header: true }
+                data_generator: |
+                  return (entity.attributes.prices || []).map(p => [new Date(p.from).getTime(), p.price]);
+            grid_options: { columns: full }
+      - type: grid
+        cards:
+          - type: tile
+            entity: sensor.stroomprijs_vandaag_laagste
+            name: Laagste vandaag
+          - type: tile
+            entity: sensor.stroomprijs_vandaag_hoogste
+            name: Hoogste vandaag
+          - type: tile
+            entity: sensor.stroomprijs_vandaag_gemiddeld
+            name: Gemiddeld vandaag
+          - type: tile
+            entity: sensor.stroom_goedkoopste_moment
+            name: Goedkoopste moment
+      - type: grid
+        cards:
+          - type: history-graph
+            title: Prijsverloop (7 dagen)
+            hours_to_show: 168
+            entities:
+              # Bewust de bron: de kopie sensor.stroomprijs_nu staat niet in de database.
+              - entity: sensor.current_electricity_price_all_in
+                name: Stroom
+            grid_options: { columns: full }

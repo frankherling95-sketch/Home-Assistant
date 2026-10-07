@@ -16,6 +16,12 @@ jobs:
           python-version: "3.13"
       - run: pip install pytest-homeassistant-custom-component==0.13.316
       - run: pytest
+      - name: Home Assistant-configuratie controleren
+        run: |
+          echo "[]" > automations.yaml; echo "{}" > scripts.yaml; echo "[]" > scenes.yaml
+          # check_config eindigt ook bij fouten met exit 0: daarom op de uitvoer toetsen.
+          hass --script check_config -c . 2>&1 | grep -v "Attempting install" | tee check.log
+          ! grep -qE "ERROR|Invalid config|Failed config" check.log
 
   hassfest:
     runs-on: ubuntu-latest

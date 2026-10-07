@@ -1,0 +1,37 @@
+# Home Assistant — configuratie uit git.
+#
+# Wat in de UI wordt ingesteld (integraties, apparaten, energie-instellingen,
+# UI-automatiseringen) staat in .storage/ en automations.yaml en blijft lokaal.
+# Wat hier staat, komt uit de repo en wordt via de Git pull-add-on bijgewerkt.
+
+homeassistant:
+  # Lost "US$ 0,00" in het energiedashboard op. Staat het hier, dan is het in
+  # de UI niet meer te wijzigen — bewust: één bron van waarheid.
+  currency: EUR
+  country: NL
+  packages: !include_dir_named packages
+
+default_config:
+
+frontend:
+  themes: !include_dir_merge_named themes
+
+# UI-beheerd en niet in git (zie .gitignore); tools/koppel-git.sh maakt ze aan.
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+lovelace:
+  dashboards:
+    dashboard-energie:
+      mode: yaml
+      title: Energie
+      icon: mdi:lightning-bolt
+      show_in_sidebar: true
+      filename: dashboards/energie.yaml
+    dashboard-laden:
+      mode: yaml
+      title: Laden
+      icon: mdi:ev-station
+      show_in_sidebar: true
+      filename: dashboards/laden.yaml

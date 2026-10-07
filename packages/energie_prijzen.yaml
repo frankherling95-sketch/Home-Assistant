@@ -1,0 +1,78 @@
+# Prijsinzichten op basis van sensor.stroomprijs_nu (zie bronnen.yaml).
+# Werkt met uur- én kwartierblokken.
+
+template:
+  - sensor:
+      - name: Stroomprijs vandaag laagste
+        unique_id: prijs_vandaag_laagste
+        unit_of_measurement: "€/kWh"
+        icon: mdi:arrow-collapse-down
+        availability: &vandaag_beschikbaar "{{ (state_attr('sensor.stroomprijs_nu', 'prices') or []) | count > 0 }}"
+        state: >
+          {% set ns = namespace(v=[]) %}
+          {% for r in state_attr('sensor.stroomprijs_nu', 'prices') or [] %}
+            {% if as_local(as_datetime(r['from'])).date() == now().date() %}{% set ns.v = ns.v + [r['price']] %}{% endif %}
+          {% endfor %}
+          {{ ns.v | min if ns.v else none }}
+
+      - name: Stroomprijs vandaag hoogste
+        unique_id: prijs_vandaag_hoogste
+        unit_of_measurement: "€/kWh"
+        icon: mdi:arrow-collapse-up
+        availability: *vandaag_beschikbaar
+        state: >
+          {% set ns = namespace(v=[]) %}
+          {% for r in state_attr('sensor.stroomprijs_nu', 'prices') or [] %}
+            {% if as_local(as_datetime(r['from'])).date() == now().date() %}{% set ns.v = ns.v + [r['price']] %}{% endif %}
+          {% endfor %}
+          {{ ns.v | max if ns.v else none }}
+
+      - name: Stroomprijs vandaag gemiddeld
+        unique_id: prijs_vandaag_gemiddeld
+        unit_of_measurement: "€/kWh"
+        icon: mdi:approximately-equal
+        availability: *vandaag_beschikbaar
+        state: >
+          {% set ns = namespace(v=[]) %}
+          {% for r in state_attr('sensor.stroomprijs_nu', 'prices') or [] %}
+            {% if as_local(as_datetime(r['from'])).date() == now().date() %}{% set ns.v = ns.v + [r['price']] %}{% endif %}
+          {% endfor %}
+          {{ (ns.v | average) | round(4) if ns.v else none }}
+
+      # Begin van het goedkoopste nog komende blok (vandaag of morgen).
+      - name: Stroom goedkoopste moment
+        unique_id: prijs_goedkoopste_moment
+        device_class: timestamp
+        icon: mdi:clock-check-outline
+        availability: *vandaag_beschikbaar
+        state: >
+          {% set ns = namespace(best=none) %}
+          {% for r in state_attr('sensor.stroomprijs_nu', 'prices') or [] %}
+            {% if as_timestamp(r['till']) > as_timestamp(now())
+                  and (ns.best is none or r['price'] < ns.best['price']) %}{% set ns.best = r %}{% endif %}
+          {% endfor %}
+          {{ as_datetime(ns.best['from']).isoformat() if ns.best else none }}
+        attributes:
+          prijs: >
+            {% set ns = namespace(v=[]) %}
+            {% for r in state_attr('sensor.stroomprijs_nu', 'prices') or [] %}
+              {% if as_timestamp(r['till']) > as_timestamp(now()) %}{% set ns.v = ns.v + [r['price']] %}{% endif %}
+            {% endfor %}
+            {{ ns.v | min if ns.v else none }}
+
+      # laag / normaal / hoog: in welk derde van de dagbandbreedte zit de prijs nu?
+      - name: Stroomprijs niveau
+        unique_id: prijs_niveau
+        icon: mdi:gauge
+        availability: >
+          {{ has_value('sensor.stroomprijs_nu') and has_value('sensor.stroomprijs_vandaag_laagste')
+             and has_value('sensor.stroomprijs_vandaag_hoogste') }}
+        state: >
+          {% set nu = states('sensor.stroomprijs_nu') | float %}
+          {% set lo = states('sensor.stroomprijs_vandaag_laagste') | float %}
+          {% set hi = states('sensor.stroomprijs_vandaag_hoogste') | float %}
+          {% if nu <= 0 %}negatief
+          {% elif hi - lo < 0.0001 %}normaal
+          {% elif nu < lo + (hi - lo) / 3 %}laag
+          {% elif nu > hi - (hi - lo) / 3 %}hoog
+          {% else %}normaal{% endif %}

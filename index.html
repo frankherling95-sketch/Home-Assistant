@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Slim laden</title>
+<title>Home Assistant Herling</title>
 <meta name="description" content="Home Assistant-integratie: laad de auto op de goedkoopste uren met Frank Energie, Easee en Kia/Hyundai Connect.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%2318bcf2' d='M13 2 4 14h7l-1 8 9-12h-7z'/%3E%3C/svg%3E">
 <style>
@@ -68,9 +68,20 @@ footer { margin-top: 48px; color: var(--muted); font-size: 0.85rem; }
 </head>
 <body>
 <main>
-  <h1>Slim laden</h1>
-  <p class="lead">Home Assistant-integratie die de auto laadt op de goedkoopste uren vóór vertrek —
-    met de dagprijzen van Frank Energie, het accuniveau uit Kia/Hyundai Connect en een Easee-lader.</p>
+  <h1>Home Assistant</h1>
+  <p class="lead">Configuratie als code: dashboards voor energie en laden, prijsinzichten van Frank Energie
+    en <b>Slim laden</b> — de auto laden op de goedkoopste uren vóór vertrek met Kia/Hyundai Connect en een Easee-lader.</p>
+
+  <h2>Dashboards</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Dashboard</th><th>Inhoud</th></tr>
+    <tr><td>Energie</td><td>Totalen, vermogensbronnen, elektriciteit per uur, zon, apparaten, gas &amp; water, stroomprijs vandaag en morgen</td></tr>
+    <tr><td>Laden</td><td>Accu en bereik van de auto, status van de lader, laadplan met kosten, instellingen</td></tr>
+  </table>
+  </div>
+
+  <h2>Slim laden</h2>
 
   <div class="flow" aria-label="Werking">
     <div class="card"><b>Frank Energie</b><span class="muted">prijs per uur/kwartier</span></div>
@@ -84,22 +95,37 @@ footer { margin-top: 48px; color: var(--muted); font-size: 0.85rem; }
   <h2>Installeren</h2>
   <ol class="steps">
     <li><div>
-      <b>Bronintegraties</b> via HACS installeren en instellen.<br>
+      <b>Backup maken</b> van Home Assistant.<br>
+      <a class="btn ghost" href="https://my.home-assistant.io/redirect/backup/">Back-ups</a>
+    </div></li>
+    <li><div>
+      <b>Integraties en kaarten</b> via HACS installeren en instellen.<br>
       <a class="btn ghost" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=bajansen&amp;repository=home-assistant-frank_energie&amp;category=integration">Frank Energie</a>
       <a class="btn ghost" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=nordicopen&amp;repository=easee_hass&amp;category=integration">Easee</a>
       <a class="btn ghost" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=Hyundai-Kia-Connect&amp;repository=kia_uvo&amp;category=integration">Kia/Hyundai Connect</a>
+      <a class="btn ghost" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=RomRider&amp;repository=apexcharts-card&amp;category=plugin">apexcharts-card</a>
     </div></li>
     <li><div>
-      <b>Slim laden</b> toevoegen in HACS en Home Assistant herstarten.<br>
-      <a class="btn" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=frankherling95-sketch&amp;repository=Home-Assistant&amp;category=integration">Openen in HACS</a>
+      <b>Configuratie koppelen</b>: in de Terminal &amp; SSH-app één keer uitvoeren. Wist niets; je automatiseringen en geheimen blijven staan.<br>
+      <code>curl -fsSL https://raw.githubusercontent.com/frankherling95-sketch/Home-Assistant/main/tools/koppel-git.sh | bash</code><br>
+      <a class="btn ghost" href="https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_ssh">Terminal &amp; SSH</a>
     </div></li>
     <li><div>
-      <b>Integratie instellen</b>: prijssensor, accusensor, capaciteit en laadvermogen.<br>
+      <b>Bronnen</b> aanwijzen in <code>packages/bronnen.yaml</code> (regels met <code># PAS AAN</code>) en herstarten.
+    </div></li>
+    <li><div>
+      <b>Git pull-app</b> instellen op deze repo, met automatisch ophalen elke 5 minuten. Pas starten ná stap 3.<br>
+      <a class="btn" href="https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_git_pull">Git pull</a>
+    </div></li>
+    <li><div>
+      <b>Slim laden</b> toevoegen met <code>sensor.stroomprijs_nu</code> en <code>sensor.auto_accuniveau</code>.<br>
       <a class="btn" href="https://my.home-assistant.io/redirect/config_flow_start/?domain=slim_laden">Slim laden toevoegen</a>
     </div></li>
     <li><div>
-      <b>Blueprint importeren</b> en er een automatisering van maken met <code>Nu laden</code>, je lader en de statussensor.<br>
-      <a class="btn" href="https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Ffrankherling95-sketch%2FHome-Assistant%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fslim_laden%2Feasee_slim_laden.yaml">Blueprint importeren</a>
+      <b>Automatisering</b> maken van de blueprint <i>Slim laden → Easee</i>, en in de energie-instellingen
+      <code>sensor.stroomprijs_nu</code> als stroomprijs kiezen.<br>
+      <a class="btn ghost" href="https://my.home-assistant.io/redirect/blueprints/">Blueprints</a>
+      <a class="btn ghost" href="https://my.home-assistant.io/redirect/config_energy/">Energie-instellingen</a>
     </div></li>
   </ol>
   <p class="muted">De knoppen openen je eigen Home Assistant via my.home-assistant.io. Zet in de Easee-app geen eigen laadschema aan.</p>
