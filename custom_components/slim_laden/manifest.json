@@ -1,10 +1,9 @@
 {
   "domain": "slim_laden",
   "name": "Slim laden",
-  "after_dependencies": ["frank_energie", "easee", "kia_uvo"],
   "codeowners": ["@frankherling95-sketch"],
   "config_flow": true,
-  "documentation": "https://github.com/frankherling95-sketch/staartploeg/tree/main",
+  "documentation": "https://frankherling95-sketch.github.io/staartploeg/",
   "integration_type": "service",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/frankherling95-sketch/staartploeg/issues",

@@ -14,7 +14,7 @@
         },
         "data_description": {
           "price_sensor": "Sensor met een `prices`-attribuut, bijv. sensor.current_electricity_price_all_in.",
-          "soc_sensor": "Bijv. sensor.<auto>_ev_battery_level. Leeg = altijd uitgaan van een lege accu.",
+          "soc_sensor": "Bijv. sensor.ev6_ev_battery_level. Leeg = altijd uitgaan van een lege accu.",
           "power_kw": "Wat Easee en auto samen halen: 11 kW bij 3×16 A, 7,4 kW bij 1×32 A."
         }
       }
@@ -39,7 +39,7 @@
         },
         "data_description": {
           "price_sensor": "Sensor met een `prices`-attribuut, bijv. sensor.current_electricity_price_all_in.",
-          "soc_sensor": "Bijv. sensor.<auto>_ev_battery_level. Leeg = altijd uitgaan van een lege accu.",
+          "soc_sensor": "Bijv. sensor.ev6_ev_battery_level. Leeg = altijd uitgaan van een lege accu.",
           "power_kw": "Wat Easee en auto samen halen: 11 kW bij 3×16 A, 7,4 kW bij 1×32 A."
         }
       }
