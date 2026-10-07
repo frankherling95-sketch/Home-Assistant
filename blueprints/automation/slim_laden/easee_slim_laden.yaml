@@ -1,0 +1,57 @@
+blueprint:
+  name: Slim laden → Easee
+  description: >-
+    Pauzeert en hervat een Easee-lader op basis van `Nu laden` uit de
+    Slim laden-integratie. Herhaalt de opdracht zodra de auto wordt
+    ingeplugd, zodat de lader nooit in de verkeerde stand blijft hangen.
+  domain: automation
+  source_url: https://github.com/frankherling95-sketch/staartploeg/blob/main/blueprints/automation/slim_laden/easee_slim_laden.yaml
+  input:
+    charge_now:
+      name: Nu laden
+      description: binary_sensor van Slim laden.
+      selector:
+        entity:
+          filter:
+            - integration: slim_laden
+              domain: binary_sensor
+    charger:
+      name: Easee-lader
+      selector:
+        device:
+          filter:
+            - integration: easee
+          entity:
+            - domain: switch
+    charger_status:
+      name: Status van de lader
+      description: Bijv. sensor.<lader>_status.
+      selector:
+        entity:
+          filter:
+            - integration: easee
+              domain: sensor
+
+mode: queued
+max: 5
+
+triggers:
+  - trigger: state
+    entity_id: !input charge_now
+    to: ["on", "off"]
+  - trigger: state
+    entity_id: !input charger_status
+    from: disconnected
+  - trigger: homeassistant
+    event: start
+
+variables:
+  charge_now: !input charge_now
+
+actions:
+  - delay: 2  # lader eerst de nieuwe sessie laten oppakken
+  - action: easee.action_command
+    continue_on_error: true
+    data:
+      device_id: !input charger
+      action_command: "{{ 'resume' if is_state(charge_now, 'on') else 'pause' }}"
