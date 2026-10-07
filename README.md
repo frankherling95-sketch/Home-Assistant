@@ -1,10 +1,10 @@
 # Home Assistant — Slim laden
 
-[![Openen in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=frankherling95-sketch&repository=staartploeg&category=integration)
+[![Openen in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=frankherling95-sketch&repository=Home-Assistant&category=integration)
 [![Integratie toevoegen](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=slim_laden)
-[![Blueprint importeren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Ffrankherling95-sketch%2Fstaartploeg%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fslim_laden%2Feasee_slim_laden.yaml)
+[![Blueprint importeren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Ffrankherling95-sketch%2FHome-Assistant%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fslim_laden%2Feasee_slim_laden.yaml)
 
-Documentatie: https://frankherling95-sketch.github.io/staartploeg/
+Documentatie: https://frankherling95-sketch.github.io/Home-Assistant/
 
 | Pad | Wat |
 | --- | --- |
@@ -12,7 +12,6 @@ Documentatie: https://frankherling95-sketch.github.io/staartploeg/
 | `blueprints/automation/slim_laden/` | Automatisering die de Easee-lader aanstuurt |
 | `tests/` | pytest, inclusief een echte Home Assistant-testomgeving |
 | `index.html` | GitHub Pages-pagina met installatieknoppen |
-| `sw.js` | Ruimt de service worker van de vroegere Staartploeg-app op bij oude bezoekers |
 | `.github/workflows/validate.yml` | CI: pytest, hassfest en HACS-validatie |
 
 Custom integration die de auto laadt op de goedkoopste uren vóór vertrek. Combineert drie

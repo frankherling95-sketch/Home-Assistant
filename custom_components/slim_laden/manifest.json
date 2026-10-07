@@ -3,10 +3,10 @@
   "name": "Slim laden",
   "codeowners": ["@frankherling95-sketch"],
   "config_flow": true,
-  "documentation": "https://frankherling95-sketch.github.io/staartploeg/",
+  "documentation": "https://frankherling95-sketch.github.io/Home-Assistant/",
   "integration_type": "service",
   "iot_class": "calculated",
-  "issue_tracker": "https://github.com/frankherling95-sketch/staartploeg/issues",
+  "issue_tracker": "https://github.com/frankherling95-sketch/Home-Assistant/issues",
   "requirements": [],
   "version": "0.1.0"
 }
