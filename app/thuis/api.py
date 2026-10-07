@@ -5,8 +5,8 @@ Lokaal: `THUIS_AUTH_UIT=1 uvicorn thuis.api:app --reload` en open http://localho
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 import os
+from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 from typing import Any
