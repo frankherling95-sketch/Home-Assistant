@@ -4,7 +4,7 @@
   "after_dependencies": ["frank_energie", "easee", "kia_uvo"],
   "codeowners": ["@frankherling95-sketch"],
   "config_flow": true,
-  "documentation": "https://github.com/frankherling95-sketch/staartploeg/tree/main/home-assistant",
+  "documentation": "https://github.com/frankherling95-sketch/staartploeg/tree/main",
   "integration_type": "service",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/frankherling95-sketch/staartploeg/issues",
