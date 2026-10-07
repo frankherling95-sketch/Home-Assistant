@@ -52,6 +52,8 @@ async def async_setup_entry(
 
 
 class SettingNumber(SlimLadenEntity, RestoreNumber):
+    _domain = "number"
+
     entity_description: SettingDescription
 
     def __init__(self, coordinator, description: SettingDescription) -> None:

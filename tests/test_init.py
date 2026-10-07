@@ -71,8 +71,8 @@ async def test_setup_and_charge_now(hass: HomeAssistant) -> None:
     await _setup(hass)
 
     assert hass.states.get("binary_sensor.slim_laden_charge_now").state == "on"
-    assert float(hass.states.get("sensor.slim_laden_energy_needed").state) > 0
-    assert hass.states.get("switch.slim_laden_smart_charging_active").state == "on"
+    assert float(hass.states.get("sensor.slim_laden_needed_energy").state) > 0
+    assert hass.states.get("switch.slim_laden_enabled").state == "on"
 
     # Doel bereikt en duur uur → niet laden; reageert direct op de SoC-sensor.
     _prices(hass, now_cheap=False)
@@ -82,7 +82,7 @@ async def test_setup_and_charge_now(hass: HomeAssistant) -> None:
 
     # Uitschakelen = gewoon laden.
     await hass.services.async_call(
-        "switch", "turn_off", {"entity_id": "switch.slim_laden_smart_charging_active"}, blocking=True
+        "switch", "turn_off", {"entity_id": "switch.slim_laden_enabled"}, blocking=True
     )
     await hass.async_block_till_done()
     state = hass.states.get("binary_sensor.slim_laden_charge_now")
@@ -95,13 +95,28 @@ async def test_settings_entities(hass: HomeAssistant) -> None:
     await _setup(hass)
 
     await hass.services.async_call(
-        "number", "set_value", {"entity_id": "number.slim_laden_target_battery_level", "value": 100}, blocking=True
+        "number", "set_value", {"entity_id": "number.slim_laden_target_soc", "value": 100}, blocking=True
     )
     await hass.services.async_call(
-        "time", "set_value", {"entity_id": "time.slim_laden_departure_time", "time": "06:00:00"}, blocking=True
+        "time", "set_value", {"entity_id": "time.slim_laden_departure", "time": "06:00:00"}, blocking=True
     )
     await hass.async_block_till_done()
-    assert hass.states.get("number.slim_laden_target_battery_level").state == "100.0"
-    assert hass.states.get("time.slim_laden_departure_time").state == "06:00:00"
+    assert hass.states.get("number.slim_laden_target_soc").state == "100.0"
+    assert hass.states.get("time.slim_laden_departure").state == "06:00:00"
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     assert entry.runtime_data.data.needed_kwh == round(0.6 * 77.4 / 0.9, 2)
+
+
+async def test_entity_ids_onafhankelijk_van_taal(hass: HomeAssistant) -> None:
+    hass.config.language = "nl"
+    _prices(hass, now_cheap=False)
+    await _setup(hass)
+    # Dashboards in git verwijzen naar deze ID's; ze mogen niet meevertalen.
+    for entity_id in (
+        "binary_sensor.slim_laden_charge_now",
+        "sensor.slim_laden_plan_start",
+        "number.slim_laden_target_soc",
+        "time.slim_laden_departure",
+        "switch.slim_laden_enabled",
+    ):
+        assert hass.states.get(entity_id) is not None, entity_id

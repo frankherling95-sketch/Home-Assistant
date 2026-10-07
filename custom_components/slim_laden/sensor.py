@@ -78,6 +78,8 @@ async def async_setup_entry(
 
 
 class PlanSensor(SlimLadenEntity, SensorEntity):
+    _domain = "sensor"
+
     entity_description: PlanSensorDescription
 
     def __init__(self, coordinator, description: PlanSensorDescription) -> None:

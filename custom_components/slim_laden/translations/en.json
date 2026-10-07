@@ -14,7 +14,7 @@
         },
         "data_description": {
           "price_sensor": "Sensor with a `prices` attribute, e.g. sensor.current_electricity_price_all_in.",
-          "soc_sensor": "E.g. sensor.<car>_ev_battery_level. Empty = always assume an empty battery.",
+          "soc_sensor": "E.g. sensor.ev6_ev_battery_level. Empty = always assume an empty battery.",
           "power_kw": "What charger and car achieve together: 11 kW at 3×16 A, 7.4 kW at 1×32 A."
         }
       }
@@ -39,7 +39,7 @@
         },
         "data_description": {
           "price_sensor": "Sensor with a `prices` attribute, e.g. sensor.current_electricity_price_all_in.",
-          "soc_sensor": "E.g. sensor.<car>_ev_battery_level. Empty = always assume an empty battery.",
+          "soc_sensor": "E.g. sensor.ev6_ev_battery_level. Empty = always assume an empty battery.",
           "power_kw": "What charger and car achieve together: 11 kW at 3×16 A, 7.4 kW at 1×32 A."
         }
       }

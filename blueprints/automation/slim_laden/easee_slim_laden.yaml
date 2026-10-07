@@ -5,7 +5,7 @@ blueprint:
     Slim laden-integratie. Herhaalt de opdracht zodra de auto wordt
     ingeplugd, zodat de lader nooit in de verkeerde stand blijft hangen.
   domain: automation
-  source_url: https://github.com/frankherling95-sketch/staartploeg/blob/main/blueprints/automation/slim_laden/easee_slim_laden.yaml
+  source_url: https://github.com/frankherling95-sketch/Home-Assistant/blob/main/blueprints/automation/slim_laden/easee_slim_laden.yaml
   input:
     charge_now:
       name: Nu laden

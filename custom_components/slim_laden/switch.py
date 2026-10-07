@@ -21,6 +21,8 @@ async def async_setup_entry(
 
 
 class SlimLadenSwitch(SlimLadenEntity, SwitchEntity, RestoreEntity):
+    _domain = "switch"
+
     @property
     def available(self) -> bool:
         return True

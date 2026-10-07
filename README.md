@@ -1,85 +1,120 @@
-# Home Assistant — Slim laden
+# Home Assistant — configuratie als code
+
+Deze repo **is** de `/config`-map van mijn Home Assistant. Wijzigingen worden hier ontwikkeld,
+getest in CI en via de Git pull-app naar Home Assistant gehaald.
+
+```
+ontwikkelen ─▶ PR (tests, hassfest, config-check) ─▶ main ─▶ Git pull-app ─▶ Home Assistant
+```
+
+Documentatie: https://frankherling95-sketch.github.io/Home-Assistant/
+
+## Structuur
 
 | Pad | Wat |
 | --- | --- |
-| `custom_components/slim_laden/` | De integratie (HACS-installeerbaar) |
-| `blueprints/automation/slim_laden/` | Automatisering die de Easee-lader aanstuurt |
-| `tests/` | pytest, inclusief een echte Home Assistant-testomgeving |
+| `configuration.yaml` | Basis: packages, dashboards, valuta EUR |
+| `packages/bronnen.yaml` | **Enige plek** waar entiteiten van Frank Energie, Kia en Easee genoemd worden |
+| `packages/energie_prijzen.yaml` | Prijsinzichten: laagste/hoogste/gemiddeld, goedkoopste moment, niveau |
+| `dashboards/energie.yaml` | Energie: totalen, vermogensbronnen, elektriciteit, gas & water, prijzen |
+| `dashboards/laden.yaml` | Auto, lader en het laadplan van Slim laden |
+| `custom_components/slim_laden/` | Eigen integratie: laden op de goedkoopste uren |
+| `blueprints/automation/slim_laden/` | Stuurt de Easee-lader op basis van Slim laden |
+| `tools/koppel-git.sh` | Eenmalig: bestaande `/config` veilig aan deze repo koppelen |
+| `tests/` | pytest tegen een echte Home Assistant-testomgeving |
+| `index.html` | GitHub Pages |
 
-Custom integration die de auto laadt op de goedkoopste uren vóór vertrek. Combineert drie
-bestaande integraties in plaats van hun API's na te bouwen:
+**Niet** in git (zie `.gitignore`, die werkt met een toestaanlijst): `secrets.yaml`, `.storage/`,
+de database, logs, `automations.yaml`/`scripts.yaml`/`scenes.yaml` (die beheert de UI) en via HACS
+geïnstalleerde integraties.
 
-| Bron | Integratie (HACS) | Wat Slim laden ervan gebruikt |
-| --- | --- | --- |
-| Frank Energie dagprijzen | [bajansen/home-assistant-frank_energie](https://github.com/bajansen/home-assistant-frank_energie) | `sensor.current_electricity_price_all_in` → attribuut `prices` (from/till/price; uur- én kwartierblokken) |
-| Hyundai / Kia Connect | [Hyundai-Kia-Connect/kia_uvo](https://github.com/Hyundai-Kia-Connect/kia_uvo) | `sensor.<auto>_ev_battery_level` (SoC in %) |
-| Easee EV laden | [nordicopen/easee_hass](https://github.com/nordicopen/easee_hass) | actie `easee.action_command` (pause/resume) + `sensor.<lader>_status` |
+## Lagen
 
 ```
-Frank Energie ─ prijzen ─┐
-                         ├─▶ slim_laden ─▶ binary_sensor.…_nu_laden ─▶ blueprint ─▶ Easee pause/resume
-Kia Connect ─── SoC ─────┘
+Frank Energie · Kia/Hyundai · Easee     (HACS-integraties, in de UI ingesteld)
+              │
+              ▼
+packages/bronnen.yaml                   stabiele namen: sensor.stroomprijs_nu, sensor.auto_accuniveau, …
+              │
+              ├─▶ packages/energie_prijzen.yaml     inzichten
+              ├─▶ Slim laden                       planning  ─▶ blueprint ─▶ Easee
+              ▼
+dashboards/*.yaml                        alleen stabiele namen
 ```
 
-De integratie rekent; de blueprint stuurt. Wie later een andere lader of prijsleverancier
-heeft, vervangt alleen die kant.
+Andere auto, lader of leverancier: alleen `packages/bronnen.yaml` aanpassen.
 
-## Hoe het plant
+## Eerste keer instellen
+
+1. **Backup**: Instellingen → Systeem → Back-ups → nu maken.
+2. **HACS-integraties** installeren en instellen: Frank Energie, Easee, Kia/Hyundai Connect.
+   In HACS → Frontend ook **apexcharts-card** (voor de prijsgrafieken).
+3. **Terminal & SSH-app** openen en uitvoeren:
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/frankherling95-sketch/Home-Assistant/main/tools/koppel-git.sh | bash
+   ```
+   Dit koppelt `/config` aan de repo zonder je automatiseringen, `secrets.yaml`, `.storage` of
+   HACS-integraties te wissen. Van je oude `configuration.yaml` blijft een kopie staan; het script
+   toont wat er anders is.
+4. **`packages/bronnen.yaml`**: de regels met `# PAS AAN` moeten naar jouw entiteiten wijzen
+   (Instellingen → Apparaten en diensten → Entiteiten). Stuur ze door, dan pas ik ze aan.
+5. Herstarten: `ha core restart`.
+6. **Git pull-app** installeren en instellen:
+   ```yaml
+   repository: https://github.com/frankherling95-sketch/Home-Assistant.git
+   git_branch: main
+   git_command: pull
+   auto_restart: true
+   restart_ignore: [dashboards/, README.md, index.html, tests/, .github/]
+   repeat: { active: true, interval: 300 }
+   ```
+   Start de app pas ná stap 3: een eerste clone door de app zelf wist `.yaml`-bestanden die
+   niet in de repo staan.
+7. **Slim laden** toevoegen (Instellingen → Integratie toevoegen) met `sensor.stroomprijs_nu`
+   en `sensor.auto_accuniveau`, en een automatisering maken van de blueprint *Slim laden → Easee*.
+8. **Energie-instellingen** (Instellingen → Dashboards → Energie): bij netverbruik
+   *Gebruik een entiteit met de huidige prijs* → `sensor.stroomprijs_nu`. Optioneel bij
+   *Individuele apparaten*: `sensor.lader_energie_totaal`.
+
+Daarna: wijzigingen komen binnen 5 minuten na een merge naar `main` vanzelf binnen. De Git pull-app
+draait eerst een config-check en herstart alleen als die slaagt.
+
+## Slim laden
+
+Laadt de auto op de goedkoopste prijsblokken vóór de vertrektijd.
 
 1. Benodigde energie = `(doel-SoC − SoC) × capaciteit ÷ rendement`. Onbekende SoC telt als leeg.
-2. Alle prijsblokken tussen nu en de eerstvolgende vertrektijd, op prijs gesorteerd.
-3. Goedkoopste blokken pakken tot de energie gedekt is. Het lopende blok telt alleen voor de rest.
-4. `Nu laden` = aan als het huidige blok in het plan zit, **of** de prijs op/onder `Altijd laden onder`
-   ligt (standaard € 0,00 → gratis/negatieve uren altijd meepakken, tot 100%).
-5. Herberekend elke minuut en direct bij een nieuwe prijs of SoC.
+2. Alle prijsblokken (uur of kwartier) tussen nu en de vertrektijd, goedkoopste eerst, tot de energie gedekt is.
+3. `Nu laden` = aan als het huidige blok in het plan zit, **of** de prijs op/onder *Altijd laden onder* ligt
+   (standaard € 0,00 → gratis/negatieve uren altijd meepakken, tot 100%).
+4. Herberekend elke minuut en direct bij een nieuwe prijs of SoC.
 
-Prijzen voor morgen komen rond 13:00. Daarvoor is het plan soms `volledig: false`: het rekent
-met wat bekend is en schuift op zodra de nieuwe prijzen binnen zijn.
+Prijzen voor morgen komen rond 13:00; daarvoor is het plan soms `volledig: false`.
 
-## Entiteiten
-
-| Entiteit | Functie |
+| Entiteit (vast, onafhankelijk van taal) | Functie |
 | --- | --- |
-| `binary_sensor.…_nu_laden` | Stuursignaal; attribuut `reden`: gepland · onder_drempel · wachten · doel_bereikt · geen_prijzen · uitgeschakeld |
-| `sensor.…_start_laden` / `…_einde_laden` | Eerste en laatste gekozen blok; attribuut `blokken` met het hele plan |
-| `sensor.…_benodigde_energie` | kWh uit het net |
-| `sensor.…_geschatte_kosten` / `…_gemiddelde_laadprijs` | Op basis van de all-in prijs |
-| `number.…_doel_accuniveau` | Doel-SoC (standaard 80%) |
-| `time.…_vertrektijd` | Uiterlijk dan vol (standaard 07:30) |
-| `number.…_altijd_laden_onder` | Prijsdrempel in €/kWh |
-| `switch.…_slim_laden_actief` | Uit = gewoon laden, zonder planning |
+| `binary_sensor.slim_laden_charge_now` | Stuursignaal; attribuut `reden` |
+| `sensor.slim_laden_plan_start` / `_plan_end` | Eerste/laatste blok; attribuut `blokken` |
+| `sensor.slim_laden_needed_energy` | kWh uit het net |
+| `sensor.slim_laden_estimated_cost` / `_average_price` | Op basis van de all-in prijs |
+| `number.slim_laden_target_soc` · `time.slim_laden_departure` | Doel-SoC · vertrektijd |
+| `number.slim_laden_cheap_threshold` | Prijsdrempel in €/kWh |
+| `switch.slim_laden_enabled` | Uit = gewoon laden |
 
-## Installeren
+Zet in de Easee-app geen eigen laadschema aan; dat vecht met de blueprint.
 
-1. Installeer via HACS de drie integraties hierboven en configureer ze.
-2. HACS → ⋮ → *Aangepaste repositories* → voeg deze repo toe als type **Integratie** →
-   installeer *Slim laden*. (Handmatig kan ook: kopieer `custom_components/slim_laden` naar
-   `/config/custom_components/`.)
-3. Kopieer `blueprints/automation/slim_laden/` naar `/config/blueprints/automation/`, of importeer
-   de blueprint via *Automatiseringen → Blueprints → Blueprint importeren* met de URL van
-   `easee_slim_laden.yaml` in deze repo.
-4. Herstart Home Assistant.
-5. *Instellingen → Apparaten en diensten → Integratie toevoegen → Slim laden*: kies de prijssensor,
-   de accusensor van de auto, bruikbare capaciteit (bijv. 77,4 kWh EV6/Ioniq 5 LR, 64,8 kWh Niro EV)
-   en het laadvermogen (11 kW bij 3×16 A).
-6. *Automatiseringen → Nieuw → Slim laden → Easee*: kies `Nu laden`, de lader en de statussensor.
-
-Zet in de Easee-app **geen** eigen laadschema aan; dat vecht met de blueprint.
-
-Vereist Home Assistant 2024.6 of nieuwer. Getest tegen 2026.2.
-
-## Testen
+## Ontwikkelen en testen
 
 ```bash
 pip install pytest-homeassistant-custom-component
 pytest
 ```
 
-`planner.py` heeft geen Home Assistant-afhankelijkheden; daar zit de rekenlogica en de meeste tests.
+CI (`.github/workflows/validate.yml`) draait pytest, de Home Assistant-configcheck, hassfest en de
+HACS-validatie. `planner.py` heeft geen Home Assistant-afhankelijkheden; daar zit de rekenlogica.
 
 ## Bekende grenzen
 
-- De SoC van de auto komt via de Kia/Hyundai-cloud en ververst niet elke minuut. Tijdens het laden
-  loopt het plan daardoor wat achter; het laatste geplande blok vangt dat op.
-- Laadvermogen is een vaste aanname. Bij een koude accu of fase-beperking laadt de auto trager en
-  kan het doel net niet gehaald worden — zet dan het vermogen in de opties wat lager.
+- De SoC komt via de Kia/Hyundai-cloud en ververst niet elke minuut.
+- Laadvermogen is een vaste aanname; bij een koude accu laadt de auto trager.
+- Energiebronnen en -kosten blijven in de UI ingesteld: Home Assistant kent daar geen YAML voor.

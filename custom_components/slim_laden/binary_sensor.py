@@ -17,6 +17,8 @@ async def async_setup_entry(
 
 
 class NuLadenSensor(SlimLadenEntity, BinarySensorEntity):
+    _domain = "binary_sensor"
+
     @property
     def available(self) -> bool:
         return super().available and self.coordinator.data is not None

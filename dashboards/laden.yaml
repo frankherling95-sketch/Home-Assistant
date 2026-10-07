@@ -1,0 +1,115 @@
+# Laden — auto, lader en de planning van Slim laden op één scherm.
+# Entiteiten: zie packages/bronnen.yaml (auto/lader) en de integratie Slim laden.
+# Vereist voor de grafiek: apexcharts-card via HACS (Frontend).
+
+title: Laden
+views:
+  - title: Laden
+    path: laden
+    icon: mdi:ev-station
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Auto
+          - type: tile
+            entity: sensor.auto_accuniveau
+            name: Accu
+            features: [{ type: bar-gauge }]
+            features_position: inline
+            grid_options: { columns: full }
+          - type: tile
+            entity: sensor.auto_bereik
+            name: Bereik
+          - type: tile
+            entity: binary_sensor.auto_ingeplugd
+            name: Stekker
+          - type: tile
+            entity: binary_sensor.auto_laadt
+            name: Laadt
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Lader
+          - type: tile
+            entity: sensor.lader_status
+            name: Status
+            grid_options: { columns: full }
+          - type: tile
+            entity: sensor.lader_vermogen
+            name: Vermogen
+          - type: tile
+            entity: sensor.lader_energie_sessie
+            name: Deze sessie
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Slim laden
+          - type: tile
+            entity: binary_sensor.slim_laden_charge_now
+            name: Nu laden
+            state_content: [state, reden]
+            grid_options: { columns: full }
+          - type: tile
+            entity: sensor.slim_laden_plan_start
+            name: Start
+          - type: tile
+            entity: sensor.slim_laden_plan_end
+            name: Einde
+          - type: tile
+            entity: sensor.slim_laden_needed_energy
+            name: Nodig
+          - type: tile
+            entity: sensor.slim_laden_estimated_cost
+            name: Kosten
+
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:apexcharts-card
+            header: { show: true, title: Prijs en laadplan }
+            graph_span: 2d
+            span: { start: day }
+            now: { show: true, label: Nu }
+            yaxis: [{ decimals: 2, apex_config: { title: { text: "€/kWh" } } }]
+            series:
+              - entity: sensor.stroomprijs_nu
+                name: Prijs
+                type: column
+                color: "#9aa5b8"
+                data_generator: |
+                  return (entity.attributes.prices || []).map(p => [new Date(p.from).getTime(), p.price]);
+              - entity: sensor.slim_laden_plan_start
+                name: Gepland laden
+                type: column
+                color: "#18bcf2"
+                data_generator: |
+                  return (entity.attributes.blokken || []).map(b => [new Date(b.van).getTime(), b.prijs]);
+            grid_options: { columns: full }
+          - type: history-graph
+            title: Laatste 24 uur
+            hours_to_show: 24
+            entities:
+              - entity: sensor.auto_accuniveau
+              - entity: sensor.lader_vermogen
+            grid_options: { columns: full }
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Instellingen
+          - type: entities
+            entities:
+              - entity: switch.slim_laden_enabled
+                name: Slim laden actief
+              - entity: number.slim_laden_target_soc
+                name: Doel accuniveau
+              - entity: time.slim_laden_departure
+                name: Vertrektijd
+              - entity: number.slim_laden_cheap_threshold
+                name: Altijd laden onder
+            grid_options: { columns: full }
