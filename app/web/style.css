@@ -1,0 +1,90 @@
+/* Stijl in de geest van het Home Assistant-energiedashboard: kaarten op een rustige achtergrond. */
+:root {
+  --bg: #f4f5f7; --kaart: #ffffff; --tekst: #1c1f24; --zacht: #6b7280; --lijn: #e3e5e9;
+  --balk: #ffffff; --accent: #03a9f4; --pil: #eef0f3;
+  /* Energiekleuren zoals Home Assistant */
+  --c-stroom: #488fc2; --c-terug: #8353d1; --c-gas: #8e021b; --c-laden: #26a69a; --c-prijs: #ff9800;
+  --c-plan: #03a9f4; --goed: #2e7d32; --slecht: #c62828;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111318; --kaart: #1c1f26; --tekst: #e6e8ec; --zacht: #9aa1ad; --lijn: #2b2f38;
+    --balk: #1c1f26; --pil: #262a33; --c-gas: #d14a5f; --goed: #66bb6a; --slecht: #ef5350;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--tekst);
+  font: 15px/1.45 Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; }
+button { font: inherit; color: inherit; }
+
+.balk { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 16px;
+  background: var(--balk); border-bottom: 1px solid var(--lijn); padding: 0 16px; height: 56px; }
+.titel { font-weight: 500; font-size: 1.15rem; }
+.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; height: 100%; }
+.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 0 14px;
+  height: 100%; cursor: pointer; color: var(--zacht); font-weight: 500; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--tekst); border-bottom-color: var(--tekst); }
+
+main { max-width: 1200px; margin: 0 auto; padding: 16px 16px 96px; }
+.raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+.raster[hidden] { display: none; }
+.kaart { background: var(--kaart); border: 1px solid var(--lijn); border-radius: 12px; padding: 16px; min-width: 0; }
+.kaart.breed { grid-column: 1 / -1; }
+.kaart h2 { margin: 0 0 12px; font-size: 1.5rem; font-weight: 400; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sub { font-size: 0.9rem; color: var(--zacht); }
+.pil { margin-left: auto; font-size: 0.9rem; font-weight: 500; border: 1px solid var(--lijn); border-radius: 10px; padding: 4px 10px; }
+
+.grafiek { width: 100%; height: 240px; }
+.grafiek.hoog { height: 320px; }
+
+.tabel-wrap { overflow-x: auto; }
+.totalen { width: 100%; border-collapse: collapse; }
+.totalen th, .totalen td { padding: 12px 8px; border-bottom: 1px solid var(--lijn); text-align: right; white-space: nowrap; }
+.totalen th { font-weight: 500; }
+.totalen th:nth-child(2), .totalen td:nth-child(2) { text-align: left; }
+.totalen td:first-child { width: 36px; }
+.totalen tr:last-child td { border-bottom: 0; font-weight: 500; }
+.stip { display: inline-block; width: 34px; height: 18px; border-radius: 4px; border: 1px solid; opacity: 0.9; }
+
+.cijfers, .tegels { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 12px; }
+.tegel { background: var(--pil); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.tegel .label { color: var(--zacht); font-size: 0.82rem; }
+.tegel .waarde { font-size: 1.15rem; font-weight: 500; overflow-wrap: anywhere; }
+.goed { color: var(--goed); } .slecht { color: var(--slecht); }
+
+.accu { position: relative; height: 34px; border-radius: 8px; background: var(--pil); overflow: hidden; }
+.accu-vulling { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--c-laden); opacity: 0.85; transition: width 0.4s; }
+.accu span { position: relative; display: block; text-align: center; line-height: 34px; font-weight: 500; }
+
+.formulier { display: grid; gap: 10px; }
+.formulier label { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.formulier input { font: inherit; color: var(--tekst); background: var(--pil); border: 1px solid var(--lijn);
+  border-radius: 8px; padding: 6px 8px; width: 7em; text-align: right; }
+.formulier input[type="time"] { width: 8.5em; }
+.formulier input[type="checkbox"] { width: 22px; height: 22px; }
+.formulier button { justify-self: start; background: var(--accent); color: #fff; border: 0; border-radius: 8px;
+  padding: 8px 16px; font-weight: 500; cursor: pointer; }
+.formulier output { color: var(--zacht); font-size: 0.9rem; }
+
+.melding { margin-top: 16px; padding: 12px 16px; border-radius: 10px; background: var(--pil); color: var(--zacht); }
+
+.datumbalk { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 5;
+  display: flex; align-items: center; gap: 4px; background: var(--balk); border: 1px solid var(--lijn);
+  border-radius: 14px; padding: 6px; box-shadow: 0 4px 16px rgb(0 0 0 / 0.12); }
+.datumbalk[hidden] { display: none; }
+.datumbalk button { background: none; border: 0; border-radius: 10px; min-width: 44px; height: 40px;
+  font-size: 1.3rem; cursor: pointer; }
+.datumbalk button:hover { background: var(--pil); }
+.datumbalk .datum { font-size: 1rem; font-weight: 500; padding: 0 14px; white-space: nowrap; }
+
+@media (max-width: 600px) {
+  .raster { grid-template-columns: 1fr; }
+  .titel { display: none; }
+  .balk { padding: 0 4px; }
+  .kaart h2 { font-size: 1.3rem; }
+  .totalen th, .totalen td { padding: 10px 4px; font-size: 0.92rem; }
+  .totalen td:first-child { width: 26px; }
+  .stip { width: 22px; height: 14px; }
+}

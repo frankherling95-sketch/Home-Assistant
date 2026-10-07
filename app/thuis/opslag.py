@@ -1,0 +1,194 @@
+"""Opslag: DuckDB lokaal en in tests, BigQuery in Google Cloud. Zelfde SQL voor beide.
+
+Queries schrijven tabellen als {prijs}, {verbruik}, … en parameters als @naam.
+Aggregeren gebeurt in Python, zodat er geen dialectverschillen in de SQL nodig zijn.
+"""
+
+from __future__ import annotations
+
+import json
+from datetime import UTC, date, datetime
+from typing import Any, Protocol
+
+from .config import Config
+from .schema import TABELLEN, Tabel, actueel
+
+_DUCK_TYPES = {"STRING": "VARCHAR", "TIMESTAMP": "TIMESTAMPTZ", "FLOAT64": "DOUBLE", "BOOL": "BOOLEAN"}
+
+
+def nu() -> datetime:
+    return datetime.now(UTC)
+
+
+class Opslag(Protocol):
+    def maak_tabellen(self) -> None: ...
+    def voeg_toe(self, tabel: Tabel, rijen: list[dict[str, Any]]) -> int: ...
+    def lees(self, sql: str, **params: Any) -> list[dict[str, Any]]: ...
+
+
+def _vul_aan(tabel: Tabel, rijen: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Alleen bekende kolommen, ontbrekende als None, en `opgehaald` invullen."""
+    stempel = nu()
+    namen = [k for k, _ in tabel.kolommen]
+    uit = []
+    for r in rijen:
+        rij = {k: r.get(k) for k in namen}
+        rij["opgehaald"] = rij["opgehaald"] or stempel
+        uit.append(rij)
+    return uit
+
+
+class DuckOpslag:
+    def __init__(self, pad: str = ":memory:") -> None:
+        import duckdb
+
+        self.con = duckdb.connect(pad)
+        self.con.execute("SET TimeZone = 'UTC'")
+        self.con.execute("CREATE SCHEMA IF NOT EXISTS thuis")
+
+    def _ref(self, t: Tabel) -> str:
+        return f"thuis.{t.naam}"
+
+    def maak_tabellen(self) -> None:
+        for t in TABELLEN:
+            kolommen = ", ".join(f"{k} {_DUCK_TYPES[v]}" for k, v in t.kolommen)
+            self.con.execute(f"CREATE TABLE IF NOT EXISTS {self._ref(t)} ({kolommen})")
+
+    def voeg_toe(self, tabel: Tabel, rijen: list[dict[str, Any]]) -> int:
+        if not rijen:
+            return 0
+        rijen = _vul_aan(tabel, rijen)
+        namen = list(rijen[0])
+        self.con.cursor().executemany(
+            f"INSERT INTO {self._ref(tabel)} ({', '.join(namen)}) VALUES ({', '.join('?' * len(namen))})",
+            [[r[k] for k in namen] for r in rijen],
+        )
+        return len(rijen)
+
+    def lees(self, sql: str, **params: Any) -> list[dict[str, Any]]:
+        sql = _vul_tabellen(sql, self._ref).replace("@", "$")
+        # Eigen cursor per aanroep: de API leest vanuit meerdere threads.
+        cur = self.con.cursor().execute(sql, params)
+        namen = [d[0] for d in cur.description]
+        return [_naar_utc(dict(zip(namen, r, strict=True))) for r in cur.fetchall()]
+
+
+class BigQueryOpslag:
+    def __init__(self, project: str, dataset: str) -> None:
+        from google.cloud import bigquery
+
+        self.bq = bigquery
+        self.client = bigquery.Client(project=project)
+        self.dataset = f"{project}.{dataset}"
+
+    def _ref(self, t: Tabel) -> str:
+        return f"`{self.dataset}.{t.naam}`"
+
+    def _schema(self, t: Tabel) -> list:
+        return [self.bq.SchemaField(k, v) for k, v in t.kolommen]
+
+    def maak_tabellen(self) -> None:
+        self.client.create_dataset(self.dataset, exists_ok=True)
+        for t in TABELLEN:
+            tabel = self.bq.Table(f"{self.dataset}.{t.naam}", schema=self._schema(t))
+            # Partitie op de tijd waar queries op filteren, clustering op de sleutel:
+            # zo leest een dagoverzicht alleen die dag in plaats van de hele historie.
+            if t.tijdkolom:
+                tabel.time_partitioning = self.bq.TimePartitioning(field=t.tijdkolom)
+            tabel.clustering_fields = list(t.sleutel)[:4]
+            self.client.create_table(tabel, exists_ok=True)
+
+    def voeg_toe(self, tabel: Tabel, rijen: list[dict[str, Any]]) -> int:
+        if not rijen:
+            return 0
+        rijen = [{k: _json_waarde(v) for k, v in r.items()} for r in _vul_aan(tabel, rijen)]
+        # Laadtaak i.p.v. streaming insert: laadtaken zijn gratis.
+        job = self.client.load_table_from_json(
+            rijen,
+            f"{self.dataset}.{tabel.naam}",
+            job_config=self.bq.LoadJobConfig(
+                schema=self._schema(tabel), write_disposition=self.bq.WriteDisposition.WRITE_APPEND
+            ),
+        )
+        job.result()
+        return len(rijen)
+
+    def lees(self, sql: str, **params: Any) -> list[dict[str, Any]]:
+        config = self.bq.QueryJobConfig(
+            query_parameters=[self.bq.ScalarQueryParameter(k, _bq_type(v), v) for k, v in params.items()]
+        )
+        rows = self.client.query(_vul_tabellen(sql, self._ref), job_config=config).result()
+        return [_naar_utc(dict(r.items())) for r in rows]
+
+
+def _vul_tabellen(sql: str, ref) -> str:
+    """{prijs} → actuele stand van die tabel."""
+    return sql.format(**{t.naam: actueel(t, ref(t)) for t in TABELLEN})
+
+
+def _naar_utc(rij: dict[str, Any]) -> dict[str, Any]:
+    return {k: v.astimezone(UTC) if isinstance(v, datetime) else v for k, v in rij.items()}
+
+
+def _json_waarde(v: Any) -> Any:
+    return v.isoformat() if isinstance(v, (datetime, date)) else v
+
+
+def _bq_type(v: Any) -> str:
+    if isinstance(v, bool):
+        return "BOOL"
+    if isinstance(v, datetime):
+        return "TIMESTAMP"
+    if isinstance(v, date):
+        return "DATE"
+    if isinstance(v, int):
+        return "INT64"
+    if isinstance(v, float):
+        return "FLOAT64"
+    return "STRING"
+
+
+def maak_opslag(cfg: Config) -> Opslag:
+    if cfg.opslag == "bigquery":
+        return BigQueryOpslag(cfg.gcp_project, cfg.bq_dataset)
+    return DuckOpslag(cfg.duckdb_pad)
+
+
+def voeg_toe_gewijzigd(opslag: Opslag, tabel: Tabel, rijen: list[dict[str, Any]]) -> int:
+    """Alleen rijen opslaan die nieuw zijn of afwijken van de actuele stand.
+
+    Prijzen en verbruik worden elke ronde opnieuw opgehaald; zonder deze filter groeit de
+    tabel elke 15 minuten met dezelfde gegevens.
+    """
+    if not rijen or not tabel.tijdkolom:
+        return opslag.voeg_toe(tabel, rijen)
+    kol = tabel.tijdkolom
+    waarden = [k for k, _ in tabel.kolommen if k != "opgehaald"]
+    bestaand = opslag.lees(
+        f"SELECT {', '.join(waarden)} FROM {{{tabel.naam}}} WHERE {kol} >= @van AND {kol} <= @tot",
+        van=min(r[kol] for r in rijen),
+        tot=max(r[kol] for r in rijen),
+    )
+
+    def vingerafdruk(r: dict[str, Any]) -> tuple:
+        return tuple(round(v, 6) if isinstance(v, float) else v for v in (r.get(k) for k in waarden))
+
+    gezien = {vingerafdruk(r) for r in bestaand}
+    return opslag.voeg_toe(tabel, [r for r in rijen if vingerafdruk(r) not in gezien])
+
+
+# ── Instellingen (sleutel/waarde, JSON) ─────────────────────────────────────────
+
+
+def lees_instellingen(opslag: Opslag, standaard: dict[str, Any]) -> dict[str, Any]:
+    uit = dict(standaard)
+    for r in opslag.lees("SELECT sleutel, waarde FROM {instelling}"):
+        if r["sleutel"] in standaard:
+            uit[r["sleutel"]] = json.loads(r["waarde"])
+    return uit
+
+
+def schrijf_instellingen(opslag: Opslag, waarden: dict[str, Any]) -> None:
+    from .schema import INSTELLING
+
+    opslag.voeg_toe(INSTELLING, [{"sleutel": k, "waarde": json.dumps(v)} for k, v in waarden.items()])

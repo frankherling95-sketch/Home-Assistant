@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thuis</title>
+<meta name="theme-color" content="#111318">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%2303a9f4' d='M13 2 4 14h7l-1 8 9-12h-7z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.1/echarts.min.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="balk">
+  <span class="titel">Thuis</span>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="samenvatting" aria-selected="true">Samenvatting</button>
+    <button role="tab" data-tab="elektriciteit">Elektriciteit</button>
+    <button role="tab" data-tab="gas">Gas</button>
+    <button role="tab" data-tab="laden">Laden</button>
+  </nav>
+</header>
+
+<main>
+  <section data-paneel="samenvatting" class="raster">
+    <article class="kaart">
+      <h2>Totalen</h2>
+      <div class="tabel-wrap"><table class="totalen" id="totalen"></table></div>
+    </article>
+    <article class="kaart">
+      <h2>Stroomprijs <span class="sub" id="prijs-sub"></span></h2>
+      <div class="grafiek" id="g-prijs"></div>
+      <div class="cijfers" id="prijs-cijfers"></div>
+    </article>
+    <article class="kaart">
+      <h2>Nu</h2>
+      <div class="tegels" id="nu-tegels"></div>
+    </article>
+  </section>
+
+  <section data-paneel="elektriciteit" class="raster" hidden>
+    <article class="kaart breed">
+      <h2>Elektriciteit <span class="pil" id="stroom-totaal"></span></h2>
+      <div class="grafiek hoog" id="g-stroom"></div>
+    </article>
+    <article class="kaart">
+      <h2>Laden</h2>
+      <div class="grafiek" id="g-laden"></div>
+    </article>
+    <article class="kaart">
+      <h2>Kosten per uur</h2>
+      <div class="grafiek" id="g-kosten"></div>
+    </article>
+  </section>
+
+  <section data-paneel="gas" class="raster" hidden>
+    <article class="kaart breed">
+      <h2>Gasverbruik <span class="pil" id="gas-totaal"></span></h2>
+      <div class="grafiek hoog" id="g-gas"></div>
+    </article>
+  </section>
+
+  <section data-paneel="laden" class="raster" hidden>
+    <article class="kaart">
+      <h2>Auto</h2>
+      <div class="accu"><div class="accu-vulling" id="accu-vulling"></div><span id="accu-tekst">–</span></div>
+      <div class="tegels" id="auto-tegels"></div>
+    </article>
+    <article class="kaart">
+      <h2>Lader</h2>
+      <div class="tegels" id="lader-tegels"></div>
+    </article>
+    <article class="kaart breed">
+      <h2>Laadplan <span class="pil" id="plan-status"></span></h2>
+      <div class="grafiek" id="g-plan"></div>
+      <div class="tegels" id="plan-tegels"></div>
+    </article>
+    <article class="kaart">
+      <h2>Instellingen</h2>
+      <form id="instellingen" class="formulier">
+        <label>Doel accu <span><input name="doel_pct" type="number" min="10" max="100" step="5"> %</span></label>
+        <label>Vertrektijd <input name="vertrek" type="time" required></label>
+        <label>Accucapaciteit <span><input name="capaciteit_kwh" type="number" min="5" max="200" step="0.1"> kWh</span></label>
+        <label>Laadvermogen <span><input name="vermogen_kw" type="number" min="1" max="22" step="0.1"> kW</span></label>
+        <label>Laadrendement <span><input name="rendement_pct" type="number" min="50" max="100" step="1"> %</span></label>
+        <label>Altijd laden onder <span>€ <input name="altijd_onder" type="number" min="-1" max="1" step="0.01"> /kWh</span></label>
+        <label class="schakel">Lader automatisch sturen <input name="sturen" type="checkbox"></label>
+        <button type="submit">Opslaan</button>
+        <output id="instellingen-melding"></output>
+      </form>
+    </article>
+  </section>
+
+  <p class="melding" id="melding" hidden></p>
+</main>
+
+<footer class="datumbalk" id="datumbalk">
+  <button id="vorige" aria-label="Vorige dag">‹</button>
+  <button id="datum" class="datum"></button>
+  <button id="volgende" aria-label="Volgende dag">›</button>
+</footer>
+</body>
+</html>

@@ -1,31 +1,9 @@
-# Deze repo is de /config-map van Home Assistant.
-# Alles is genegeerd behalve wat hieronder expliciet wordt toegestaan:
-# geheimen, database, logs en .storage komen zo nooit in git.
-/*
-!/.gitignore
-!/.nojekyll
-!/.github/
-!/README.md
-!/index.html
-!/hacs.json
-!/pytest.ini
-!/configuration.yaml
-!/packages/
-!/dashboards/
-!/themes/
-!/blueprints/
-!/tools/
-!/tests/
-
-# Eigen integraties wel, via HACS geïnstalleerde niet (die beheert HACS).
-!/custom_components/
-/custom_components/*
-!/custom_components/slim_laden/
-
 __pycache__/
 *.pyc
+*.egg-info/
 .pytest_cache/
+.ruff_cache/
+.venv/
+*.duckdb
+*.duckdb.wal
 .DS_Store
-
-# Standaard-blueprints die Home Assistant zelf aanmaakt.
-/blueprints/*/homeassistant/
