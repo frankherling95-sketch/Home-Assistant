@@ -12,11 +12,16 @@
 #   PROJECT      Google Cloud-project (standaard: het actieve project in gcloud)
 #   REGIO        standaard europe-west4 (Nederland)
 #   EMAILS       wie de app mag openen, komma-gescheiden (standaard: jij)
-#   GITHUB_REPO  standaard frankherling95-sketch/Home-Assistant
+#   GITHUB=j     automatisch deployen vanuit GitHub instellen zonder het te vragen (alleen voor
+#                de beheerder van GITHUB_REPO, standaard frankherling95-sketch/Home-Assistant)
 #   BUDGET       maandbudget voor het alarm, standaard 1 (in de valuta van je betaalaccount)
 #   BOUW=1       ook een nieuw image bouwen als de app al draait
 #
-# Zie docs/deploy.md voor uitleg en kosten.
+# Het script vraagt de logins (Frank Energie, Easee, Kia/Hyundai). Bij een volgende keer vraagt
+# het of je ze wilt wijzigen; Enter laat een waarde staan.
+#
+# Zie docs/deploy.md voor uitleg en kosten, en docs/eigen-installatie.md voor een eigen
+# installatie stap voor stap.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -83,29 +88,67 @@ else
   bq --project_id="$PROJECT" --location=EU mk --dataset --description="Thuis: energiedata" "$PROJECT:$DATASET"
 fi
 
-stap "Geheim $GEHEIM (alle wachtwoorden in één JSON)"
+stap "Logins (alle wachtwoorden samen in één geheim: $GEHEIM)"
+# sleutel|vraag|verborgen
+VRAGEN=(
+  "FRANK_EMAIL|Frank Energie: e-mailadres|nee"
+  "FRANK_WACHTWOORD|Frank Energie: wachtwoord|ja"
+  "EASEE_GEBRUIKER|Easee: e-mailadres of telefoonnummer|nee"
+  "EASEE_WACHTWOORD|Easee: wachtwoord|ja"
+  "KIA_MERK|Auto: merk (kia of hyundai)|nee"
+  "KIA_GEBRUIKER|Kia Connect / Hyundai Bluelink: e-mailadres|nee"
+  "KIA_WACHTWOORD|Kia Connect / Hyundai Bluelink: wachtwoord|ja"
+  "KIA_PIN|Kia/Hyundai: pincode (in Europa niet nodig, Enter)|ja"
+  "GOOGLE_CHAT_WEBHOOK|Google Chat-webhook voor meldingen (mag leeg)|ja"
+)
+vraag_logins() {  # $1 = huidige JSON; schrijft de nieuwe JSON naar stdout (vragen gaan naar stderr)
+  local regel sleutel vraag verborgen waarde
+  export HUIDIG="$1"  # via de omgeving, niet als argument: zo staat het niet in de proceslijst
+  info "Enter = overslaan (of laten zoals het is), - = leegmaken. Wachtwoorden zie je niet tijdens het typen." >&2
+  for regel in "${VRAGEN[@]}"; do
+    IFS='|' read -r sleutel vraag verborgen <<<"$regel"
+    if KEY="$sleutel" python3 -c 'import json,os,sys; sys.exit(0 if json.loads(os.environ["HUIDIG"]).get(os.environ["KEY"]) else 1)'; then
+      vraag="$vraag [al ingevuld]"
+    fi
+    if [ "$verborgen" = ja ]; then read -rsp "   $vraag: " waarde; echo >&2; else read -rp "   $vraag: " waarde; fi
+    if [ -n "$waarde" ]; then printf '%s\0%s\0' "$sleutel" "$waarde"; fi
+  done | python3 -c '
+import json, os, sys
+uit = json.loads(os.environ["HUIDIG"])
+d = sys.stdin.buffer.read().split(b"\0")[:-1]
+for k, v in zip(d[0::2], d[1::2]):
+    k, v = k.decode(), v.decode().strip()
+    if v == "-":
+        uit.pop(k, None)
+    else:
+        uit[k] = v.lower() if k == "KIA_MERK" else v
+print(json.dumps(uit))'
+  unset HUIDIG
+}
 if stil gcloud secrets describe "$GEHEIM" --project="$PROJECT"; then
-  info "bestaat al; aanpassen: zie docs/deploy.md (Wachtwoorden wijzigen)"
+  antwoord=n
+  if [ -t 0 ]; then read -rp "   Logins (opnieuw) invullen of wijzigen? [j/N] " antwoord; fi
+  if [[ "$antwoord" =~ ^[jJyY] ]]; then
+    huidig="$(gcloud secrets versions access latest --secret="$GEHEIM" --project="$PROJECT" 2>/dev/null || echo '{}')"
+    vraag_logins "$huidig" | gcloud secrets versions add "$GEHEIM" --project="$PROJECT" --data-file=- >/dev/null
+    # Oude versies uitzetten (niet wissen): zes actieve versies zijn gratis.
+    gcloud secrets versions list "$GEHEIM" --project="$PROJECT" --filter="state=ENABLED" \
+      --sort-by=~createTime --format='value(name)' | tail -n +2 | while read -r versie; do
+      gcloud secrets versions disable "$versie" --secret="$GEHEIM" --project="$PROJECT" --quiet >/dev/null
+    done
+    info "opgeslagen; de volgende ronde gebruikt de nieuwe logins"
+  else
+    info "bestaan al en blijven zoals ze zijn"
+  fi
 else
   json='{}'
-  if [ -t 0 ]; then
-    info "Vul in wat je hebt; Enter = overslaan. Wachtwoorden zie je niet tijdens het typen."
-    declare -A waarden=()
-    for sleutel in FRANK_EMAIL FRANK_WACHTWOORD EASEE_GEBRUIKER EASEE_WACHTWOORD KIA_GEBRUIKER KIA_WACHTWOORD KIA_PIN KIA_MERK GOOGLE_CHAT_WEBHOOK; do
-      case "$sleutel" in
-        *WACHTWOORD|*PIN|*WEBHOOK) read -rsp "   $sleutel: " waarde; echo ;;
-        *) read -rp "   $sleutel: " waarde ;;
-      esac
-      [ -n "$waarde" ] && waarden[$sleutel]="$waarde"
-    done
-    json="$(for k in "${!waarden[@]}"; do printf '%s\0%s\0' "$k" "${waarden[$k]}"; done |
-      python3 -c 'import json,sys; d=sys.stdin.buffer.read().split(b"\0")[:-1]; print(json.dumps({d[i].decode(): d[i+1].decode() for i in range(0,len(d),2)}))')"
-  fi
-  printf '%s' "$json" | gcloud secrets create "$GEHEIM" --project="$PROJECT" --replication-policy=automatic --data-file=-
+  if [ -t 0 ]; then json="$(vraag_logins '{}')"; fi
+  printf '%s' "$json" | gcloud secrets create "$GEHEIM" --project="$PROJECT" --replication-policy=automatic --data-file=- >/dev/null
+  info "opgeslagen"
 fi
 gcloud secrets add-iam-policy-binding "$GEHEIM" --project="$PROJECT" \
   --member="serviceAccount:$RUN_SA" --role=roles/secretmanager.secretAccessor --quiet >/dev/null
-info "alleen thuis-run (de verzamelaar) kan het lezen"
+info "alleen de verzamelaar kan ze lezen"
 
 stap "Artifact Registry $REPO met opruimregels"
 if stil gcloud artifacts repositories describe "$REPO" --project="$PROJECT" --location="$REGIO"; then
@@ -137,7 +180,7 @@ if [ -z "$IMAGE" ] || [ "$BOUW" = 1 ]; then
   docker build -t "$IMAGE" app
   docker push "$IMAGE"
 else
-  info "de app draait al op $IMAGE (BOUW=1 voor een nieuw image; normaal doet GitHub dat)"
+  info "de app draait al op $IMAGE (een nieuwe versie: git pull && BOUW=1 bash deploy/setup-gcp.sh)"
 fi
 
 stap "Verzamelaar: Cloud Run-job $JOB"
@@ -160,12 +203,27 @@ gcloud run deploy "$APP" --project="$PROJECT" --region="$REGIO" --image="$IMAGE"
 gcloud beta services identity create --service=iap.googleapis.com --project="$PROJECT" >/dev/null 2>&1 || true
 gcloud run services add-iam-policy-binding "$APP" --project="$PROJECT" --region="$REGIO" \
   --member="serviceAccount:service-$NUMMER@gcp-sa-iap.iam.gserviceaccount.com" --role=roles/run.invoker --quiet >/dev/null
+# Zonder Google Workspace-organisatie (los gmail-account) heeft IAP eerst een eigen inlogscherm
+# nodig. Dat kan alleen eenmalig in de console; daarna lukt het toegang geven hieronder wel.
+ORGANISATIE="$(gcloud projects describe "$PROJECT" --format='value(parent.type)')"
+TOEGANG_OK=1
 IFS=',' read -ra lijst <<<"$EMAILS"
 for email in "${lijst[@]}"; do
-  gcloud iap web add-iam-policy-binding --project="$PROJECT" --member="user:$email" \
-    --role=roles/iap.httpsResourceAccessor --region="$REGIO" --resource-type=cloud-run --service="$APP" --quiet >/dev/null
-  info "toegang voor $email"
+  if gcloud iap web add-iam-policy-binding --project="$PROJECT" --member="user:$email" \
+    --role=roles/iap.httpsResourceAccessor --region="$REGIO" --resource-type=cloud-run --service="$APP" --quiet >/dev/null 2>&1; then
+    info "toegang voor $email"
+  else
+    TOEGANG_OK=0
+  fi
 done
+if [ "$TOEGANG_OK" = 0 ]; then
+  let_op "toegang geven lukte nog niet. Doe eenmalig deze stappen in de console en draai daarna dit script opnieuw:"
+  info "1. Open https://console.cloud.google.com/run/detail/$REGIO/$APP?project=$PROJECT"
+  info "2. Tabblad Security > onder Identity-Aware Proxy (IAP): Edit policy > Configure in IAP"
+  info "3. Configure consent screen: kies External, vul de app-naam (Thuis) en je e-mailadres in"
+  info "4. Kies Auto generate credentials en klik Save"
+  [ "$ORGANISATIE" = organization ] || info "   (Dit project hangt niet onder een Google Workspace-organisatie; daarom is deze stap nodig.)"
+fi
 
 stap "Cloud Scheduler: elk kwartier een ronde"
 gcloud run jobs add-iam-policy-binding "$JOB" --project="$PROJECT" --region="$REGIO" \
@@ -183,7 +241,17 @@ else
   info "aangemaakt"
 fi
 
-stap "GitHub Actions: Workload Identity Federation (geen sleutels)"
+stap "Automatische updates via GitHub Actions"
+# Alleen voor wie de GitHub-repository beheert: deze stap laat die repository in dit project
+# deployen. Wie andermans repository gebruikt, zegt nee en werkt bij met BOUW=1.
+GITHUB="${GITHUB:-}"
+if [ -z "$GITHUB" ] && [ -t 0 ]; then
+  read -rp "   Ben jij beheerder van github.com/$GITHUB_REPO en moet die hier mogen deployen? [j/N] " GITHUB
+fi
+if ! [[ "$GITHUB" =~ ^[jJyY] ]]; then
+  info "overgeslagen; bijwerken doe je met: git pull && BOUW=1 bash deploy/setup-gcp.sh"
+  WIF_PROVIDER=""
+else
 if ! stil gcloud iam workload-identity-pools describe "$POOL" --project="$PROJECT" --location=global; then
   gcloud iam workload-identity-pools create "$POOL" --project="$PROJECT" --location=global --display-name="GitHub Actions"
 fi
@@ -209,6 +277,7 @@ gcloud iam service-accounts add-iam-policy-binding "$RUN_SA" --project="$PROJECT
   --member="serviceAccount:$DEPLOY_SA" --quiet >/dev/null
 WIF_PROVIDER="projects/$NUMMER/locations/global/workloadIdentityPools/$POOL/providers/$PROVIDER"
 info "thuis-deploy mag images pushen en app en verzamelaar bijwerken, niets anders"
+fi
 
 stap "Budgetalarm ($BUDGET per maand)"
 BA="$(gcloud billing projects describe "$PROJECT" --format='value(billingAccountName)')"
@@ -227,15 +296,19 @@ else
 fi
 
 stap "Klaar"
-URL="$(gcloud run services describe "$APP" --project="$PROJECT" --region="$REGIO" --format='value(status.url)')"
-info "App: $URL  (inloggen met $EMAILS)"
-info ""
-info "GitHub-variabelen voor automatisch deployen (Settings > Secrets and variables > Actions > Variables):"
-variabelen=("GCP_PROJECT=$PROJECT" "GCP_REGIO=$REGIO" "GCP_WIF_PROVIDER=$WIF_PROVIDER" "GCP_DEPLOY_SA=$DEPLOY_SA")
-if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
-  for v in "${variabelen[@]}"; do gh variable set "${v%%=*}" --repo "$GITHUB_REPO" --body "${v#*=}"; done
-  info "gezet met gh"
-else
-  for v in "${variabelen[@]}"; do info "  ${v%%=*} = ${v#*=}"; done
-  info "of met gh: gh variable set NAAM --repo $GITHUB_REPO --body WAARDE"
+info "App: https://$APP-$NUMMER.$REGIO.run.app  (inloggen met $EMAILS)"
+if [ "$TOEGANG_OK" = 0 ]; then
+  let_op "je hebt nog geen toegang: doe de stappen bij 'App' hierboven en draai dit script daarna opnieuw"
+fi
+if [ -n "$WIF_PROVIDER" ]; then
+  info ""
+  info "GitHub-variabelen voor automatisch deployen (Settings > Secrets and variables > Actions > Variables):"
+  variabelen=("GCP_PROJECT=$PROJECT" "GCP_REGIO=$REGIO" "GCP_WIF_PROVIDER=$WIF_PROVIDER" "GCP_DEPLOY_SA=$DEPLOY_SA")
+  if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
+    for v in "${variabelen[@]}"; do gh variable set "${v%%=*}" --repo "$GITHUB_REPO" --body "${v#*=}"; done
+    info "gezet met gh"
+  else
+    for v in "${variabelen[@]}"; do info "  ${v%%=*} = ${v#*=}"; done
+    info "of met gh: gh variable set NAAM --repo $GITHUB_REPO --body WAARDE"
+  fi
 fi
