@@ -88,7 +88,8 @@ function dagKaart(dag, keuze) {
   const laag = b.reduce((a, x) => (x.prijs < a.prijs ? x : a));
   const hoog = b.reduce((a, x) => (x.prijs > a.prijs ? x : a));
   const negatief = b.filter((x) => x.prijs < 0);
-  const gas = dag.prijzen.gas[0];
+  // De gasdag wisselt om 06:00: vandaag de prijs van nu, morgen die van de nieuwe gasdag.
+  const gas = (keuze === "vandaag" && huidigBlok(dag.prijzen.gas)) || dag.prijzen.gas.at(-1);
   return kaart({
     titel: keuze === "morgen" ? "Morgen in cijfers" : "Vandaag in cijfers",
     klasse: "b-4",
