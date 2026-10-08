@@ -196,8 +196,9 @@ provider_opties=(
 if stil gcloud iam workload-identity-pools providers describe "$PROVIDER" --project="$PROJECT" --location=global --workload-identity-pool="$POOL"; then
   gcloud iam workload-identity-pools providers update-oidc "$PROVIDER" "${provider_opties[@]}" --quiet >/dev/null
 else
+  # Weergavenaam: maximaal 32 tekens (de reponaam zelf is te lang).
   gcloud iam workload-identity-pools providers create-oidc "$PROVIDER" "${provider_opties[@]}" \
-    --display-name="$GITHUB_REPO" --issuer-uri="https://token.actions.githubusercontent.com"
+    --display-name="GitHub: deploy vanaf main" --issuer-uri="https://token.actions.githubusercontent.com"
 fi
 gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA" --project="$PROJECT" --role=roles/iam.workloadIdentityUser \
   --member="principalSet://iam.googleapis.com/projects/$NUMMER/locations/global/workloadIdentityPools/$POOL/attribute.repository/$GITHUB_REPO" \
