@@ -1,12 +1,12 @@
 # Thuis — eigen energieplatform
 
 Eén app voor stroom, gas, prijzen en het laden van de auto. Haalt de data zelf op bij
-**Frank Energie**, **Easee** en **Kia/Hyundai Connect**, bewaart de historie in **BigQuery** en
+**Frank Energie**, **Easee**, **Kia/Hyundai Connect** en **BMW CarData**, bewaart de historie in **BigQuery** en
 draait volledig in **Google Cloud** achter je Google Workspace-login. Geen Home Assistant nodig.
 
 ```
 Cloud Scheduler (elke 15 min)
-  └─▶ Cloud Run-job  thuis-verzamel ──▶ Frank Energie · Easee · Kia · Open-Meteo
+  └─▶ Cloud Run-job  thuis-verzamel ──▶ Frank Energie · Easee · Kia of BMW · Open-Meteo
           │                         ──▶ Slim laden: lader pauzeren/hervatten (optioneel)
           ▼                         ──▶ Google Chat-meldingen (optioneel)
       BigQuery  (dataset thuis, EU)
@@ -40,7 +40,7 @@ een paar dagen klopt.
 
 | Pad | Wat |
 | --- | --- |
-| `app/thuis/connectors/` | Frank Energie (GraphQL), Easee (REST), Kia/Hyundai (community-bibliotheek), Open-Meteo |
+| `app/thuis/connectors/` | Frank Energie (GraphQL), Easee (REST), Kia/Hyundai (community-bibliotheek), BMW CarData (officiële API), Open-Meteo |
 | `app/thuis/schema.py` | Alle tabellen op één plek, voor DuckDB én BigQuery |
 | `app/thuis/opslag.py` | Opslaglaag: append-only, actuele stand per sleutel, alleen gewijzigde rijen erbij |
 | `app/thuis/verzamel.py` | De verzamelaar: elke bron faalt los, uitslag per stap in de rondelog |
@@ -91,6 +91,10 @@ laag (er moet wel een betaalaccount aan het project hangen; het script zet een b
 
 ## Bekende grenzen
 
+- **BMW CarData** staat 50 verzoeken per dag toe. Thuis vraagt de auto elk kwartier als hij laadt,
+  elk half uur met de stekker erin en anders elk uur. Koppelen: maak in het CarData-portaal
+  (My BMW → BMW CarData) een client aan met "CarData API" aan, en vul de client-ID in op de pagina
+  Koppelingen. Daarna bevestig je een code op de site van BMW; je wachtwoord gaat niet via Thuis.
 - **Kia/Hyundai** heeft geen officiële API. De community-bibliotheek volgt wijzigingen meestal
   snel; bij inlogproblemen is een update van `hyundai_kia_connect_api` vaak genoeg.
 - **Verbruik** komt van de slimme meter via Frank Energie, met ongeveer een dag vertraging.

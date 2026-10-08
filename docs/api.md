@@ -128,10 +128,12 @@ Per dienst de status, voor de pagina "Koppelingen". Nooit tokens of wachtwoorden
   {"dienst": "easee", "naam": "Easee", "uitleg": "Voor de lader: …",
    "velden": [{"naam": "gebruiker", "label": "E-mailadres of telefoonnummer", "type": "text"},
               {"naam": "wachtwoord", "label": "Wachtwoord", "type": "password"}],
-   "status": "ok", "account": "fr…@herling.nl", "sinds": "2026-10-08T14:00:00+00:00"}
+   "methode": "inloggen", "status": "ok", "account": "fr…@herling.nl", "sinds": "2026-10-08T14:00:00+00:00"}
 ]
 ```
-- `dienst`: `frank` | `easee` | `kia` | `google_chat`
+- `dienst`: `frank` | `easee` | `kia` | `bmw` | `google_chat`
+- `methode`: `inloggen` (de velden versturen is genoeg) | `code` (BMW: daarna een code bevestigen
+  op de site van BMW, zie hieronder)
 - `status`: `ok` | `opnieuw` (bewaarde tokens werken niet meer) | `script` (oude login uit het
   setup-script) | `niet`
 - `velden[].type`: `text` | `email` | `password` | `url` | `keuze` (met `keuzes`)
@@ -143,7 +145,23 @@ Antwoord: `{"bericht": "Laders gevonden: Oprit", "koppelingen": [ …zoals GET�
 Thuis meteen een ronde van de verzamelaar.
 - 400 met `detail` voor de gebruiker (verkeerde login, ontbrekend veld), 404 onbekende dienst,
   422 ongeldig veld (wachtwoorden worden nooit teruggegeven), 502 als de dienst onverwacht antwoordt.
-- DELETE haalt de koppeling weg; antwoord zoals GET.
+- DELETE haalt de koppeling weg (en een koppeling die nog op bevestiging wacht); antwoord zoals GET.
+
+### Koppelen met een code (BMW)
+BMW CarData werkt met de device code flow: Thuis krijgt geen wachtwoord, je bevestigt een code op
+de site van BMW.
+1. `POST /api/koppelingen/bmw` met `{"client_id": "…"}` (de client-ID uit het CarData-portaal).
+   Antwoord: `{"code": {"code": "KQ7M-XW2P", "link": "https://…", "interval": 5, "verloopt": "…"}}`.
+   De app toont de code en de link; wat Thuis nodig heeft om de tokens op te halen (device code,
+   PKCE-verifier) blijft op de server, in de kluis onder `wachtend`.
+2. `POST /api/koppelingen/bmw/controleer`, elke `interval` seconden. Antwoord
+   `{"wacht": true, "interval": 5}` zolang de code niet is bevestigd (het interval kan oplopen als
+   BMW dat vraagt), daarna als bij koppelen: `{"bericht": "Auto gevonden: BMW i4 eDrive40",
+   "koppelingen": [ … ]}`.
+- 400: code verlopen, geweigerd of afgebroken: opnieuw beginnen bij stap 1. 409: er loopt geen
+  koppeling (meer).
+- Bij het bevestigen zoekt Thuis de auto waarvan je hoofdgebruiker bent en maakt het bij BMW een
+  "container" met de gegevens die het leest (accu, bereik, stekker, laadstatus).
 
 ### `GET /api/status?tabellen=true|false`
 Gezondheid per bron uit de rondelog van de verzamelaar, voor de statusstip en de pagina "Bronnen".
@@ -155,6 +173,7 @@ Standaard zonder `tabellen` (één query); `tabellen=true` voegt ze toe (een que
     {"stap": "verbruik", "naam": "Frank Energie · verbruik", "uitslag": "fout: ...", "tijd": "...", "laatst_ok": "..."},
     {"stap": "lader",    "naam": "Easee",                    "uitslag": "overgeslagen", "tijd": "...", "laatst_ok": null},
     {"stap": "auto",     "naam": "Kia Connect",              "...": "..."},
+    {"stap": "bmw",      "naam": "BMW CarData",              "...": "..."},
     {"stap": "weer",     "naam": "Open-Meteo",               "...": "..."},
     {"stap": "sturen",   "naam": "Slim laden",               "...": "..."},
     {"stap": "meldingen","naam": "Google Chat",              "...": "..."}
@@ -166,3 +185,6 @@ Standaard zonder `tabellen` (één query); `tabellen=true` voegt ze toe (een que
 - `tijd` = laatste ronde; `laatst_ok` = laatste ronde met `ok` (binnen 30 dagen).
 - `tabellen` = wanneer elke tabel voor het laatst een rij kreeg (`null` = nog leeg).
 - De naam van `auto` volgt `KIA_MERK`: Kia Connect, Hyundai Bluelink of Genesis Connected.
+- `bmw` is ook `ok` in een ronde waarin de auto niet aan de beurt was: BMW staat 50 verzoeken per
+  dag toe, dus Thuis vraagt elk kwartier als de auto laadt, elk half uur met de stekker erin en
+  anders elk uur (nooit meer dan 45 per 24 uur).

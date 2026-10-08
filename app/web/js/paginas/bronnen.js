@@ -1,7 +1,7 @@
 // Koppelingen: je accounts koppelen (zonder dat Thuis je wachtwoord bewaart), en hoe het met
 // elke bron gaat volgens de rondelog van de verzamelaar.
 
-import { $, $$, api, datumKort, esc, icoon, isoDatum, meldFout, relatief, toast } from "../basis.js";
+import { $, $$, api, datumKort, esc, icoon, isoDatum, klok, meldFout, relatief, toast } from "../basis.js";
 import { kaart, melding, skeletKaart } from "../onderdelen.js";
 
 const TABELNAMEN = {
@@ -25,6 +25,7 @@ const STATUS = {
 
 const HULP = {
   google_chat: "Maak in Google Chat een ruimte, kies Apps en integraties → Webhooks → Webhook toevoegen, en kopieer het adres.",
+  bmw: "Log in op de BMW-site, ga naar BMW CarData en maak een client aan met 'CarData API' aan. Kopieer de Client-ID. Daarna geeft Thuis je een code om bij BMW te bevestigen.",
 };
 
 export async function toon(main, _params, ctx) {
@@ -123,11 +124,12 @@ function openFormulier(li, k) {
     return;
   }
   for (const ander of $$(".koppel-vak")) ander.hidden = true;
+  const verstuur = k.methode === "code" ? "Code aanvragen" : "Koppelen";
   vak.innerHTML = `<form class="koppel-form">
     ${k.velden.map((v) => veld(v, k.dienst)).join("")}
     ${HULP[k.dienst] ? `<p class="zacht klein">${esc(HULP[k.dienst])}</p>` : ""}
     <div class="formulier-acties">
-      <button class="knop primair" type="submit">Koppelen</button>
+      <button class="knop primair" type="submit">${verstuur}</button>
       <button class="knop" type="button" data-annuleer>Annuleren</button>
     </div>
   </form>`;
@@ -139,19 +141,58 @@ function openFormulier(li, k) {
     e.preventDefault();
     const knop = $("button[type=submit]", form);
     knop.disabled = true;
-    knop.textContent = "Bezig met inloggen…";
+    knop.textContent = k.methode === "code" ? "Code aanvragen…" : "Bezig met inloggen…";
     const gegevens = Object.fromEntries(new FormData(form).entries());
     try {
       const r = await api(`koppelingen/${k.dienst}`, { methode: "POST", body: gegevens });
       form.reset();
-      toast(`${k.naam} gekoppeld. ${r.bericht}. De eerste gegevens komen binnen een paar minuten.`);
-      toonKoppelingen(r.koppelingen);
+      if (r.code) return toonCode(vak, k, r.code);
+      gekoppeld(k, r);
     } catch (err) {
       knop.disabled = false;
-      knop.textContent = "Koppelen";
+      knop.textContent = verstuur;
       meldFout(err);
     }
   };
+}
+
+function gekoppeld(k, r) {
+  toast(`${k.naam} gekoppeld. ${r.bericht}. De eerste gegevens komen binnen een paar minuten.`);
+  toonKoppelingen(r.koppelingen);
+}
+
+// Koppelen met een code (BMW): jij bevestigt de code op de site van BMW, Thuis vraagt ondertussen
+// steeds of dat al gebeurd is.
+function toonCode(vak, k, code) {
+  vak.innerHTML = `<div class="koppel-form koppel-code">
+    <p>Open de site van BMW, log in met je BMW-account en bevestig deze code:</p>
+    <p class="code" aria-label="Code ${esc(code.code.split("").join(" "))}">${esc(code.code)}</p>
+    <div class="formulier-acties">
+      <a class="knop primair" href="${esc(code.link)}" target="_blank" rel="noopener noreferrer">Open BMW en bevestig</a>
+      <button class="knop" type="button" data-annuleer>Annuleren</button>
+    </div>
+    <p class="zacht klein" aria-live="polite" data-wacht>Wachten op je bevestiging. De code is geldig tot ${esc(klok(code.verloopt))}.</p>
+  </div>`;
+  let gestopt = false;
+  $("[data-annuleer]", vak).onclick = () => {
+    gestopt = true;
+    vak.hidden = true;
+  };
+  const vraag = async (seconden) => {
+    await new Promise((klaar) => setTimeout(klaar, seconden * 1000));
+    if (gestopt || vak.hidden || !vak.isConnected) return;
+    try {
+      const r = await api(`koppelingen/${k.dienst}/controleer`, { methode: "POST" });
+      if (gestopt || !vak.isConnected) return;
+      if (r.wacht) return vraag(r.interval);
+      gekoppeld(k, r);
+    } catch (err) {
+      if (!vak.isConnected) return;
+      meldFout(err);
+      $("[data-wacht]", vak).textContent = "Dit is niet gelukt. Klik op Annuleren en begin opnieuw met koppelen.";
+    }
+  };
+  vraag(code.interval);
 }
 
 async function ontkoppel(k) {

@@ -10,7 +10,8 @@ import mimetypes
 import os
 import threading
 import time
-from contextlib import asynccontextmanager
+from collections.abc import Iterator
+from contextlib import asynccontextmanager, contextmanager
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Literal
@@ -25,7 +26,7 @@ from .connectors import KoppelFout
 from .inzicht import dagen_grenzen, dagoverzicht, laatste, periodeoverzicht, vandaag
 from .inzichten import inzichten
 from .kluis import Kluis, maak_kluis, werk_bij
-from .koppelingen import DIENSTEN, koppel, overzicht
+from .koppelingen import DIENSTEN, controleer_code, koppel, overzicht, start_code
 from .laden import STANDAARD, maak_plan
 from .opslag import Opslag, lees_instellingen, maak_opslag, nu, schrijf_instellingen
 from .schema import TABELLEN
@@ -221,6 +222,7 @@ class KoppelGegevens(BaseModel):
     merk: str | None = Field(default=None, pattern=r"^(kia|hyundai|genesis)$")
     wachtwoord: SecretStr | None = Field(default=None, max_length=200)
     webhook: SecretStr | None = Field(default=None, max_length=500)
+    client_id: str | None = Field(default=None, pattern=r"^\s*[A-Za-z0-9-]{8,64}\s*$")
 
     def als_dict(self) -> dict[str, str]:
         return {k: v.get_secret_value() if isinstance(v, SecretStr) else v for k, v in self if v is not None}
@@ -231,6 +233,20 @@ def api_koppelingen(_: str = Depends(gebruiker), k: Kluis = Depends(kluis)) -> l
     return overzicht(k.lees())
 
 
+@contextmanager
+def _dienstfouten(dienst: str) -> Iterator[None]:
+    """KoppelFout: tekst voor de gebruiker (400). Al het andere: netwerk of een gewijzigde dienst (502)."""
+    try:
+        yield
+    except KoppelFout as err:
+        raise HTTPException(400, str(err)) from err
+    except Exception as err:
+        _LOG.exception("Koppelen met %s mislukt", dienst)
+        raise HTTPException(
+            502, f"{DIENSTEN[dienst]['naam']} gaf een onverwacht antwoord; probeer het later nog eens."
+        ) from err
+
+
 @app.post("/api/koppelingen/{dienst}")
 def api_koppel(
     dienst: str,
@@ -239,19 +255,45 @@ def api_koppel(
     _: str = Depends(gebruiker),
     k: Kluis = Depends(kluis),
 ) -> dict[str, Any]:
-    """Eenmalig inloggen bij de dienst; alleen de tokens gaan de kluis in."""
+    """Eenmalig inloggen bij de dienst; alleen de tokens gaan de kluis in.
+
+    BMW (methode "code"): geeft een code en een link; de app vraagt daarna met
+    /controleer of de code op de site van BMW is bevestigd.
+    """
     if dienst not in DIENSTEN:
         raise HTTPException(404, "Onbekende dienst")
-    try:
+    if DIENSTEN[dienst].get("methode") == "code":
+        with _dienstfouten(dienst):
+            wacht, code = start_code(dienst, gegevens.als_dict())
+        werk_bij(k, wachtend={dienst: wacht})
+        return {"code": code}
+    with _dienstfouten(dienst):
         stand, bericht = koppel(dienst, gegevens.als_dict())
-    except KoppelFout as err:
-        raise HTTPException(400, str(err)) from err
-    except Exception as err:  # netwerk, of de dienst heeft iets veranderd
-        _LOG.exception("Koppelen met %s mislukt", dienst)
-        raise HTTPException(
-            502, f"{DIENSTEN[dienst]['naam']} gaf een onverwacht antwoord; probeer het later nog eens."
-        ) from err
     data = werk_bij(k, {dienst: stand})
+    start_ronde(request.app.state.cfg)
+    return {"bericht": bericht, "koppelingen": overzicht(data)}
+
+
+@app.post("/api/koppelingen/{dienst}/controleer")
+def api_koppel_controleer(
+    dienst: str, request: Request, _: str = Depends(gebruiker), k: Kluis = Depends(kluis)
+) -> dict[str, Any]:
+    """Is de code al bevestigd? {"wacht": true, "interval": s} of, als het gelukt is, als bij koppelen."""
+    if DIENSTEN.get(dienst, {}).get("methode") != "code":
+        raise HTTPException(404, "Onbekende dienst")
+    wacht = (k.lees().get("wachtend") or {}).get(dienst)
+    if not wacht:
+        raise HTTPException(409, "Er loopt geen koppeling meer. Begin opnieuw met koppelen.")
+    try:
+        with _dienstfouten(dienst):
+            uit = controleer_code(dienst, wacht)
+    except HTTPException:
+        werk_bij(k, wachtend={dienst: None})  # deze code werkt niet meer: opnieuw beginnen
+        raise
+    if uit is None:
+        return {"wacht": True, "interval": wacht["interval"]}
+    stand, bericht = uit
+    data = werk_bij(k, {dienst: stand}, wachtend={dienst: None})
     start_ronde(request.app.state.cfg)
     return {"bericht": bericht, "koppelingen": overzicht(data)}
 
@@ -262,7 +304,7 @@ def api_ontkoppel(
 ) -> list[dict[str, Any]]:
     if dienst not in DIENSTEN:
         raise HTTPException(404, "Onbekende dienst")
-    return overzicht(werk_bij(k, {dienst: None}))
+    return overzicht(werk_bij(k, {dienst: None}, wachtend={dienst: None}))
 
 
 def start_ronde(cfg: Config) -> None:
@@ -287,6 +329,7 @@ BRONNEN = (
     ("verbruik", "Frank Energie · verbruik"),
     ("lader", "Easee"),
     ("auto", "{auto}"),
+    ("bmw", "BMW CarData"),
     ("weer", "Open-Meteo"),
     ("sturen", "Slim laden"),
     ("meldingen", "Google Chat"),

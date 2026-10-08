@@ -88,6 +88,17 @@ oude versies van het geheim worden opgeruimd. Werkt een koppeling niet meer, dan
 Koppelingen gaan vóór oude logins uit het setup-script. Hoe lang de tokens van Frank, Easee en
 Kia geldig blijven, publiceren die diensten niet; elk kwartier verversen houdt ze normaal in leven.
 
+**BMW (en MINI)** koppel je met een code in plaats van een wachtwoord:
+
+1. Log in op de BMW-site (My BMW), ga naar **BMW CarData** en maak een client aan. Zet
+   *CarData API* aan en kopieer de **Client-ID**.
+2. Kies in Thuis bij BMW **Koppelen**, plak de client-ID en klik **Code aanvragen**.
+3. Klik **Open BMW en bevestig** en bevestig daar de code (of vul hem in via *Authenticate device*
+   op de CarData-pagina). Thuis ziet dat vanzelf en zoekt je auto erbij.
+
+De tokens zijn twee weken geldig en worden bij elk verzoek ververst. BMW staat 50 verzoeken per
+dag toe; Thuis blijft daar ruim onder (zie [api.md](api.md#get-apistatustabellentruefalse)).
+
 ### Oude logins (setup-script)
 
 Het script kan ook logins vragen: draai `bash deploy/setup-gcp.sh` en antwoord `j` op *Logins

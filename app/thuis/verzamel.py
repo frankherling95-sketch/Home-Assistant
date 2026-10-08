@@ -3,7 +3,7 @@
 Draait in Google Cloud elke 15 minuten als Cloud Run-job (Cloud Scheduler start hem).
 Lokaal: `python -m thuis.verzamel`.
 
-Elke bron staat los: valt Kia uit, dan komen Frank en Easee gewoon binnen. De uitslag per
+Elke bron staat los: valt de auto uit, dan komen Frank en Easee gewoon binnen. De uitslag per
 stap komt in de rondelog (tabel `ronde`, pagina "Koppelingen"). De job eindigt met exit-code 1
 als er iets misging, zodat de fout ook zichtbaar is in Cloud Run.
 
@@ -32,7 +32,7 @@ from .schema import AUTO, LADER, PRIJS, RONDE, VERBRUIK, WEER
 
 _LOG = logging.getLogger("thuis.verzamel")
 # Welke koppeling een stap gebruikt (voor de status "opnieuw koppelen").
-DIENST_VAN_STAP = {"verbruik": "frank", "lader": "easee", "sturen": "easee", "auto": "kia"}
+DIENST_VAN_STAP = {"verbruik": "frank", "lader": "easee", "sturen": "easee", "auto": "kia", "bmw": "bmw"}
 
 
 def ronde(
@@ -42,6 +42,7 @@ def ronde(
     easee: object | None = None,
     kia: object | None = None,
     weer: OpenMeteo | None = None,
+    bmw: object | None = None,
     chat: object | None = None,
     kluis: Kluis | None = None,
 ) -> dict[str, str]:
@@ -52,6 +53,7 @@ def ronde(
     cfg = cfg.met_geheimen(data)
     c = maak_connectoren(cfg, data)
     c.frank, c.easee, c.kia, c.chat = frank or c.frank, easee or c.easee, kia or c.kia, chat or c.chat
+    c.bmw = bmw or c.bmw
     weer = weer or OpenMeteo(cfg.lat, cfg.lon)
     verlopen: set[str] = set()
 
@@ -72,6 +74,10 @@ def ronde(
 
     def auto() -> None:
         opslag.voeg_toe(AUTO, c.kia.metingen())
+
+    def bmw_auto() -> None:
+        # Niet elke ronde: BMW staat 50 verzoeken per dag toe (zie connectors/bmw.py).
+        opslag.voeg_toe(AUTO, c.bmw.metingen(begin))
 
     def temperatuur() -> None:
         voeg_toe_gewijzigd(opslag, WEER, weer.temperaturen(terug=2, vooruit=2))
@@ -96,6 +102,7 @@ def ronde(
         ("verbruik", c.frank_account, verbruik),
         ("lader", c.easee is not None, lader),
         ("auto", c.kia is not None, auto),
+        ("bmw", c.bmw is not None, bmw_auto),
         ("weer", True, temperatuur),
         ("sturen", c.easee is not None, sturen),  # na lader en auto: rekent met verse metingen
         ("meldingen", c.chat is not None, meldingen),  # als laatste: ziet alles van deze ronde
