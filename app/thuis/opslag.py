@@ -1,16 +1,19 @@
 """Opslag: DuckDB lokaal en in tests, BigQuery in Google Cloud. Zelfde SQL voor beide.
 
 Queries schrijven tabellen als {prijs}, {verbruik}, … en parameters als @naam.
-Aggregeren gebeurt in Python, zodat er geen dialectverschillen in de SQL nodig zijn.
+Aggregeren gebeurt zoveel mogelijk in Python, zodat er geen dialectverschillen in de SQL nodig
+zijn. Het enige verschil, de lokale datum van een tijdstip, zit in `lokale_dag()`.
 """
 
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from datetime import UTC, date, datetime
 from typing import Any, Protocol
 
-from .config import Config
+from .config import TZ, Config
 from .schema import TABELLEN, Tabel, actueel
 
 _DUCK_TYPES = {"STRING": "VARCHAR", "TIMESTAMP": "TIMESTAMPTZ", "FLOAT64": "DOUBLE", "BOOL": "BOOLEAN"}
@@ -24,6 +27,7 @@ class Opslag(Protocol):
     def maak_tabellen(self) -> None: ...
     def voeg_toe(self, tabel: Tabel, rijen: list[dict[str, Any]]) -> int: ...
     def lees(self, sql: str, **params: Any) -> list[dict[str, Any]]: ...
+    def lokale_dag(self, kolom: str) -> str: ...  # SQL: lokale datum (Europe/Amsterdam) van een tijdstip
 
 
 def _vul_aan(tabel: Tabel, rijen: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -58,11 +62,22 @@ class DuckOpslag:
         if not rijen:
             return 0
         rijen = _vul_aan(tabel, rijen)
-        namen = list(rijen[0])
-        self.con.cursor().executemany(
-            f"INSERT INTO {self._ref(tabel)} ({', '.join(namen)}) VALUES ({', '.join('?' * len(namen))})",
-            [[r[k] for k in namen] for r in rijen],
-        )
+        # Via een NDJSON-bestand in één keer inlezen: executemany zet elke waarde los om
+        # (en probeert daarbij telkens pandas te importeren), wat bij duizenden rijen minuten kost.
+        fd, pad = tempfile.mkstemp(suffix=".json")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                for r in rijen:
+                    f.write(json.dumps({k: _json_waarde(v) for k, v in r.items()}) + "\n")
+            namen = ", ".join(k for k, _ in tabel.kolommen)
+            kolommen = ", ".join(f"'{k}': '{_DUCK_TYPES[v]}'" for k, v in tabel.kolommen)
+            bestand = pad.replace("\\", "/").replace("'", "''")
+            self.con.cursor().execute(
+                f"INSERT INTO {self._ref(tabel)} ({namen}) SELECT {namen} "
+                f"FROM read_json('{bestand}', format = 'newline_delimited', columns = {{{kolommen}}})"
+            )
+        finally:
+            os.unlink(pad)
         return len(rijen)
 
     def lees(self, sql: str, **params: Any) -> list[dict[str, Any]]:
@@ -71,6 +86,9 @@ class DuckOpslag:
         cur = self.con.cursor().execute(sql, params)
         namen = [d[0] for d in cur.description]
         return [_naar_utc(dict(zip(namen, r, strict=True))) for r in cur.fetchall()]
+
+    def lokale_dag(self, kolom: str) -> str:
+        return f"CAST(timezone('{TZ.key}', {kolom}) AS DATE)"
 
 
 class BigQueryOpslag:
@@ -119,6 +137,9 @@ class BigQueryOpslag:
         )
         rows = self.client.query(_vul_tabellen(sql, self._ref), job_config=config).result()
         return [_naar_utc(dict(r.items())) for r in rows]
+
+    def lokale_dag(self, kolom: str) -> str:
+        return f"DATE({kolom}, '{TZ.key}')"
 
 
 def _vul_tabellen(sql: str, ref) -> str:

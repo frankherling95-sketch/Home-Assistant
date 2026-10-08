@@ -1,13 +1,15 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import httpx
 import pytest
 import respx
 
 from thuis.connectors import easee as easee_mod
+from thuis.connectors import weer as weer_mod
 from thuis.connectors.easee import Easee
 from thuis.connectors.frank import URL, Frank, FrankFout
 from thuis.connectors.kia import naar_rij
+from thuis.connectors.weer import OpenMeteo
 
 PRIJS = {
     "from": "2026-10-07T00:00:00.000Z",
@@ -114,6 +116,27 @@ def test_easee_meting_en_herlogin_bij_401():
     )
     Easee("u", "p").pauzeer("EH1")
     assert pause.called
+
+
+@respx.mock
+def test_open_meteo_temperatuur_per_uur():
+    route = respx.get(weer_mod.URL).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "hourly": {
+                    "time": [1791331200, 1791334800, 1791338400],
+                    "temperature_2m": [10.04, None, 9.46],
+                }
+            },
+        )
+    )
+    rijen = OpenMeteo(52.1, 5.18).temperaturen(terug=2, vooruit=2)
+    assert [r["temperatuur"] for r in rijen] == [10.0, 9.5]  # ontbrekend uur valt weg
+    assert rijen[0]["van"] == datetime(2026, 10, 7, tzinfo=UTC)
+    assert rijen[0]["tot"] - rijen[0]["van"] == timedelta(hours=1)
+    params = route.calls[0].request.url.params
+    assert params["past_days"] == "2" and params["timeformat"] == "unixtime" and params["latitude"] == "52.1"
 
 
 def test_kia_rij_uit_voertuig():

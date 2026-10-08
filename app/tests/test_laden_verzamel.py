@@ -72,14 +72,24 @@ class NepFrank:
         raise RuntimeError("Frank plat")
 
 
+class NepWeer:
+    def temperaturen(self, terug, vooruit):
+        return [{"van": NU, "tot": NU + timedelta(hours=1), "temperatuur": 11.5}]
+
+
 def test_ronde_bron_valt_los_uit(opslag, monkeypatch):
     monkeypatch.setenv("FRANK_EMAIL", "a@b.nl")
     monkeypatch.setenv("FRANK_WACHTWOORD", "x")
-    uitslag = ronde(Config(), opslag, frank=NepFrank(), easee=NepEasee())
+    monkeypatch.delenv("GOOGLE_CHAT_WEBHOOK", raising=False)
+    uitslag = ronde(Config(), opslag, frank=NepFrank(), easee=NepEasee(), weer=NepWeer())
     assert uitslag["prijzen"] == "ok"
     assert uitslag["verbruik"].startswith("fout")
     assert uitslag["lader"] == "ok" and uitslag["auto"] == "overgeslagen" and uitslag["sturen"] == "ok"
+    assert uitslag["weer"] == "ok" and uitslag["meldingen"] == "overgeslagen"
     assert len(opslag.lees("SELECT * FROM {lader_meting}")) == 1
+    assert opslag.lees("SELECT temperatuur FROM {weer}") == [{"temperatuur": 11.5}]
+    log = {r["stap"]: r["uitslag"] for r in opslag.lees("SELECT stap, uitslag FROM {ronde}")}
+    assert log["verbruik"] == "fout: Frank plat" and log["prijzen"] == "ok" and len(log) == 7
 
 
 def test_geheimen_uit_een_json(monkeypatch):

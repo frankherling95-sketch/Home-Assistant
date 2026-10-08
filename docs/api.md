@@ -3,16 +3,15 @@
 Alle endpoints onder `/api/`, JSON, tijden als ISO 8601 met tijdzone (UTC), datums als
 `YYYY-MM-DD` (lokale datum Europe/Amsterdam). Bedragen in euro, energie in kWh, gas in m³.
 Inloggen: IAP vóór Cloud Run zet `X-Goog-Authenticated-User-Email`; lokaal `THUIS_AUTH_UIT=1`.
+Zonder geldige header: 401; een adres buiten `TOEGESTANE_EMAILS`: 403. Validatiefouten: 422.
 
 Dit bestand is leidend voor backend (`app/thuis`) en frontend (`app/web`).
-
-## Bestaand
 
 ### `GET /api/gebruiker`
 `{"email": "frank@…"}`
 
 ### `GET /api/dag?datum=YYYY-MM-DD`
-Eén dag per uur (23/24/25 uren rond de zomertijdwissel).
+Eén dag per uur (23/24/25 uren rond de zomertijdwissel). Zonder `datum`: vandaag.
 ```json
 {
   "datum": "2026-10-07",
@@ -20,7 +19,7 @@ Eén dag per uur (23/24/25 uren rond de zomertijdwissel).
   "reeksen": {
     "stroom": [0.41, ...], "teruglevering": [0, ...], "gas": [0.08, ...], "laden": [0, ...],
     "kosten_stroom": [0.11, ...],
-    "temperatuur": [11.2, ...]
+    "temperatuur": [11.2, null, ...]
   },
   "prijzen": {
     "stroom": [{"van": "...", "tot": "...", "prijs": 0.231}],
@@ -36,7 +35,38 @@ Eén dag per uur (23/24/25 uren rond de zomertijdwissel).
 }
 ```
 - `laden` is een deel van `stroom` (de lader hangt achter de meter) en telt niet apart mee in totale kosten.
-- `temperatuur` is NIEUW: gemiddelde °C per uur, `null` waar onbekend.
+- `laden` komt uit de meterstand van de lader: het verschil tussen twee metingen telt bij het uur
+  van de latere meting, tegen de prijs van het blok waar het midden van dat interval in valt.
+- `kosten_stroom` per uur = stroom − |teruglevering|.
+- `temperatuur`: gemiddelde °C per uur (Open-Meteo), `null` waar onbekend.
+- Prijsblokken zijn kwartieren (of uren, voor oudere data).
+
+### `GET /api/periode?type=week|maand|jaar&datum=YYYY-MM-DD`
+De periode waar `datum` in valt (zonder `datum`: vandaag). Week = maandag t/m zondag.
+Week/maand: bakjes per dag; jaar: per maand.
+```json
+{
+  "type": "week",
+  "van": "2026-10-05", "tot": "2026-10-11",
+  "label": "5 – 11 okt 2026",
+  "bakjes": ["2026-10-05", "2026-10-06", "..."],
+  "bakje_labels": ["ma 5", "di 6", "..."],
+  "reeksen": {
+    "stroom": [...], "teruglevering": [...], "gas": [...], "laden": [...],
+    "kosten": [...],
+    "temperatuur": [...]
+  },
+  "totalen": { "...": "zelfde vorm als /api/dag totalen" },
+  "vorige":  { "...": "totalen van de hele vorige periode van hetzelfde type" },
+  "vorige_label": "28 sep – 4 okt 2026"
+}
+```
+- Maand: `bakje_labels` = `["1", "2", ...]`, `label` = `"oktober 2026"`.
+- Jaar: `bakjes` = `["2026-01", ...]`, `bakje_labels` = `["jan", ...]`, `label` = `"2026"`.
+- `kosten` per bakje = stroom + gas − |teruglevering|.
+- `null` in `stroom`/`teruglevering`/`gas`/`kosten`: geen meterdata voor dat bakje (nog niet binnen,
+  of in de toekomst). `laden` is `0` voor verleden bakjes zonder laden en `null` voor de toekomst.
+- `temperatuur` = gemiddelde °C per bakje of `null`.
 
 ### `GET /api/nu`
 ```json
@@ -58,55 +88,39 @@ Plan-redenen: `gepland, onder_drempel, wachten, doel_bereikt, geen_prijzen, uitg
 ### `GET /api/instellingen` · `PUT /api/instellingen`
 Body/antwoord = `instellingen` hierboven. Validatiefout → 422.
 
-## Nieuw
-
-### `GET /api/periode?type=week|maand|jaar&datum=YYYY-MM-DD`
-De periode waar `datum` in valt. Week = maandag t/m zondag. Week/maand: bakjes per dag; jaar: per maand.
-```json
-{
-  "type": "week",
-  "van": "2026-10-05", "tot": "2026-10-11",
-  "label": "5 – 11 okt 2026",
-  "bakjes": ["2026-10-05", "2026-10-06", "..."],
-  "bakje_labels": ["ma 5", "di 6", "..."],
-  "reeksen": {
-    "stroom": [...], "teruglevering": [...], "gas": [...], "laden": [...],
-    "kosten": [...],
-    "temperatuur": [...]
-  },
-  "totalen": { "...": "zelfde vorm als /api/dag totalen" },
-  "vorige":  { "...": "totalen van de vorige periode van hetzelfde type" }
-}
-```
-- Jaar: `bakjes` = `["2026-01", ...]`, `bakje_labels` = `["jan", ...]`.
-- `kosten` per bakje = stroom + gas − |teruglevering|.
-- `temperatuur` = gemiddelde °C per bakje of `null`.
-
 ### `GET /api/laadsessies?van=YYYY-MM-DD&tot=YYYY-MM-DD`
-Standaard de laatste 30 dagen. Nieuwste eerst.
+Sessies die in die dagen begonnen (beide inclusief). Standaard de laatste 30 dagen. Nieuwste eerst.
+`van` na `tot` → 422.
 ```json
 [
   {"lader_id": "EH000001", "start": "...", "eind": "...", "kwh": 32.4, "kosten": 5.83,
-   "gem_prijs": 0.18, "slim": true}
+   "gem_prijs": 0.18, "slim": true, "klaar": true, "besparing": 1.20}
 ]
 ```
-`slim` = tijdens de sessie is er door Slim laden gestuurd (stuuractie).
+- Een sessie loopt van inpluggen (`start`) tot uitpluggen; `eind` = laatste meting waarin geladen werd.
+- `slim` = tijdens de sessie heeft Slim laden de lader gestuurd (stuuractie).
+- `klaar` = uitgeplugd of de lader meldt `klaar`; `false` = sessie loopt nog.
+- `besparing` = kosten bij direct laden vanaf inpluggen (op het hoogst gemeten vermogen) min de
+  werkelijke kosten; `null` als de prijzen dat venster niet dekken.
 
 ### `GET /api/inzichten?datum=YYYY-MM-DD`
 Korte, uitgerekende inzichten voor de overzichtspagina. Volgorde = belangrijkste eerst.
+Voor een eerdere datum wordt gerekend alsof het het eind van die dag is.
 ```json
 [
   {"id": "besparing_laden", "titel": "Slim laden bespaarde", "waarde": "€ 12,40",
-   "toelichting": "deze maand, t.o.v. direct laden", "toon": "goed", "icoon": "auto"}
+   "toelichting": "deze maand t.o.v. direct laden · 4 sessies", "toon": "goed", "icoon": "auto"}
 ]
 ```
 - `toon`: `goed` | `neutraal` | `let_op`
 - `icoon`: `euro` | `bliksem` | `auto` | `vlam` | `zon` | `klok` | `trend_op` | `trend_neer` | `thermometer`
-- Ids (minimaal): `besparing_laden`, `goedkoopste_morgen`, `negatieve_prijzen`, `kosten_maand`,
-  `gas_vs_vorige_week`, `gem_laadprijs`. Een inzicht zonder data wordt weggelaten.
+- Ids, in deze volgorde: `negatieve_prijzen` (vanaf nu t/m morgen), `goedkoopste_morgen` (goedkoopste
+  aaneengesloten uur, met het daggemiddelde), `besparing_laden` (deze maand), `kosten_maand` (t.o.v. dezelfde dagen vorige
+  maand), `gem_laadprijs` (t.o.v. de gemiddelde stroomprijs), `gas_vs_vorige_week` (per graaddag,
+  basis 18 °C). Een inzicht zonder data wordt weggelaten.
 
 ### `GET /api/status`
-Gezondheid per bron, voor de pagina "Bronnen".
+Gezondheid per bron uit de rondelog van de verzamelaar, voor de pagina "Bronnen".
 ```json
 {
   "bronnen": [
@@ -121,4 +135,7 @@ Gezondheid per bron, voor de pagina "Bronnen".
   "tabellen": {"prijs": "...", "verbruik": "...", "lader_meting": "...", "auto_meting": "...", "...": "..."}
 }
 ```
-`uitslag`: `ok` | `overgeslagen` | `fout: <tekst>`; `laatst_ok` = laatste ronde met `ok`.
+- `uitslag`: `ok` | `overgeslagen` | `fout: <tekst>`, of `null` als de stap de laatste 30 dagen niet draaide.
+- `tijd` = laatste ronde; `laatst_ok` = laatste ronde met `ok` (binnen 30 dagen).
+- `tabellen` = wanneer elke tabel voor het laatst een rij kreeg (`null` = nog leeg).
+- De naam van `auto` volgt `KIA_MERK`: Kia Connect, Hyundai Bluelink of Genesis Connected.

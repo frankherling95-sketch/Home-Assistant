@@ -2,9 +2,9 @@ from datetime import date, timedelta
 
 from conftest import blokken, utc
 
-from thuis.inzicht import dag_grenzen, dagoverzicht, laden_per_uur
+from thuis.inzicht import dag_grenzen, dagoverzicht, laad_intervallen, laden_per_uur
 from thuis.opslag import lees_instellingen, schrijf_instellingen
-from thuis.schema import LADER, PRIJS, VERBRUIK
+from thuis.schema import AUTO, LADER, PRIJS, VERBRUIK, WEER
 
 
 def test_actueel_neemt_laatst_opgehaalde_rij(opslag):
@@ -22,14 +22,49 @@ def test_dag_grenzen_zomertijdwissel():
     assert start == utc(2026, 10, 24, 22)
 
 
-def test_laden_per_uur_uit_meterstand():
-    m = [
-        {"tijd": utc(2026, 10, 7, 1, 50), "lader_id": "L", "totaal_kwh": 100.0},
-        {"tijd": utc(2026, 10, 7, 2, 5), "lader_id": "L", "totaal_kwh": 102.5},
-        {"tijd": utc(2026, 10, 7, 2, 20), "lader_id": "L", "totaal_kwh": 105.0},
-        {"tijd": utc(2026, 10, 7, 3, 5), "lader_id": "L", "totaal_kwh": 1.0},  # reset: telt niet
+def test_laden_per_uur_uit_meterstand(opslag):
+    opslag.voeg_toe(
+        LADER,
+        [
+            {"tijd": utc(2026, 10, 7, 1, 50), "lader_id": "L", "totaal_kwh": 100.0},
+            {"tijd": utc(2026, 10, 7, 2, 5), "lader_id": "L", "totaal_kwh": 102.5},
+            {"tijd": utc(2026, 10, 7, 2, 20), "lader_id": "L", "totaal_kwh": 105.0},
+            {"tijd": utc(2026, 10, 7, 3, 5), "lader_id": "L", "totaal_kwh": 1.0},  # reset: telt niet
+            {
+                "tijd": utc(2026, 10, 7, 3, 5),
+                "lader_id": "M",
+                "totaal_kwh": 7.0,
+            },  # andere lader, eerste meting
+        ],
+    )
+    intervallen = laad_intervallen(opslag, utc(2026, 10, 7, 2), utc(2026, 10, 7, 4))
+    assert [(i["van"], i["kwh"]) for i in intervallen] == [
+        (utc(2026, 10, 7, 1, 50), 2.5),
+        (utc(2026, 10, 7, 2, 5), 2.5),
     ]
-    assert laden_per_uur(m) == {utc(2026, 10, 7, 2): 5.0}
+    assert laden_per_uur(intervallen) == {utc(2026, 10, 7, 2): 5.0}
+
+
+def test_bulk_invoegen_met_lege_waarden_en_booleans(opslag):
+    n = opslag.voeg_toe(
+        AUTO,
+        [
+            {"tijd": utc(2026, 3, 29, 1, i), "auto_id": "A", "accu_pct": None, "ingeplugd": i % 2 == 0}
+            for i in range(60)
+        ],
+    )
+    rijen = opslag.lees("SELECT * FROM {auto_meting} ORDER BY tijd")
+    assert n == 60 and len(rijen) == 60
+    assert rijen[0]["accu_pct"] is None and rijen[0]["ingeplugd"] is True and rijen[1]["ingeplugd"] is False
+    assert rijen[59]["tijd"] == utc(2026, 3, 29, 1, 59) and rijen[0]["opgehaald"].tzinfo is not None
+
+
+def test_lokale_dag_in_sql(opslag):
+    opslag.voeg_toe(PRIJS, blokken(utc(2026, 10, 24, 21), [0.1] * 4))  # 23:00 t/m 02:00 lokaal
+    rijen = opslag.lees(
+        f"SELECT {opslag.lokale_dag('van')} AS dag, COUNT(*) AS n FROM {{prijs}} GROUP BY dag ORDER BY dag"
+    )
+    assert [(r["dag"], r["n"]) for r in rijen] == [(date(2026, 10, 24), 1), (date(2026, 10, 25), 3)]
 
 
 def test_dagoverzicht_totalen(opslag):
@@ -67,6 +102,13 @@ def test_dagoverzicht_totalen(opslag):
             for m, k in ((0, 0), (30, 5), (59, 11))
         ],
     )
+    opslag.voeg_toe(
+        WEER,
+        [
+            {"van": start + timedelta(hours=h), "tot": start + timedelta(hours=h + 1), "temperatuur": 9.5}
+            for h in (0, 1)
+        ],
+    )
     d = dagoverzicht(opslag, dag)
     assert len(d["uren"]) == 24
     assert d["reeksen"]["stroom"][:3] == [1.0, 1.0, 0]
@@ -75,6 +117,7 @@ def test_dagoverzicht_totalen(opslag):
     assert d["reeksen"]["kosten_stroom"][12] == -0.3
     assert d["totalen"]["laden"]["hoeveelheid"] == 11.0
     assert d["totalen"]["laden"]["kosten"] == 3.3
+    assert d["reeksen"]["temperatuur"][:3] == [9.5, 9.5, None]
 
 
 def test_instellingen_roundtrip(opslag):

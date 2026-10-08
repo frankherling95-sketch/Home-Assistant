@@ -7,19 +7,21 @@ from __future__ import annotations
 
 import os
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from .config import TZ, Config
-from .inzicht import dagoverzicht, laatste
+from .config import Config
+from .inzicht import dagen_grenzen, dagoverzicht, laatste, periodeoverzicht, vandaag
+from .inzichten import inzichten
 from .laden import STANDAARD, maak_plan
 from .opslag import Opslag, lees_instellingen, maak_opslag, nu, schrijf_instellingen
 from .schema import TABELLEN
+from .sessies import laadsessies
 
 # In de container staat de web-app los van het geïnstalleerde pakket (THUIS_WEB=/app/web).
 WEB = Path(os.environ.get("THUIS_WEB") or Path(__file__).resolve().parent.parent / "web")
@@ -74,7 +76,36 @@ def api_gebruiker(email: str = Depends(gebruiker)) -> dict[str, str]:
 def api_dag(
     datum: date | None = None, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)
 ) -> dict[str, Any]:
-    return dagoverzicht(o, datum or nu().astimezone(TZ).date())
+    return dagoverzicht(o, datum or vandaag())
+
+
+@app.get("/api/periode")
+def api_periode(
+    soort: Literal["week", "maand", "jaar"] = Query(alias="type"),
+    datum: date | None = None,
+    _: str = Depends(gebruiker),
+    o: Opslag = Depends(opslag),
+) -> dict[str, Any]:
+    return periodeoverzicht(o, soort, datum or vandaag())
+
+
+@app.get("/api/laadsessies")
+def api_laadsessies(
+    van: date | None = None, tot: date | None = None, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)
+) -> list[dict[str, Any]]:
+    tot = tot or vandaag()
+    van = van or tot - timedelta(days=30)
+    if van > tot:
+        raise HTTPException(422, "van ligt na tot")
+    vermogen = float(lees_instellingen(o, STANDAARD)["vermogen_kw"])
+    return [_json(s) for s in laadsessies(o, *dagen_grenzen(van, tot), vermogen)]
+
+
+@app.get("/api/inzichten")
+def api_inzichten(
+    datum: date | None = None, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)
+) -> list[dict[str, str]]:
+    return inzichten(o, datum or vandaag())
 
 
 @app.get("/api/nu")
@@ -103,14 +134,59 @@ def api_instellingen_opslaan(
     return lees_instellingen(o, STANDAARD)
 
 
+BRONNEN = (
+    ("prijzen", "Frank Energie · prijzen"),
+    ("verbruik", "Frank Energie · verbruik"),
+    ("lader", "Easee"),
+    ("auto", "{auto}"),
+    ("weer", "Open-Meteo"),
+    ("sturen", "Slim laden"),
+    ("meldingen", "Google Chat"),
+)
+
+
 @app.get("/api/status")
-def api_status(_: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str, Any]:
-    """Wanneer elke bron voor het laatst iets opleverde: snel zien of een connector stilvalt."""
-    uit = {}
+def api_status(request: Request, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str, Any]:
+    """Gezondheid per bron uit de rondelog, en wanneer elke tabel voor het laatst iets kreeg."""
+    sinds = nu() - timedelta(days=30)
+    laatste_ronde = {
+        r["stap"]: r
+        for r in o.lees(
+            "SELECT stap, uitslag, tijd FROM {ronde} WHERE tijd >= @sinds "
+            "QUALIFY ROW_NUMBER() OVER (PARTITION BY stap ORDER BY tijd DESC) = 1",
+            sinds=sinds,
+        )
+    }
+    laatst_ok = {
+        r["stap"]: r["tijd"]
+        for r in o.lees(
+            "SELECT stap, MAX(tijd) AS tijd FROM {ronde} WHERE tijd >= @sinds AND uitslag = 'ok' GROUP BY stap",
+            sinds=sinds,
+        )
+    }
+    merk = request.app.state.cfg.kia_merk.lower()
+    auto = {"hyundai": "Hyundai Bluelink", "genesis": "Genesis Connected"}.get(merk, "Kia Connect")
+    bronnen = []
+    for stap, naam in BRONNEN:
+        r = laatste_ronde.get(stap) or {}
+        bronnen.append(
+            {
+                "stap": stap,
+                "naam": naam.format(auto=auto),
+                "uitslag": r.get("uitslag"),
+                "tijd": _iso(r.get("tijd")),
+                "laatst_ok": _iso(laatst_ok.get(stap)),
+            }
+        )
+    tabellen = {}
     for t in TABELLEN:
         rij = o.lees(f"SELECT MAX(opgehaald) AS laatst FROM {{{t.naam}}}")
-        uit[t.naam] = rij[0]["laatst"].isoformat() if rij and rij[0]["laatst"] else None
-    return uit
+        tabellen[t.naam] = _iso(rij[0]["laatst"]) if rij else None
+    return {"bronnen": bronnen, "tabellen": tabellen}
+
+
+def _iso(v: Any) -> str | None:
+    return v.isoformat() if v is not None else None
 
 
 def _json(rij: dict[str, Any] | None) -> dict[str, Any] | None:

@@ -49,6 +49,14 @@ class Config:
     kia_pin: str = field(default_factory=lambda: _env("KIA_PIN"))
     kia_merk: str = field(default_factory=lambda: _env("KIA_MERK", "kia"))  # kia | hyundai
 
+    # Weer (Open-Meteo, geen account). Standaard De Bilt: het KNMI-station waar graaddagen
+    # in Nederland mee worden gerekend.
+    lat: float = field(default_factory=lambda: float(_env("THUIS_LAT", "52.10")))
+    lon: float = field(default_factory=lambda: float(_env("THUIS_LON", "5.18")))
+
+    # Meldingen in een Google Chat-ruimte via een inkomende webhook. Leeg = geen meldingen.
+    chat_webhook: str = field(default_factory=lambda: _env("GOOGLE_CHAT_WEBHOOK"))
+
     # Inloggen regelt Identity-Aware Proxy (IAP) vóór Cloud Run. De app controleert daarnaast
     # het e-mailadres dat IAP doorgeeft tegen deze lijst. Leeg = iedereen die IAP doorlaat.
     toegestane_emails: list[str] = field(default_factory=lambda: _lijst("TOEGESTANE_EMAILS"))

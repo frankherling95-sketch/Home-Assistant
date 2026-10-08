@@ -31,7 +31,7 @@ def maak_plan(opslag: Opslag, instellingen: dict[str, Any], moment: datetime | N
     lokaal = moment.astimezone(TZ)
     deadline = next_deadline(lokaal, time.fromisoformat(instellingen["vertrek"]))
     blokken = prijzen(opslag, "stroom", moment - timedelta(hours=1), moment + timedelta(days=2))
-    auto = laatste(opslag, "auto_meting")
+    auto = laatste(opslag, "auto_meting", moment)
     soc = auto["accu_pct"] if auto else None
 
     plan: Plan = make_plan(
@@ -71,7 +71,8 @@ def stuur(opslag: Opslag, easee: Any, moment: datetime | None = None) -> str | N
     instellingen = lees_instellingen(opslag, STANDAARD)
     if not instellingen["sturen"]:
         return None
-    lader = laatste(opslag, "lader_meting")
+    moment = moment or nu()
+    lader = laatste(opslag, "lader_meting", moment)
     if lader is None or lader["status"] not in VERBONDEN:
         return None
 
@@ -88,7 +89,7 @@ def stuur(opslag: Opslag, easee: Any, moment: datetime | None = None) -> str | N
     (easee.hervat if actie == "hervat" else easee.pauzeer)(lader["lader_id"])
     opslag.voeg_toe(
         STUURACTIE,
-        [{"tijd": moment or nu(), "lader_id": lader["lader_id"], "actie": actie, "reden": plan["reden"]}],
+        [{"tijd": moment, "lader_id": lader["lader_id"], "actie": actie, "reden": plan["reden"]}],
     )
     _LOG.info("Lader %s: %s (%s)", lader["lader_id"], actie, plan["reden"])
     return actie

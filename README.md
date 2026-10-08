@@ -37,8 +37,12 @@ een paar dagen klopt.
 | `app/thuis/schema.py` | Alle tabellen op één plek, voor DuckDB én BigQuery |
 | `app/thuis/opslag.py` | Opslaglaag: append-only, actuele stand per sleutel, alleen gewijzigde rijen erbij |
 | `app/thuis/verzamel.py` | De verzamelaar: elke bron faalt los, uitslag per stap in de rondelog |
-| `app/thuis/inzicht.py` | Dag- en periodeoverzichten, laden per uur, inzichten |
+| `app/thuis/inzicht.py` | Dag- en periodeoverzichten (dag/week/maand/jaar), laden uit de meterstand van de lader |
+| `app/thuis/sessies.py` | Laadsessies van inpluggen tot uitpluggen, met kosten en besparing t.o.v. direct laden |
+| `app/thuis/inzichten.py` | Inzichten voor de overzichtspagina (negatieve prijzen, besparing, gas per graaddag, …) |
+| `app/thuis/meldingen.py` | Google Chat-meldingen, elk maar één keer |
 | `app/thuis/planner.py` · `laden.py` | Laadplanning en het sturen van de lader |
+| `app/thuis/demo.py` | ±400 dagen realistische voorbeelddata met seizoenen |
 | `app/thuis/api.py` | API (`docs/api.md`) en serveert de web-app |
 | `app/web/` | Web-app (vanilla JS + ECharts), licht/donker, installeerbaar op je telefoon |
 | `deploy/` | Eenmalige inrichting van Google Cloud (Cloud Shell) en beheerscripts |
@@ -56,6 +60,17 @@ pytest
 
 Met echte accounts lokaal: zet `FRANK_EMAIL`, `FRANK_WACHTWOORD`, `EASEE_GEBRUIKER`, … (zie
 `app/thuis/config.py`) en draai `python -m thuis.verzamel`.
+
+| Variabele | Waarvoor |
+| --- | --- |
+| `FRANK_EMAIL`, `FRANK_WACHTWOORD`, `FRANK_SITE` | Verbruik en kosten (prijzen zijn openbaar) |
+| `EASEE_GEBRUIKER`, `EASEE_WACHTWOORD`, `EASEE_LADER` | Lader; `EASEE_LADER` alleen bij meer laders |
+| `KIA_GEBRUIKER`, `KIA_WACHTWOORD`, `KIA_PIN`, `KIA_MERK` | Auto (`kia`, `hyundai` of `genesis`) |
+| `THUIS_LAT`, `THUIS_LON` | Plaats voor het weer; standaard De Bilt |
+| `GOOGLE_CHAT_WEBHOOK` | Meldingen in een Google Chat-ruimte; leeg = geen meldingen |
+| `TOEGESTANE_EMAILS` | Wie de app mag gebruiken (naast IAP), komma-gescheiden |
+
+Wat er na versie 1.0 nog op de lijst staat: **[docs/roadmap.md](docs/roadmap.md)**.
 
 ## Naar Google Cloud
 

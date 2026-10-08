@@ -95,7 +95,28 @@ STUURACTIE = Tabel(
     "tijd",
 )
 
-TABELLEN = (PRIJS, VERBRUIK, LADER, AUTO, INSTELLING, STUURACTIE)
+WEER = Tabel(
+    "weer",
+    (("van", "TIMESTAMP"), ("tot", "TIMESTAMP"), ("temperatuur", "FLOAT64"), OPGEHAALD),
+    ("van",),
+    "van",
+)  # per uur, °C (Open-Meteo); vooruit is het een verwachting die later wordt bijgewerkt
+
+MELDING = Tabel(
+    "melding",
+    (("sleutel", "STRING"), ("tijd", "TIMESTAMP"), ("soort", "STRING"), ("tekst", "STRING"), OPGEHAALD),
+    ("sleutel",),
+    "tijd",
+)  # verstuurde meldingen; de sleutel voorkomt dat dezelfde melding twee keer gaat
+
+RONDE = Tabel(
+    "ronde",
+    (("tijd", "TIMESTAMP"), ("stap", "STRING"), ("uitslag", "STRING"), ("duur_s", "FLOAT64"), OPGEHAALD),
+    ("tijd", "stap"),
+    "tijd",
+)  # rondelog van de verzamelaar: per stap ok | overgeslagen | fout: …
+
+TABELLEN = (PRIJS, VERBRUIK, LADER, AUTO, INSTELLING, STUURACTIE, WEER, MELDING, RONDE)
 
 
 def actueel(t: Tabel, ref: str) -> str:
