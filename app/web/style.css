@@ -424,6 +424,10 @@ main { padding: 0 24px 32px; width: 100%; max-width: 1360px; outline: none; }
 .koppel-veld input:focus, .koppel-veld select:focus { border-color: var(--accent); outline: none;
   box-shadow: 0 0 0 2px var(--accent-zacht); }
 .formulier-acties { display: flex; flex-wrap: wrap; gap: 8px; }
+.koppel-code p { margin: 0; }
+.koppel-code .code { font-size: 28px; font-weight: 600; letter-spacing: 0.12em; font-variant-numeric: tabular-nums;
+  color: var(--inkt); padding: 10px 14px; border: 1px dashed var(--lijn-sterk); border-radius: 8px;
+  background: var(--oppervlak); justify-self: start; user-select: all; }
 @media (max-width: 599px) {
   .koppelingen > li { grid-template-columns: auto minmax(0, 1fr); }
   .koppelingen .pil { grid-column: 2; justify-self: start; }

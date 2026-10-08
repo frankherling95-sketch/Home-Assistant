@@ -5,7 +5,8 @@ REST-API); lokaal een JSON-bestand. De app schrijft erin bij het koppelen, de ve
 een token is ververst. Beide voegen alleen hun eigen wijzigingen samen met de nieuwste versie,
 zodat ze elkaars werk niet overschrijven.
 
-Vorm: {"FRANK_EMAIL": … (oude logins uit het setup-script), "koppelingen": {"frank": {…}, …}}
+Vorm: {"FRANK_EMAIL": … (oude logins uit het setup-script), "koppelingen": {"frank": {…}, …},
+"wachtend": {"bmw": {…}}} (een BMW-koppeling die nog op bevestiging wacht)
 """
 
 from __future__ import annotations
@@ -33,16 +34,26 @@ class Kluis(Protocol):
     def schrijf(self, data: dict[str, Any]) -> None: ...
 
 
-def werk_bij(kluis: Kluis, koppelingen: dict[str, dict[str, Any] | None]) -> dict[str, Any]:
-    """Wijzigingen per koppeling samenvoegen met de nieuwste stand en opslaan. None = verwijderen."""
+def werk_bij(
+    kluis: Kluis,
+    koppelingen: dict[str, dict[str, Any] | None] | None = None,
+    wachtend: dict[str, dict[str, Any] | None] | None = None,
+) -> dict[str, Any]:
+    """Wijzigingen per koppeling samenvoegen met de nieuwste stand en opslaan. None = verwijderen.
+
+    `wachtend`: koppelingen die op een bevestiging wachten (BMW), apart van de echte.
+    """
     data = kluis.lees()
-    alle = dict(data.get("koppelingen") or {})
-    for naam, waarde in koppelingen.items():
-        if waarde is None:
-            alle.pop(naam, None)
-        else:
-            alle[naam] = waarde
-    data["koppelingen"] = alle
+    for sectie, wijzig in (("koppelingen", koppelingen), ("wachtend", wachtend)):
+        if wijzig is None:
+            continue
+        alle = dict(data.get(sectie) or {})
+        for naam, waarde in wijzig.items():
+            if waarde is None:
+                alle.pop(naam, None)
+            else:
+                alle[naam] = waarde
+        data[sectie] = alle
     kluis.schrijf(data)
     return data
 

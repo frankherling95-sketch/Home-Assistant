@@ -1,9 +1,12 @@
-"""Koppelingen: de accounts van Frank Energie, Easee, Kia/Hyundai en Google Chat.
+"""Koppelingen: de accounts van Frank Energie, Easee, Kia/Hyundai, BMW en Google Chat.
 
 Koppelen gebeurt in de app: één keer inloggen, daarna bewaart Thuis alleen de tokens die de
 dienst teruggeeft (nooit het wachtwoord) in de kluis. De verzamelaar bouwt zijn connectoren
 daaruit, ververst tokens en slaat de nieuwe op. Werken ze niet meer, dan krijgt de koppeling
 status "opnieuw" en vraagt de app om opnieuw te koppelen.
+
+BMW koppelt anders: met een code die je op de site van BMW bevestigt (methode "code"). Tot die
+bevestiging staat wat Thuis daarvoor nodig heeft onder "wachtend" in de kluis.
 
 Oude installaties met logins uit het setup-script (FRANK_EMAIL, …) blijven gewoon werken.
 """
@@ -45,6 +48,13 @@ DIENSTEN: dict[str, dict[str, Any]] = {
             {"naam": "wachtwoord", "label": "Wachtwoord", "type": "password"},
         ],
         "oud": ("KIA_GEBRUIKER", "KIA_WACHTWOORD"),
+    },
+    "bmw": {
+        "naam": "BMW",
+        "uitleg": "Voor de accu en het bereik van je BMW of MINI, via BMW CarData.",
+        "methode": "code",
+        "velden": [{"naam": "client_id", "label": "Client-ID uit BMW CarData", "type": "text"}],
+        "oud": (),
     },
     "google_chat": {
         "naam": "Google Chat",
@@ -90,8 +100,30 @@ def koppel(dienst: str, gegevens: dict[str, str]) -> tuple[dict[str, Any], str]:
         r = {"webhook": webhook, "account": "Chat-ruimte", "bericht": "Testbericht verstuurd"}
     else:
         raise KoppelFout(f"Onbekende dienst: {dienst}")
+    return _gekoppeld(r)
+
+
+def _gekoppeld(r: dict[str, Any]) -> tuple[dict[str, Any], str]:
     bericht = r.pop("bericht", "Gekoppeld")
     return {**r, "status": "ok", "gekoppeld": nu().isoformat()}, bericht
+
+
+def start_code(dienst: str, gegevens: dict[str, str]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Koppelen met een code (BMW). Geeft (wat bewaard blijft tot de bevestiging, code en link)."""
+    if dienst != "bmw":
+        raise KoppelFout(f"Onbekende dienst: {dienst}")
+    from .connectors.bmw import start_koppeling
+
+    (client_id,) = _verplicht(gegevens, "client_id")
+    return start_koppeling(client_id)
+
+
+def controleer_code(dienst: str, wacht: dict[str, Any]) -> tuple[dict[str, Any], str] | None:
+    """None zolang de code niet is bevestigd; daarna (wat in de kluis komt, bevestiging)."""
+    from .connectors.bmw import controleer_koppeling
+
+    r = controleer_koppeling(wacht)
+    return None if r is None else _gekoppeld(r)
 
 
 def _maskeer(account: str) -> str:
@@ -107,7 +139,7 @@ def overzicht(data: dict[str, Any]) -> list[dict[str, Any]]:
     uit = []
     for dienst, d in DIENSTEN.items():
         k = koppelingen.get(dienst)
-        oud = all(data.get(s) for s in d["oud"])
+        oud = bool(d["oud"]) and all(data.get(s) for s in d["oud"])
         if k:
             status, account = k.get("status", "ok"), k.get("account", "")
         elif oud:
@@ -120,8 +152,9 @@ def overzicht(data: dict[str, Any]) -> list[dict[str, Any]]:
                 "naam": d["naam"],
                 "uitleg": d["uitleg"],
                 "velden": d["velden"],
+                "methode": d.get("methode", "inloggen"),
                 "status": status,  # ok | opnieuw | script | niet
-                "account": _maskeer(account) if dienst != "google_chat" else account,
+                "account": account if dienst in ("google_chat", "bmw") else _maskeer(account),
                 "sinds": (k or {}).get("gekoppeld"),
             }
         )
@@ -137,6 +170,7 @@ class Connectoren:
     frank_account: bool = False  # verbruik ophalen?
     easee: Any = None
     kia: Any = None
+    bmw: Any = None
     chat: Any = None
     koppelingen: dict[str, dict[str, Any]] = field(default_factory=dict)
 
@@ -165,6 +199,10 @@ def maak_connectoren(cfg: Config, data: dict[str, Any]) -> Connectoren:
             c.kia = Kia(merk=k["kia"].get("merk", "kia"), token=k["kia"].get("token"))
         else:
             c.kia = Kia(cfg.kia_gebruiker, cfg.kia_wachtwoord, cfg.kia_pin, cfg.kia_merk)
+    if "bmw" in k:
+        from .connectors.bmw import BMW
+
+        c.bmw = BMW(k["bmw"])
     webhook = (k.get("google_chat") or {}).get("webhook") or cfg.chat_webhook
     if webhook:
         from .meldingen import GoogleChat
@@ -174,19 +212,24 @@ def maak_connectoren(cfg: Config, data: dict[str, Any]) -> Connectoren:
 
 
 def nieuwe_stand(c: Connectoren, verlopen: set[str], gelukt: set[str]) -> dict[str, dict[str, Any]]:
-    """Wat er na een ronde in de kluis moet: verse tokens, en de status per koppeling."""
+    """Wat er na een ronde in de kluis moet: verse tokens, en de status per koppeling.
+
+    BMW houdt meer bij dan tokens (de telling van verzoeken, de laatste toestand): daar gaat het
+    hele record terug.
+    """
     wijzig: dict[str, dict[str, Any]] = {}
     for dienst, conn, sleutel in (
         ("frank", c.frank, "tokens"),
         ("easee", c.easee, "tokens"),
         ("kia", c.kia, "token"),
+        ("bmw", c.bmw, None),
     ):
         k = c.koppelingen.get(dienst)
         if k is None or conn is None:
             continue
         nieuw = dict(k)
         if getattr(conn, "gewijzigd", False):
-            nieuw[sleutel] = conn.tokens
+            nieuw.update(conn.record if sleutel is None else {sleutel: conn.tokens})
         if dienst in verlopen:
             nieuw["status"] = "opnieuw"
         elif dienst in gelukt:

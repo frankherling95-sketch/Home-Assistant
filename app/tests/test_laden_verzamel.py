@@ -84,12 +84,16 @@ def test_ronde_bron_valt_los_uit(opslag, monkeypatch):
     uitslag = ronde(Config(), opslag, frank=NepFrank(), easee=NepEasee(), weer=NepWeer())
     assert uitslag["prijzen"] == "ok"
     assert uitslag["verbruik"].startswith("fout")
-    assert uitslag["lader"] == "ok" and uitslag["auto"] == "overgeslagen" and uitslag["sturen"] == "ok"
+    assert (
+        uitslag["lader"] == "ok"
+        and uitslag["auto"] == uitslag["bmw"] == "overgeslagen"
+        and uitslag["sturen"] == "ok"
+    )
     assert uitslag["weer"] == "ok" and uitslag["meldingen"] == "overgeslagen"
     assert len(opslag.lees("SELECT * FROM {lader_meting}")) == 1
     assert opslag.lees("SELECT temperatuur FROM {weer}") == [{"temperatuur": 11.5}]
     log = {r["stap"]: r["uitslag"] for r in opslag.lees("SELECT stap, uitslag FROM {ronde}")}
-    assert log["verbruik"] == "fout: Frank plat" and log["prijzen"] == "ok" and len(log) == 7
+    assert log["verbruik"] == "fout: Frank plat" and log["prijzen"] == "ok" and len(log) == 8
 
 
 def test_geheimen_uit_een_json(monkeypatch):
