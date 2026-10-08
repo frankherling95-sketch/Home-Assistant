@@ -18,11 +18,14 @@ from typing import Any, Literal
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 from .config import Config
+from .connectors import KoppelFout
 from .inzicht import dagen_grenzen, dagoverzicht, laatste, periodeoverzicht, vandaag
 from .inzichten import inzichten
+from .kluis import Kluis, maak_kluis, werk_bij
+from .koppelingen import DIENSTEN, koppel, overzicht
 from .laden import STANDAARD, maak_plan
 from .opslag import Opslag, lees_instellingen, maak_opslag, nu, schrijf_instellingen
 from .schema import TABELLEN
@@ -44,6 +47,7 @@ _LOG = logging.getLogger(__name__)
 async def _levensloop(app: FastAPI):
     app.state.cfg = Config()
     app.state.opslag = maak_opslag(app.state.cfg)
+    app.state.kluis = maak_kluis(app.state.cfg)
     # BigQuery: de verzamelaar maakt de tabellen (ook direct na elke deploy); dat scheelt
     # hier tien API-aanroepen bij elke koude start.
     if app.state.cfg.opslag != "bigquery":
@@ -52,6 +56,17 @@ async def _levensloop(app: FastAPI):
 
 
 app = FastAPI(title="Thuis", lifespan=_levensloop, docs_url=None, redoc_url=None)
+
+
+@app.middleware("http")
+async def _cache_regels(request: Request, call_next):
+    """Web-app altijd hervalideren (ETag maakt dat goedkoop): na een deploy meteen de nieuwe versie.
+    API-antwoorden nooit bewaren: daar zitten persoonlijke gegevens in."""
+    antwoord = await call_next(request)
+    antwoord.headers.setdefault(
+        "Cache-Control", "no-store" if request.url.path.startswith("/api/") else "no-cache"
+    )
+    return antwoord
 
 
 class IapSleutels:
@@ -115,6 +130,10 @@ def gebruiker(request: Request) -> str:
 
 def opslag(request: Request) -> Opslag:
     return request.app.state.opslag
+
+
+def kluis(request: Request) -> Kluis:
+    return request.app.state.kluis
 
 
 class Instellingen(BaseModel):
@@ -192,6 +211,75 @@ def api_instellingen_opslaan(
 ) -> dict[str, Any]:
     schrijf_instellingen(o, waarden.model_dump())
     return lees_instellingen(o, STANDAARD)
+
+
+class KoppelGegevens(BaseModel):
+    """Wat de gebruiker invult bij koppelen. Geheimen als SecretStr: nooit in logs of foutmeldingen."""
+
+    email: str | None = Field(default=None, max_length=200)
+    gebruiker: str | None = Field(default=None, max_length=200)
+    merk: str | None = Field(default=None, pattern=r"^(kia|hyundai|genesis)$")
+    wachtwoord: SecretStr | None = Field(default=None, max_length=200)
+    webhook: SecretStr | None = Field(default=None, max_length=500)
+
+    def als_dict(self) -> dict[str, str]:
+        return {k: v.get_secret_value() if isinstance(v, SecretStr) else v for k, v in self if v is not None}
+
+
+@app.get("/api/koppelingen")
+def api_koppelingen(_: str = Depends(gebruiker), k: Kluis = Depends(kluis)) -> list[dict[str, Any]]:
+    return overzicht(k.lees())
+
+
+@app.post("/api/koppelingen/{dienst}")
+def api_koppel(
+    dienst: str,
+    gegevens: KoppelGegevens,
+    request: Request,
+    _: str = Depends(gebruiker),
+    k: Kluis = Depends(kluis),
+) -> dict[str, Any]:
+    """Eenmalig inloggen bij de dienst; alleen de tokens gaan de kluis in."""
+    if dienst not in DIENSTEN:
+        raise HTTPException(404, "Onbekende dienst")
+    try:
+        stand, bericht = koppel(dienst, gegevens.als_dict())
+    except KoppelFout as err:
+        raise HTTPException(400, str(err)) from err
+    except Exception as err:  # netwerk, of de dienst heeft iets veranderd
+        _LOG.exception("Koppelen met %s mislukt", dienst)
+        raise HTTPException(
+            502, f"{DIENSTEN[dienst]['naam']} gaf een onverwacht antwoord; probeer het later nog eens."
+        ) from err
+    data = werk_bij(k, {dienst: stand})
+    start_ronde(request.app.state.cfg)
+    return {"bericht": bericht, "koppelingen": overzicht(data)}
+
+
+@app.delete("/api/koppelingen/{dienst}")
+def api_ontkoppel(
+    dienst: str, _: str = Depends(gebruiker), k: Kluis = Depends(kluis)
+) -> list[dict[str, Any]]:
+    if dienst not in DIENSTEN:
+        raise HTTPException(404, "Onbekende dienst")
+    return overzicht(werk_bij(k, {dienst: None}))
+
+
+def start_ronde(cfg: Config) -> None:
+    """Na het koppelen meteen een ronde, zodat de eerste gegevens er binnen een minuut zijn."""
+    if not cfg.job:
+        return
+    try:
+        from .kluis import _google_token
+
+        httpx.post(
+            f"https://run.googleapis.com/v2/{cfg.job}:run",
+            headers={"Authorization": f"Bearer {_google_token()}"},
+            json={},
+            timeout=15,
+        ).raise_for_status()
+    except Exception:  # noqa: BLE001 — dan komt het binnen een kwartier vanzelf
+        _LOG.warning("Ronde na koppelen niet gestart", exc_info=True)
 
 
 BRONNEN = (

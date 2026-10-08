@@ -34,7 +34,7 @@ export async function toon(main, _params, ctx) {
         sub: welkeDag === "gisteren" ? "gisteren · meterdata van vandaag volgt morgen" : "vandaag",
         klasse: "o-stromen",
         id: "k-stromen",
-        inhoud: meterdag.compleet.verbruik || meterdag.totalen.laden.hoeveelheid ? stromen(meterdag.totalen) : leeg("Nog geen meterdata."),
+        inhoud: meterdag.compleet.verbruik || meterdag.totalen.laden.hoeveelheid ? stromen(meterdag.totalen) : '<p class="leeg">Nog geen meterdata. <a href="#/koppelingen">Koppel Frank Energie</a> voor je verbruik.</p>',
       })}
       ${kaart({ titel: `Totalen ${welkeDag}`, klasse: "o-totalen", id: "k-totalen", inhoud: totalenTabel(meterdag.totalen) })}
     </div>
@@ -162,7 +162,7 @@ function autoKaart({ auto, lader, plan, instellingen }) {
         <div class="doel" style="left:${instellingen.doel_pct}%" title="Doel ${instellingen.doel_pct}%"></div>
         <span><b>${getal(pct, 0)}%</b><span class="zacht">${auto.bereik_km != null ? `${getal(auto.bereik_km, 0)} km` : ""}</span></span>
       </div>`
-    : leeg("Nog geen gegevens van de auto.");
+    : '<p class="leeg">Nog geen gegevens van de auto. <a href="#/koppelingen">Koppel je auto</a></p>';
   const b = plan.blokken;
   const planTekst = b.length ? `${klok(b[0].van)}–${klok(b.at(-1).tot)}` : PLAN_REDEN[plan.reden] || plan.reden;
   return kaart({

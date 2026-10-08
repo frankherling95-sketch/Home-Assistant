@@ -23,7 +23,7 @@ Cloud Run-service thuis-app  (API + web-app)  ◀── jij, ingelogd via IAP (W
 | Prijzen | All-in prijzen vandaag en morgen per kwartier, goedkoopste momenten, negatieve prijzen |
 | Laden | Auto en lader live, laadplan (Slim laden), laadsessies met kosten, instellingen |
 | Inzichten | Besparing door slim laden, kosten deze maand, gas t.o.v. vorige week (graaddagen), … |
-| Bronnen | Status per connector: wanneer het laatst gelukt is en wat er misging |
+| Koppelingen | Je accounts koppelen (Thuis bewaart alleen tokens, geen wachtwoorden) en de status per bron |
 
 | Desktop (licht) | Mobiel (donker) |
 | --- | --- |
@@ -65,8 +65,9 @@ THUIS_AUTH_UIT=1 uvicorn thuis.api:app     # http://localhost:8000
 pytest
 ```
 
-Met echte accounts lokaal: zet `FRANK_EMAIL`, `FRANK_WACHTWOORD`, `EASEE_GEBRUIKER`, … (zie
-`app/thuis/config.py`) en draai `python -m thuis.verzamel`.
+Met echte accounts lokaal: koppel ze op de pagina Koppelingen (de tokens komen in
+`thuis-kluis.json`), of zet `FRANK_EMAIL`, `FRANK_WACHTWOORD`, `EASEE_GEBRUIKER`, … (zie
+`app/thuis/config.py`). Draai daarna `python -m thuis.verzamel`.
 
 | Variabele | Waarvoor |
 | --- | --- |

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import time
 from datetime import UTC, datetime
 from typing import Any
 
 import httpx
+
+from . import KoppelFout, KoppelingVerlopen
 
 URL = "https://api.easee.com"
 
@@ -42,23 +45,73 @@ class EaseeFout(RuntimeError):
 
 
 class Easee:
-    def __init__(self, gebruiker: str, wachtwoord: str, client: httpx.Client | None = None) -> None:
+    """Met wachtwoord, of met bewaarde tokens (`access_token`, `refresh_token`, `verloopt` als epoch).
+
+    Een refresh-token is bij Easee maar één keer bruikbaar: na elke verversing de nieuwe bewaren.
+    """
+
+    def __init__(
+        self,
+        gebruiker: str = "",
+        wachtwoord: str = "",
+        client: httpx.Client | None = None,
+        tokens: dict[str, Any] | None = None,
+    ) -> None:
         self.gebruiker, self.wachtwoord = gebruiker, wachtwoord
         self.client = client or httpx.Client(timeout=30, base_url=URL)
-        self._token: str | None = None
+        self.tokens: dict[str, Any] = dict(tokens or {})
+        self.gewijzigd = False
+
+    def _geldig(self) -> bool:
+        return (
+            bool(self.tokens.get("access_token"))
+            and float(self.tokens.get("verloopt") or 0) - 60 > time.time()
+        )
+
+    def _zorg_voor_token(self) -> None:
+        if self._geldig():
+            return
+        if self.tokens.get("refresh_token"):
+            self._ververs()
+        else:
+            self.login()
+
+    def _ververs(self) -> None:
+        r = self.client.post(
+            "/api/accounts/refresh_token",
+            json={
+                "accessToken": self.tokens.get("access_token"),
+                "refreshToken": self.tokens["refresh_token"],
+            },
+        )
+        if r.status_code < 400:
+            self._bewaar(r.json())
+        elif self.wachtwoord:
+            self.login()
+        else:  # sessie bij Easee verlopen of ingetrokken
+            raise KoppelingVerlopen("Easee", f"HTTP {r.status_code}")
+
+    def _bewaar(self, antwoord: dict[str, Any]) -> None:
+        self.tokens = {
+            "access_token": antwoord["accessToken"],
+            "refresh_token": antwoord.get("refreshToken"),
+            "verloopt": round(time.time() + int(antwoord.get("expiresIn") or 3600)),
+        }
+        self.gewijzigd = True
 
     def _verzoek(self, methode: str, pad: str, **kwargs: Any) -> Any:
-        if self._token is None:
-            self.login()
-        r = self.client.request(methode, pad, headers={"Authorization": f"Bearer {self._token}"}, **kwargs)
-        if r.status_code == 401:  # token verlopen: één keer opnieuw inloggen
-            self.login()
-            r = self.client.request(
-                methode, pad, headers={"Authorization": f"Bearer {self._token}"}, **kwargs
-            )
+        self._zorg_voor_token()
+        r = self.client.request(methode, pad, headers=self._kop(), **kwargs)
+        if r.status_code == 401:  # token toch verlopen: één keer verversen of opnieuw inloggen
+            self.tokens["verloopt"] = 0
+            self._zorg_voor_token()
+            r = self.client.request(methode, pad, headers=self._kop(), **kwargs)
         if r.status_code >= 400:
             raise EaseeFout(f"{methode} {pad}: HTTP {r.status_code}")
         return r.json() if r.content else None
+
+    def _kop(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {self.tokens['access_token']}"}
 
     def login(self) -> None:
         r = self.client.post(
@@ -66,7 +119,21 @@ class Easee:
         )
         if r.status_code >= 400:
             raise EaseeFout(f"Inloggen bij Easee mislukt: HTTP {r.status_code}")
-        self._token = r.json()["accessToken"]
+        self._bewaar(r.json())
+
+    @classmethod
+    def koppel(cls, gebruiker: str, wachtwoord: str) -> dict[str, Any]:
+        """Eenmalig inloggen; geeft wat bewaard wordt (tokens, geen wachtwoord) en een bevestiging."""
+        e = cls(gebruiker, wachtwoord)
+        try:
+            e.login()
+        except EaseeFout as err:
+            raise KoppelFout(
+                "Inloggen bij Easee mislukt: controleer je e-mailadres (of telefoonnummer) en wachtwoord."
+            ) from err
+        laders = e.laders()
+        namen = ", ".join(lad["naam"] for lad in laders) or "geen"
+        return {"tokens": e.tokens, "account": gebruiker, "bericht": f"Laders gevonden: {namen}"}
 
     def laders(self) -> list[dict[str, str]]:
         return [

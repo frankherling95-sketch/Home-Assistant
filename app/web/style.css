@@ -401,6 +401,35 @@ main { padding: 0 24px 32px; width: 100%; max-width: 1360px; outline: none; }
 .bronlijst .detail { color: var(--inkt-3); font-size: 13px; grid-column: 2 / 4; overflow-wrap: anywhere; }
 .bronlijst .fout .detail .tekst { color: var(--fout); }
 
+/* ── koppelingen ───────────────────────────────────────────────────────── */
+
+.koppelingen { list-style: none; margin: 12px 0 0; padding: 0; }
+.koppelingen > li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 14px; padding: 14px 4px;
+  border-bottom: 1px solid var(--lijn); align-items: center; }
+.koppelingen > li:last-child { border-bottom: 0; }
+.koppelingen .icoon { grid-row: span 2; align-self: start; width: 36px; height: 36px; border-radius: 50%; display: grid;
+  place-items: center; background: var(--oppervlak-2); color: var(--inkt-3); }
+.koppelingen > li.goed .icoon { background: var(--goed-zacht); color: var(--goed); }
+.koppelingen > li.fout .icoon { background: var(--fout-zacht); color: var(--fout); }
+.koppelingen .naam { font-weight: 500; }
+.koppelingen .detail { grid-column: 2 / 4; color: var(--inkt-3); font-size: 13px; overflow-wrap: anywhere; }
+.koppelingen .detail .tekst { color: var(--fout); }
+.koppelingen .acties { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.koppel-vak { grid-column: 2 / 4; }
+.koppel-form { display: grid; gap: 12px; max-width: 440px; margin-top: 6px; padding: 14px; border-radius: 10px;
+  background: var(--oppervlak-2); }
+.koppel-veld { display: grid; gap: 4px; color: var(--inkt-2); font-size: 13px; }
+.koppel-veld input, .koppel-veld select { font: inherit; font-size: 15px; color: var(--inkt); background: var(--oppervlak);
+  border: 1px solid var(--lijn-sterk); border-radius: 8px; padding: 9px 10px; width: 100%; }
+.koppel-veld input:focus, .koppel-veld select:focus { border-color: var(--accent); outline: none;
+  box-shadow: 0 0 0 2px var(--accent-zacht); }
+.formulier-acties { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 599px) {
+  .koppelingen > li { grid-template-columns: auto minmax(0, 1fr); }
+  .koppelingen .pil { grid-column: 2; justify-self: start; }
+  .koppelingen .detail, .koppelingen .acties, .koppel-vak { grid-column: 1 / -1; }
+}
+
 /* ── sessies ───────────────────────────────────────────────────────────── */
 
 .slim { color: var(--c-laden); font-weight: 500; }

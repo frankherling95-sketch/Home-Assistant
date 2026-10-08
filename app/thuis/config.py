@@ -8,10 +8,26 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from typing import Any
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo("Europe/Amsterdam")
+
+# Velden die vroeger alleen via het setup-script (in het geheim) gezet werden.
+_OUDE_LOGINS = {
+    "frank_email": "FRANK_EMAIL",
+    "frank_wachtwoord": "FRANK_WACHTWOORD",
+    "frank_site": "FRANK_SITE",
+    "easee_gebruiker": "EASEE_GEBRUIKER",
+    "easee_wachtwoord": "EASEE_WACHTWOORD",
+    "easee_lader": "EASEE_LADER",
+    "kia_gebruiker": "KIA_GEBRUIKER",
+    "kia_wachtwoord": "KIA_WACHTWOORD",
+    "kia_pin": "KIA_PIN",
+    "kia_merk": "KIA_MERK",
+    "chat_webhook": "GOOGLE_CHAT_WEBHOOK",
+}
 
 
 def _geheimen() -> dict[str, str]:
@@ -64,6 +80,25 @@ class Config:
     # Doelgroep van de IAP-JWT: /projects/NUMMER/locations/REGIO/services/thuis-app. Gezet =
     # de ondertekende JWT controleren (aanbevolen) in plaats van alleen de e-mailheader.
     iap_audience: str = field(default_factory=lambda: _env("IAP_AUDIENCE"))
+
+    # De kluis met koppelingen (tokens): Secret Manager in de cloud, een bestand lokaal.
+    kluis: str = field(
+        default_factory=lambda: _env("THUIS_KLUIS")
+    )  # secretmanager | bestand | leeg = automatisch
+    kluis_pad: str = field(default_factory=lambda: _env("THUIS_KLUIS_PAD", "thuis-kluis.json"))
+    geheim: str = field(default_factory=lambda: _env("THUIS_GEHEIM", "thuis-geheimen"))
+    # Volledige naam van de verzamel-job (projects/…/locations/…/jobs/…): na het koppelen meteen een ronde.
+    job: str = field(default_factory=lambda: _env("THUIS_JOB"))
+
+    def met_geheimen(self, geheimen: dict[str, Any]) -> Config:
+        """Oude logins (van het setup-script) uit de kluis aanvullen waar de omgeving niets zegt."""
+        aanvulling = {
+            veld: str(geheimen[sleutel]).strip()
+            for veld, sleutel in _OUDE_LOGINS.items()
+            if not os.environ.get(sleutel) and sleutel not in _geheimen() and geheimen.get(sleutel)
+        }
+        return replace(self, **aanvulling) if aanvulling else self
+
     # Alleen lokaal: zonder IAP-header werken. Nooit in Google Cloud zetten.
     auth_uit: bool = field(default_factory=lambda: _env("THUIS_AUTH_UIT") == "1")
 

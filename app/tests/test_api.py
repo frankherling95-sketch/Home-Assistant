@@ -154,6 +154,8 @@ def test_web_app_met_juiste_types(client):
     assert client.get("/js/app.js").headers["content-type"].startswith("text/javascript")
     assert client.get("/manifest.webmanifest").headers["content-type"].startswith("application/manifest+json")
     assert client.get("/icons/icon-192.png").headers["content-type"] == "image/png"
+    assert index.headers["cache-control"] == "no-cache"  # na een deploy meteen de nieuwe versie
+    assert client.get("/api/gebruiker", headers=IAP).headers["cache-control"] == "no-store"
 
 
 def test_demo_lokaal_zonder_login(monkeypatch, tmp_path):
