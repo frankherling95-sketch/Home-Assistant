@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call: # deploy.yml draait eerst deze tests
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests en lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: app/pyproject.toml
+      - run: pip install -e ".[dev]"
+      - run: ruff check thuis tests
+      - run: ruff format --check thuis tests
+      - run: pytest
+
+  image:
+    name: Docker-image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build -t thuis app
+      - name: Image start en kan alles importeren
+        run: |
+          docker run --rm thuis python -c "import thuis.api, thuis.verzamel, google.cloud.bigquery, hyundai_kia_connect_api"
+          docker run --rm thuis id -u | grep -qv '^0$'  # niet als root

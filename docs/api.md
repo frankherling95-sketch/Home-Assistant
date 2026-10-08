@@ -121,8 +121,9 @@ Voor een eerdere datum wordt gerekend alsof het het eind van die dag is.
   maand), `gem_laadprijs` (t.o.v. de gemiddelde stroomprijs), `gas_vs_vorige_week` (per graaddag,
   basis 18 °C). Een inzicht zonder data wordt weggelaten.
 
-### `GET /api/status`
-Gezondheid per bron uit de rondelog van de verzamelaar, voor de pagina "Bronnen".
+### `GET /api/status?tabellen=true|false`
+Gezondheid per bron uit de rondelog van de verzamelaar, voor de statusstip en de pagina "Bronnen".
+Standaard zonder `tabellen` (één query); `tabellen=true` voegt ze toe (een query per tabel).
 ```json
 {
   "bronnen": [

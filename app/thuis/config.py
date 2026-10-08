@@ -35,6 +35,7 @@ class Config:
     duckdb_pad: str = field(default_factory=lambda: _env("THUIS_DUCKDB_PAD", "thuis.duckdb"))
     gcp_project: str = field(default_factory=lambda: _env("GCP_PROJECT"))
     bq_dataset: str = field(default_factory=lambda: _env("BQ_DATASET", "thuis"))
+    bq_locatie: str = field(default_factory=lambda: _env("BQ_LOCATIE", "EU"))
 
     frank_email: str = field(default_factory=lambda: _env("FRANK_EMAIL"))
     frank_wachtwoord: str = field(default_factory=lambda: _env("FRANK_WACHTWOORD"))

@@ -87,13 +87,22 @@ def test_status_uit_rondelog(client):
         RONDE, [{"tijd": t - timedelta(minutes=15), "stap": "prijzen", "uitslag": "ok", "duur_s": 1.0}]
     )
     o.voeg_toe(RONDE, [{"tijd": t, "stap": "prijzen", "uitslag": "fout: HTTP 502", "duur_s": 0.4}])
-    s = client.get("/api/status", headers=IAP).json()
+    assert "tabellen" not in client.get("/api/status", headers=IAP).json()  # standaard één query
+    s = client.get("/api/status?tabellen=true", headers=IAP).json()
     bronnen = {b["stap"]: b for b in s["bronnen"]}
     assert list(bronnen) == ["prijzen", "verbruik", "lader", "auto", "weer", "sturen", "meldingen"]
     assert bronnen["prijzen"]["uitslag"] == "fout: HTTP 502" and bronnen["prijzen"]["tijd"] == t.isoformat()
     assert (t - timedelta(minutes=15)).isoformat() <= bronnen["prijzen"]["laatst_ok"] < t.isoformat()
     assert bronnen["meldingen"]["uitslag"] == "overgeslagen" and bronnen["auto"]["naam"] == "Kia Connect"
     assert s["tabellen"]["prijs"] and s["tabellen"]["melding"] is None
+
+
+def test_web_app_met_juiste_types(client):
+    index = client.get("/")
+    assert index.status_code == 200 and 'src="js/app.js"' in index.text
+    assert client.get("/js/app.js").headers["content-type"].startswith("text/javascript")
+    assert client.get("/manifest.webmanifest").headers["content-type"].startswith("application/manifest+json")
+    assert client.get("/icons/icon-192.png").headers["content-type"] == "image/png"
 
 
 def test_demo_lokaal_zonder_login(monkeypatch, tmp_path):

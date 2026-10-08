@@ -71,12 +71,13 @@ function herteken({ vers = false } = {}) {
 
 // ── gezondheid van de bronnen (stip in de kop en het menu) ────────────────────
 
+/** Werkt de statusstip bij; geeft het tijdstip van de laatste ronde terug. */
 async function gezondheid() {
-  let status = "onbekend", tekst = "Status van de bronnen onbekend";
+  let status = "onbekend", tekst = "Status van de bronnen onbekend", laatste = null;
   try {
     const s = await api("status", { vers: true });
     const fouten = s.bronnen.filter((b) => b.uitslag?.startsWith("fout"));
-    const laatste = s.bronnen.map((b) => b.tijd).filter(Boolean).sort().at(-1);
+    laatste = s.bronnen.map((b) => b.tijd).filter(Boolean).sort().at(-1) ?? null;
     if (fouten.length) {
       status = "fout";
       tekst = `${fouten.map((b) => b.naam).join(", ")}: mislukt`;
@@ -91,6 +92,17 @@ async function gezondheid() {
   for (const el of $$("[data-gezondheid]")) el.dataset.status = status;
   $("#gezondheid").setAttribute("aria-label", `Bronnen: ${tekst}`);
   $("#gezondheid").title = tekst;
+  return laatste;
+}
+
+// Verversen alleen als de verzamelaar een nieuwe ronde heeft gedraaid: elke query kost
+// in BigQuery minimaal 10 MB, dus niet elke paar minuten alles opnieuw ophalen.
+let gezienRonde = null;
+async function kijkVoorNieuweRonde() {
+  if (document.visibilityState !== "visible") return;
+  const laatste = await gezondheid();
+  if (laatste && gezienRonde && laatste !== gezienRonde) herteken({ vers: true });
+  gezienRonde = laatste ?? gezienRonde;
 }
 
 // ── thema ─────────────────────────────────────────────────────────────────────
@@ -127,16 +139,12 @@ addEventListener("DOMContentLoaded", () => {
     clearTimeout(wacht);
     wacht = setTimeout(herschaal, 120);
   });
-  setInterval(() => {
-    if (document.visibilityState === "visible") {
-      herteken({ vers: true });
-      gezondheid();
-    }
-  }, 5 * 60e3);
+  setInterval(kijkVoorNieuweRonde, 5 * 60e3);
+  document.addEventListener("visibilitychange", kijkVoorNieuweRonde); // terug in de app
 
   toonThema();
   toon();
-  gezondheid();
+  kijkVoorNieuweRonde();
   api("gebruiker")
     .then((g) => ($("#gebruiker").textContent = `Ingelogd als ${g.email}`))
     .catch(() => {});

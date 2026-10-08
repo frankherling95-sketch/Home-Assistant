@@ -17,7 +17,7 @@ const TABELNAMEN = {
 
 export async function toon(main, _params, ctx) {
   if (ctx.nieuw) main.innerHTML = `<div class="raster">${skeletKaart("b-8", { titel: "Verzamelaar", regels: 6 })}${skeletKaart("b-4", { titel: "Tabellen", regels: 6 })}</div>`;
-  const s = await api("status", { vers: true });
+  const s = await api("status?tabellen=true", { vers: true });
   if (!ctx.actueel()) return;
 
   const laatste = s.bronnen.map((b) => b.tijd).filter(Boolean).sort().at(-1);

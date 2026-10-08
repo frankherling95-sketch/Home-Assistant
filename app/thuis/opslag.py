@@ -92,12 +92,14 @@ class DuckOpslag:
 
 
 class BigQueryOpslag:
-    def __init__(self, project: str, dataset: str) -> None:
+    def __init__(self, project: str, dataset: str, locatie: str = "EU") -> None:
         from google.cloud import bigquery
 
         self.bq = bigquery
-        self.client = bigquery.Client(project=project)
-        self.dataset = f"{project}.{dataset}"
+        # Zonder project: dat van het service-account waar Cloud Run mee draait.
+        self.client = bigquery.Client(project=project or None)
+        self.dataset = f"{self.client.project}.{dataset}"
+        self.locatie = locatie
 
     def _ref(self, t: Tabel) -> str:
         return f"`{self.dataset}.{t.naam}`"
@@ -106,7 +108,9 @@ class BigQueryOpslag:
         return [self.bq.SchemaField(k, v) for k, v in t.kolommen]
 
     def maak_tabellen(self) -> None:
-        self.client.create_dataset(self.dataset, exists_ok=True)
+        ds = self.bq.Dataset(self.dataset)
+        ds.location = self.locatie  # anders wordt een nieuwe dataset in de VS aangemaakt
+        self.client.create_dataset(ds, exists_ok=True)
         for t in TABELLEN:
             tabel = self.bq.Table(f"{self.dataset}.{t.naam}", schema=self._schema(t))
             # Partitie op de tijd waar queries op filteren, clustering op de sleutel:
@@ -171,7 +175,7 @@ def _bq_type(v: Any) -> str:
 
 def maak_opslag(cfg: Config) -> Opslag:
     if cfg.opslag == "bigquery":
-        return BigQueryOpslag(cfg.gcp_project, cfg.bq_dataset)
+        return BigQueryOpslag(cfg.gcp_project, cfg.bq_dataset, cfg.bq_locatie)
     return DuckOpslag(cfg.duckdb_pad)
 
 

@@ -6,6 +6,11 @@ const actief = new Set();
 const asGetal = new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 2 });
 
 export function grafiek(el) {
+  if (!window.echarts) {
+    // Offline of CDN onbereikbaar: de rest van de pagina werkt gewoon.
+    el.innerHTML = '<p class="leeg">Grafiek niet beschikbaar: de grafiekbibliotheek kon niet laden.</p>';
+    return { setOption() {}, resize() {}, dispose() {} };
+  }
   const g = echarts.init(el, null, { renderer: "canvas" });
   actief.add(g);
   return g;

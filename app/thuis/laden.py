@@ -26,12 +26,18 @@ STANDAARD: dict[str, Any] = {
 }
 
 
-def maak_plan(opslag: Opslag, instellingen: dict[str, Any], moment: datetime | None = None) -> dict[str, Any]:
+def maak_plan(
+    opslag: Opslag,
+    instellingen: dict[str, Any],
+    moment: datetime | None = None,
+    auto: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Laadplan tot de volgende vertrektijd. `auto` = laatste meting, als die al opgehaald is."""
     moment = moment or nu()
     lokaal = moment.astimezone(TZ)
     deadline = next_deadline(lokaal, time.fromisoformat(instellingen["vertrek"]))
     blokken = prijzen(opslag, "stroom", moment - timedelta(hours=1), moment + timedelta(days=2))
-    auto = laatste(opslag, "auto_meting", moment)
+    auto = auto or laatste(opslag, "auto_meting", moment)
     soc = auto["accu_pct"] if auto else None
 
     plan: Plan = make_plan(

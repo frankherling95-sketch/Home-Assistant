@@ -213,11 +213,17 @@ def _blok(p: dict[str, Any]) -> dict[str, Any]:
 
 def dagoverzicht(opslag: Opslag, dag: date) -> dict[str, Any]:
     start, eind = dag_grenzen(dag)
-    stroomprijs = prijzen(opslag, "stroom", start, eind)
-    gasprijs = prijzen(opslag, "gas", start, eind)
+    # Eén query voor stroom en gas (BigQuery rekent per query); een uur extra voor het eerste laadinterval.
+    alle = opslag.lees(
+        "SELECT soort, van, tot, marktprijs, allin FROM {prijs} WHERE van >= @van AND van < @tot ORDER BY van",
+        van=start - timedelta(hours=1),
+        tot=eind,
+    )
+    stroom = [p for p in alle if p["soort"] == "stroom"]
+    stroomprijs = [p for p in stroom if p["van"] >= start]
+    gasprijs = [p for p in alle if p["soort"] == "gas" and p["van"] >= start]
     rijen = verbruik(opslag, start, eind)
-    lijst = Prijslijst(prijzen(opslag, "stroom", start - timedelta(hours=1), eind))
-    laden = met_prijs(laad_intervallen(opslag, start, eind), lijst)
+    laden = met_prijs(laad_intervallen(opslag, start, eind), Prijslijst(stroom))
     laden_uur = laden_per_uur(laden)
     temp = {t["van"].replace(minute=0, second=0): t["temperatuur"] for t in temperaturen(opslag, start, eind)}
 

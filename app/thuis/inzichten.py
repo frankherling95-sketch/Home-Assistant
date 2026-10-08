@@ -1,27 +1,19 @@
 """Inzichten voor de overzichtspagina: korte, uitgerekende feiten met een toon en een icoon.
 
-Elk inzicht staat los; zonder data valt het weg in plaats van een nul te tonen.
+Elk inzicht staat los; zonder data valt het weg in plaats van een nul te tonen. De data wordt
+één keer opgehaald (`Gegevens`) en door alle inzichten gedeeld: in BigQuery kost elke query
+minimaal 10 MB, en deze pagina wordt het vaakst geopend.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any
 
 from .config import TZ
-from .inzicht import (
-    MAANDEN,
-    dag_grenzen,
-    dagcijfers,
-    dagen_grenzen,
-    geladen,
-    kosten_van,
-    laadkosten,
-    lokaal,
-    prijzen,
-    temperatuur_per_dag,
-)
+from .inzicht import MAANDEN, dag_grenzen, dagcijfers, kosten_van, lokaal, prijzen
 from .laden import STANDAARD
 from .opslag import Opslag, lees_instellingen, nu
 from .sessies import laadsessies
@@ -104,61 +96,79 @@ def goedkoopste_venster(
     return beste
 
 
+def tijdgemiddelde(blokken: list[dict[str, Any]]) -> float | None:
+    duur = sum((b["tot"] - b["van"]).total_seconds() for b in blokken)
+    return sum(b["allin"] * (b["tot"] - b["van"]).total_seconds() for b in blokken) / duur if duur else None
+
+
+# ── gedeelde gegevens ─────────────────────────────────────────────────────────
+
+
+@dataclass
+class Gegevens:
+    dag: date
+    moment: datetime
+    cijfers: dict[date, dict[str, Any]]  # vorige maand (of 14 dagen terug) t/m `dag`
+    prijzen: list[dict[str, Any]]  # stroom, begin van de maand t/m eind van morgen
+    sessies: list[dict[str, Any]]  # deze maand
+
+    def stroomprijzen(self, van: datetime, tot: datetime) -> list[dict[str, Any]]:
+        return [b for b in self.prijzen if van <= b["van"] < tot]
+
+
+def gegevens(opslag: Opslag, dag: date, moment: datetime) -> Gegevens:
+    maand = dag.replace(day=1)
+    vorige_maand = (maand - timedelta(days=1)).replace(day=1)
+    vermogen = float(lees_instellingen(opslag, STANDAARD)["vermogen_kw"])
+    return Gegevens(
+        dag=dag,
+        moment=moment,
+        cijfers=dagcijfers(opslag, min(vorige_maand, dag - timedelta(days=14)), dag),
+        prijzen=prijzen(opslag, "stroom", dag_grenzen(maand)[0], dag_grenzen(dag + timedelta(days=1))[1]),
+        sessies=laadsessies(opslag, dag_grenzen(maand)[0], min(moment, dag_grenzen(dag)[1]), vermogen),
+    )
+
+
 # ── de inzichten ──────────────────────────────────────────────────────────────
 
 
-def negatieve_prijzen(opslag: Opslag, dag: date, moment: datetime) -> dict[str, str] | None:
-    start = max(dag_grenzen(dag)[0], moment)
-    eind = dag_grenzen(dag + timedelta(days=1))[1]
-    negatief = [
-        b
-        for b in prijzen(opslag, "stroom", start - timedelta(hours=1), eind)
-        if b["allin"] < 0 and b["tot"] > start
-    ]
+def negatieve_prijzen(g: Gegevens) -> dict[str, str] | None:
+    start = max(dag_grenzen(g.dag)[0], g.moment)
+    eind = dag_grenzen(g.dag + timedelta(days=1))[1]
+    negatief = [b for b in g.prijzen if b["allin"] < 0 and b["tot"] > start and b["van"] < eind]
     if not negatief:
         return None
     groepen = aaneengesloten(negatief)
     eerste = groepen[0]
-    laagste = min(b["allin"] for b in negatief)
     extra = f" · nog {len(groepen) - 1} keer" if len(groepen) > 1 else ""
     return _inzicht(
         "negatieve_prijzen",
         "Negatieve stroomprijs",
-        f"{_dagnaam(lokaal(eerste[0]['van']), dag)} {klok(eerste[0]['van'])} – {klok(eerste[-1]['tot'])}",
-        f"laagste {euro(laagste, 3)}/kWh: je krijgt geld voor verbruik{extra}",
+        f"{_dagnaam(lokaal(eerste[0]['van']), g.dag)} {klok(eerste[0]['van'])} – {klok(eerste[-1]['tot'])}",
+        f"laagste {euro(min(b['allin'] for b in negatief), 3)}/kWh: je krijgt geld voor verbruik{extra}",
         "goed",
         "zon",
     )
 
 
-def goedkoopste_morgen(opslag: Opslag, dag: date, moment: datetime) -> dict[str, str] | None:
-    morgen = dag + timedelta(days=1)
-    blokken = prijzen(opslag, "stroom", *dag_grenzen(morgen))
+def goedkoopste_morgen(g: Gegevens) -> dict[str, str] | None:
+    blokken = g.stroomprijzen(*dag_grenzen(g.dag + timedelta(days=1)))
     venster = goedkoopste_venster(blokken, 1)
     if venster is None:
         return None
     van, tot, gem = venster
-    gemiddeld = sum(b["allin"] * (b["tot"] - b["van"]).total_seconds() for b in blokken) / sum(
-        (b["tot"] - b["van"]).total_seconds() for b in blokken
-    )
     return _inzicht(
         "goedkoopste_morgen",
         "Goedkoopste uur morgen",
         f"{klok(van)} – {klok(tot)}",
-        f"{euro(gem, 3)}/kWh, daggemiddelde {euro(gemiddeld, 3)}",
+        f"{euro(gem, 3)}/kWh, daggemiddelde {euro(tijdgemiddelde(blokken), 3)}",
         "neutraal",
         "klok",
     )
 
 
-def besparing_laden(opslag: Opslag, dag: date, moment: datetime) -> dict[str, str] | None:
-    van = dag.replace(day=1)
-    vermogen = float(lees_instellingen(opslag, STANDAARD)["vermogen_kw"])
-    sessies = [
-        s
-        for s in laadsessies(opslag, dag_grenzen(van)[0], min(moment, dag_grenzen(dag)[1]), vermogen)
-        if s["besparing"] is not None
-    ]
+def besparing_laden(g: Gegevens) -> dict[str, str] | None:
+    sessies = [s for s in g.sessies if s["besparing"] is not None]
     if not sessies:
         return None
     totaal = sum(s["besparing"] for s in sessies)
@@ -174,17 +184,17 @@ def besparing_laden(opslag: Opslag, dag: date, moment: datetime) -> dict[str, st
     )
 
 
-def kosten_maand(opslag: Opslag, dag: date, moment: datetime) -> dict[str, str] | None:
-    van = dag.replace(day=1)
-    deze = {d: c for d, c in dagcijfers(opslag, van, dag).items() if c["verbruik"]}
+def kosten_maand(g: Gegevens) -> dict[str, str] | None:
+    van = g.dag.replace(day=1)
+    deze = {d: c for d, c in g.cijfers.items() if van <= d <= g.dag and c["verbruik"]}
     if not deze:
         return None
     t_m = max(deze)  # meterdata loopt een dag achter: vergelijk alleen dagen die er zijn
     kosten = sum(kosten_van(c) for c in deze.values())
     laatste_vorige = van - timedelta(days=1)
-    vorige_start = laatste_vorige.replace(day=1)
-    vorige_eind = laatste_vorige.replace(day=min(t_m.day, laatste_vorige.day))
-    vorige = [c for c in dagcijfers(opslag, vorige_start, vorige_eind).values() if c["verbruik"]]
+    vorige_van = laatste_vorige.replace(day=1)
+    vorige_tot = laatste_vorige.replace(day=min(t_m.day, laatste_vorige.day))
+    vorige = [c for d, c in g.cijfers.items() if vorige_van <= d <= vorige_tot and c["verbruik"]]
     toelichting = f"1 – {t_m.day} {MAANDEN[t_m.month - 1]}"
     toon = "neutraal"
     if vorige:
@@ -195,20 +205,16 @@ def kosten_maand(opslag: Opslag, dag: date, moment: datetime) -> dict[str, str] 
     return _inzicht("kosten_maand", "Energiekosten deze maand", euro(kosten), toelichting, toon, "euro")
 
 
-def gem_laadprijs(opslag: Opslag, dag: date, moment: datetime) -> dict[str, str] | None:
-    start, eind = dagen_grenzen(dag.replace(day=1), dag)
-    eind = min(eind, moment)
-    laden = geladen(opslag, start, eind)
-    kwh = sum(i["kwh"] for i in laden)
+def gem_laadprijs(g: Gegevens) -> dict[str, str] | None:
+    van = g.dag.replace(day=1)
+    dagen = [c for d, c in g.cijfers.items() if van <= d <= g.dag]
+    kwh = sum(c["laden_kwh"] for c in dagen)
     if kwh < 1:
         return None
-    gem = laadkosten(laden) / kwh
-    blokken = prijzen(opslag, "stroom", start, eind)
+    gem = sum(c["laden_kosten"] for c in dagen) / kwh
+    markt = tijdgemiddelde(g.stroomprijzen(dag_grenzen(van)[0], min(g.moment, dag_grenzen(g.dag)[1])))
     toelichting, toon = "deze maand", "neutraal"
-    if blokken:
-        markt = sum(b["allin"] * (b["tot"] - b["van"]).total_seconds() for b in blokken) / sum(
-            (b["tot"] - b["van"]).total_seconds() for b in blokken
-        )
+    if markt:
         toelichting = f"deze maand · gemiddelde stroomprijs {euro(markt, 3)}"
         if markt > 0:
             toon = _toon(gem / markt - 1)
@@ -217,17 +223,15 @@ def gem_laadprijs(opslag: Opslag, dag: date, moment: datetime) -> dict[str, str]
     )
 
 
-def gas_vs_vorige_week(opslag: Opslag, dag: date, moment: datetime) -> dict[str, str] | None:
+def gas_vs_vorige_week(g: Gegevens) -> dict[str, str] | None:
     """Afgelopen 7 dagen (t/m gisteren) tegen de 7 dagen daarvoor, gecorrigeerd met graaddagen."""
-    eind = dag - timedelta(days=1)
-    cijfers = dagcijfers(opslag, eind - timedelta(days=13), eind)
-    temps = temperatuur_per_dag(opslag, *dagen_grenzen(eind - timedelta(days=13), eind))
+    eind = g.dag - timedelta(days=1)
 
     def week(laatste: date) -> tuple[float, float, int]:
-        dagen = [laatste - timedelta(days=i) for i in range(7)]
-        met = [d for d in dagen if d in cijfers and cijfers[d]["verbruik"]]
-        gas = sum(cijfers[d]["hoeveelheid"]["gas"] for d in met)
-        gd = sum(max(0.0, GRAADDAG_BASIS - temps[d]) for d in met if d in temps)
+        dagen = [g.cijfers[d] for d in (laatste - timedelta(days=i) for i in range(7)) if d in g.cijfers]
+        met = [c for c in dagen if c["verbruik"]]
+        gas = sum(c["hoeveelheid"]["gas"] for c in met)
+        gd = sum(max(0.0, GRAADDAG_BASIS - c["temperatuur"]) for c in met if c["temperatuur"] is not None)
         return gas, gd, len(met)
 
     gas_a, gd_a, n_a = week(eind)
@@ -254,7 +258,7 @@ def gas_vs_vorige_week(opslag: Opslag, dag: date, moment: datetime) -> dict[str,
 
 
 # Volgorde = belangrijkste eerst: wat je vandaag nog kunt doen, dan terugblikken.
-INZICHTEN: tuple[Callable[[Opslag, date, datetime], dict[str, str] | None], ...] = (
+INZICHTEN: tuple[Callable[[Gegevens], dict[str, str] | None], ...] = (
     negatieve_prijzen,
     goedkoopste_morgen,
     besparing_laden,
@@ -268,4 +272,5 @@ def inzichten(opslag: Opslag, dag: date, moment: datetime | None = None) -> list
     moment = moment or nu()
     if dag != lokaal(moment):  # terugkijken: alsof het het eind van die dag is
         moment = min(moment, dag_grenzen(dag)[1])
-    return [i for f in INZICHTEN if (i := f(opslag, dag, moment)) is not None]
+    g = gegevens(opslag, dag, moment)
+    return [i for f in INZICHTEN if (i := f(g)) is not None]

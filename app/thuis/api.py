@@ -120,7 +120,7 @@ def api_nu(_: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str
         "tijd": nu().isoformat(),
         "auto": _json(auto),
         "lader": _json(lader),
-        "plan": maak_plan(o, instellingen),
+        "plan": maak_plan(o, instellingen, auto=auto),
         "instellingen": instellingen,
     }
 
@@ -150,43 +150,46 @@ BRONNEN = (
 
 
 @app.get("/api/status")
-def api_status(request: Request, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str, Any]:
-    """Gezondheid per bron uit de rondelog, en wanneer elke tabel voor het laatst iets kreeg."""
-    sinds = nu() - timedelta(days=30)
-    laatste_ronde = {
+def api_status(
+    request: Request, tabellen: bool = False, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)
+) -> dict[str, Any]:
+    """Gezondheid per bron uit de rondelog; met `tabellen=true` ook wanneer elke tabel iets kreeg.
+
+    De web-app vraagt dit elke paar minuten op. BigQuery rekent minimaal 10 MB per tabel per
+    query, dus standaard één query op één tabel; de tabellen (9 queries) alleen op verzoek.
+    """
+    rondes = {
         r["stap"]: r
         for r in o.lees(
-            "SELECT stap, uitslag, tijd FROM {ronde} WHERE tijd >= @sinds "
-            "QUALIFY ROW_NUMBER() OVER (PARTITION BY stap ORDER BY tijd DESC) = 1",
-            sinds=sinds,
-        )
-    }
-    laatst_ok = {
-        r["stap"]: r["tijd"]
-        for r in o.lees(
-            "SELECT stap, MAX(tijd) AS tijd FROM {ronde} WHERE tijd >= @sinds AND uitslag = 'ok' GROUP BY stap",
-            sinds=sinds,
+            "SELECT stap, uitslag, tijd, laatst_ok FROM ("
+            "SELECT stap, uitslag, tijd, "
+            "MAX(CASE WHEN uitslag = 'ok' THEN tijd END) OVER (PARTITION BY stap) AS laatst_ok, "
+            "ROW_NUMBER() OVER (PARTITION BY stap ORDER BY tijd DESC) AS nr "
+            "FROM {ronde} WHERE tijd >= @sinds) WHERE nr = 1",
+            sinds=nu() - timedelta(days=30),
         )
     }
     merk = request.app.state.cfg.kia_merk.lower()
     auto = {"hyundai": "Hyundai Bluelink", "genesis": "Genesis Connected"}.get(merk, "Kia Connect")
     bronnen = []
     for stap, naam in BRONNEN:
-        r = laatste_ronde.get(stap) or {}
+        r = rondes.get(stap) or {}
         bronnen.append(
             {
                 "stap": stap,
                 "naam": naam.format(auto=auto),
                 "uitslag": r.get("uitslag"),
                 "tijd": _iso(r.get("tijd")),
-                "laatst_ok": _iso(laatst_ok.get(stap)),
+                "laatst_ok": _iso(r.get("laatst_ok")),
             }
         )
-    tabellen = {}
-    for t in TABELLEN:
-        rij = o.lees(f"SELECT MAX(opgehaald) AS laatst FROM {{{t.naam}}}")
-        tabellen[t.naam] = _iso(rij[0]["laatst"]) if rij else None
-    return {"bronnen": bronnen, "tabellen": tabellen}
+    uit: dict[str, Any] = {"bronnen": bronnen}
+    if tabellen:
+        uit["tabellen"] = {}
+        for t in TABELLEN:
+            rij = o.lees(f"SELECT MAX(opgehaald) AS laatst FROM {{{t.naam}}}")
+            uit["tabellen"][t.naam] = _iso(rij[0]["laatst"]) if rij else None
+    return uit
 
 
 def _iso(v: Any) -> str | None:

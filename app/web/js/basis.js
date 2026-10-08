@@ -6,8 +6,10 @@ export const $$ = (sel, ouder = document) => [...ouder.querySelectorAll(sel)];
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
-const cache = new Map(); // pad → {tijd, belofte}: snel heen en weer tussen pagina's
-const BEWAAR_MS = 60_000;
+// pad → {tijd, belofte}: snel heen en weer tussen pagina's zonder nieuwe BigQuery-queries.
+// De data verandert alleen per ronde van de verzamelaar; bij een nieuwe ronde gaat de cache leeg.
+const cache = new Map();
+const BEWAAR_MS = 5 * 60_000;
 
 export class SessieVerlopen extends Error {}
 
