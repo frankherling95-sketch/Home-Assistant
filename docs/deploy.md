@@ -39,8 +39,13 @@ bash deploy/setup-gcp.sh
 ```
 
 Het script vraagt de wachtwoorden (Enter = overslaan, dan blijft die bron uit), bouwt het
-eerste image (een paar minuten), draait één ronde en zet IAP aan. Aan het eind staan de URL
-van de app en vier GitHub-variabelen. Is `gh` ingelogd, dan zet het script die zelf.
+eerste image (een paar minuten), draait één ronde en zet IAP aan. Op de vraag of jij beheerder
+bent van de GitHub-repository antwoord je met `j` (of zet `GITHUB=j` vóór het commando): dan
+mag GitHub Actions in dit project deployen. Aan het eind staan de URL van de app en vier
+GitHub-variabelen. Is `gh` ingelogd, dan zet het script die zelf.
+
+Iemand anders (zonder toegang tot deze repository) zet een eigen installatie op met
+**[eigen-installatie.md](eigen-installatie.md)**: stap voor stap, ook met een los gmail-account.
 
 Wie mogen er in? Standaard alleen jij. Meer mensen:
 
@@ -72,7 +77,11 @@ Zonder de variabelen slaat de workflow stap 2–4 over in plaats van te falen.
 
 ## Wachtwoorden wijzigen
 
-Alle wachtwoorden staan samen in één JSON. Sleutels: `FRANK_EMAIL`, `FRANK_WACHTWOORD`,
+Het makkelijkst: draai `bash deploy/setup-gcp.sh` opnieuw en antwoord `j` op *Logins
+(opnieuw) invullen of wijzigen?*. Enter laat een waarde staan, `-` maakt hem leeg; oude
+versies van het geheim worden uitgezet.
+
+Met de hand kan ook. Alle wachtwoorden staan samen in één JSON. Sleutels: `FRANK_EMAIL`, `FRANK_WACHTWOORD`,
 `FRANK_SITE` (alleen bij meer adressen), `EASEE_GEBRUIKER`, `EASEE_WACHTWOORD`, `EASEE_LADER`
 (alleen bij meer laders), `KIA_GEBRUIKER`, `KIA_WACHTWOORD`, `KIA_PIN`, `KIA_MERK`
 (`kia`/`hyundai`/`genesis`), `GOOGLE_CHAT_WEBHOOK`.

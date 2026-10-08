@@ -81,6 +81,9 @@ Wat er na versie 1.0 nog op de lijst staat: **[docs/roadmap.md](docs/roadmap.md)
 
 ## Naar Google Cloud
 
+Een eigen installatie voor iemand anders, stap voor stap en zonder voorkennis:
+**[docs/eigen-installatie.md](docs/eigen-installatie.md)**.
+
 Zie **[docs/deploy.md](docs/deploy.md)**: één script in Cloud Shell richt alles in; daarna
 deployt elke merge naar `main` automatisch via GitHub Actions. Verwachte kosten: binnen de gratis
 laag (er moet wel een betaalaccount aan het project hangen; het script zet een budgetalarm).
