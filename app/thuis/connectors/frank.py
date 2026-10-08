@@ -1,7 +1,10 @@
 """Frank Energie (GraphQL).
 
-- Marktprijzen stroom en gas: openbaar, geen login nodig.
+- Marktprijzen stroom en gas: openbaar, geen login nodig. Per dag, in kwartieren.
 - Verbruik en kosten per uur (slimme meter): met je Frank-account.
+
+Frank heeft geen openbare documentatie; de queries volgen de bibliotheek die de Home
+Assistant-integratie gebruikt (python-frank-energie, gecontroleerd op versie 2026.9.20).
 """
 
 from __future__ import annotations
@@ -13,15 +16,16 @@ import httpx
 
 URL = "https://frank-graphql-prod.graphcdn.app/"
 
-_PRIJZEN = """
-query MarketPrices($startDate: Date!, $endDate: Date!) {
-  marketPricesElectricity(startDate: $startDate, endDate: $endDate) {
-    from till marketPrice marketPriceTax sourcingMarkupPrice energyTaxPrice
-  }
-  marketPricesGas(startDate: $startDate, endDate: $endDate) {
-    from till marketPrice marketPriceTax sourcingMarkupPrice energyTaxPrice
-  }
-}"""
+_PRIJS_VELDEN = "from till marketPrice marketPriceTax sourcingMarkupPrice energyTaxPrice allInPrice"
+_PRIJZEN = f"""
+query MarketPrices($date: String!, $resolution: PriceResolution!) {{
+  marketPrices(date: $date, resolution: $resolution) {{
+    electricityPrices {{ {_PRIJS_VELDEN} }}
+    gasPrices {{ {_PRIJS_VELDEN} }}
+  }}
+}}"""
+# Zo meldt Frank een dag waarvan de prijzen nog niet bekend zijn (morgen vóór ±13:00).
+_NOG_GEEN_PRIJZEN = "no marketprices found"
 
 _LOGIN = """
 mutation Login($email: String!, $password: String!) {
@@ -75,31 +79,24 @@ class Frank:
     # ── openbaar ──────────────────────────────────────────────────────────────
 
     def prijzen(self, start: date, eind: date) -> list[dict[str, Any]]:
-        """All-in prijzen (incl. btw, inkoopvergoeding en energiebelasting) per blok, [start, eind)."""
-        data = self._post(_PRIJZEN, {"startDate": str(start), "endDate": str(eind)})
-        rijen = []
-        for soort, sleutel in (("stroom", "marketPricesElectricity"), ("gas", "marketPricesGas")):
-            for p in data.get(sleutel) or []:
-                rijen.append(
-                    {
-                        "soort": soort,
-                        "van": _tijd(p["from"]),
-                        "tot": _tijd(p["till"]),
-                        "marktprijs": float(p["marketPrice"]),
-                        "allin": round(
-                            sum(
-                                float(p[k] or 0)
-                                for k in (
-                                    "marketPrice",
-                                    "marketPriceTax",
-                                    "sourcingMarkupPrice",
-                                    "energyTaxPrice",
-                                )
-                            ),
-                            5,
-                        ),
-                    }
-                )
+        """All-in prijzen (incl. btw, inkoopvergoeding en energiebelasting) per kwartier, dagen [start, eind).
+
+        Een dag waarvan de prijzen nog niet gepubliceerd zijn, wordt overgeslagen.
+        """
+        rijen: list[dict[str, Any]] = []
+        dag = start
+        while dag < eind:
+            try:
+                data = self._post(_PRIJZEN, {"date": str(dag), "resolution": "PT15M"})
+            except FrankFout as err:
+                if _NOG_GEEN_PRIJZEN not in str(err).lower():
+                    raise
+                data = {}
+            markt = data.get("marketPrices") or {}
+            rijen += [_prijsrij("stroom", p) for p in markt.get("electricityPrices") or []]
+            # Gas heeft één prijs per dag, maar komt ook per kwartier: samenvoegen houdt de tabel klein.
+            rijen += _samenvoegen([_prijsrij("gas", p) for p in markt.get("gasPrices") or []])
+            dag += timedelta(days=1)
         return rijen
 
     # ── met account ───────────────────────────────────────────────────────────
@@ -137,6 +134,29 @@ class Frank:
                     }
                 )
         return rijen
+
+
+def _prijsrij(soort: str, p: dict[str, Any]) -> dict[str, Any]:
+    delen = ("marketPrice", "marketPriceTax", "sourcingMarkupPrice", "energyTaxPrice")
+    allin = p.get("allInPrice")
+    return {
+        "soort": soort,
+        "van": _tijd(p["from"]),
+        "tot": _tijd(p["till"]),
+        "marktprijs": float(p["marketPrice"]),
+        "allin": round(float(allin) if allin is not None else sum(float(p[k] or 0) for k in delen), 5),
+    }
+
+
+def _samenvoegen(rijen: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Aansluitende blokken met dezelfde prijs tot één blok samenvoegen."""
+    uit: list[dict[str, Any]] = []
+    for r in sorted(rijen, key=lambda r: r["van"]):
+        if uit and uit[-1]["tot"] == r["van"] and uit[-1]["allin"] == r["allin"]:
+            uit[-1] = {**uit[-1], "tot": r["tot"]}
+        else:
+            uit.append(dict(r))
+    return uit
 
 
 def dagen(rond: date, terug: int, vooruit: int) -> list[date]:

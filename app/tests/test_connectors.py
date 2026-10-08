@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, date, datetime, timedelta
 
 import httpx
@@ -21,26 +22,52 @@ PRIJS = {
 }
 
 
+def _kwartier(i: int, **extra) -> dict:
+    van = datetime(2026, 10, 6, 22, tzinfo=UTC) + timedelta(minutes=15 * i)
+    return {
+        **PRIJS,
+        "from": van.isoformat().replace("+00:00", ".000Z"),
+        "till": (van + timedelta(minutes=15)).isoformat().replace("+00:00", ".000Z"),
+        **extra,
+    }
+
+
 @respx.mock
-def test_frank_prijzen_allin_en_kwartieren():
-    respx.post(URL).mock(
-        return_value=httpx.Response(
+def test_frank_prijzen_per_dag_en_morgen_nog_niet_bekend():
+    route = respx.post(URL)
+    route.side_effect = [
+        httpx.Response(
             200,
             json={
                 "data": {
-                    "marketPricesElectricity": [PRIJS],
-                    "marketPricesGas": [{**PRIJS, "till": "2026-10-07T01:00:00.000Z"}],
+                    "marketPrices": {
+                        "electricityPrices": [_kwartier(0, allInPrice=0.2276), _kwartier(1)],
+                        # Gas: één prijs per dag, maar per kwartier geleverd.
+                        "gasPrices": [_kwartier(i, marketPrice=0.7, allInPrice=1.69) for i in range(4)],
+                    }
                 }
             },
-        )
-    )
+        ),
+        # Zo antwoordt Frank vóór ±13:00 voor morgen.
+        httpx.Response(
+            200,
+            json={
+                "data": None,
+                "errors": [{"message": "No marketprices found for segment ELECTRICITY for 2026-10-08"}],
+            },
+        ),
+    ]
     rijen = Frank().prijzen(date(2026, 10, 7), date(2026, 10, 9))
-    stroom = rijen[0]
-    assert stroom["soort"] == "stroom"
-    assert stroom["allin"] == pytest.approx(0.2276)
-    assert stroom["van"] == datetime(2026, 10, 7, tzinfo=UTC)
-    assert (stroom["tot"] - stroom["van"]).seconds == 900
-    assert rijen[1]["soort"] == "gas"
+    stroom = [r for r in rijen if r["soort"] == "stroom"]
+    gas = [r for r in rijen if r["soort"] == "gas"]
+    assert stroom[0]["allin"] == pytest.approx(0.2276)
+    assert stroom[1]["allin"] == pytest.approx(0.2276)  # zonder allInPrice: som van de delen
+    assert stroom[0]["van"] == datetime(2026, 10, 6, 22, tzinfo=UTC)
+    assert (stroom[0]["tot"] - stroom[0]["van"]).seconds == 900
+    assert len(gas) == 1 and gas[0]["tot"] - gas[0]["van"] == timedelta(hours=1) and gas[0]["allin"] == 1.69
+    verzoek = json.loads(route.calls[0].request.content)
+    assert verzoek["variables"] == {"date": "2026-10-07", "resolution": "PT15M"}
+    assert json.loads(route.calls[1].request.content)["variables"]["date"] == "2026-10-08"
 
 
 @respx.mock
