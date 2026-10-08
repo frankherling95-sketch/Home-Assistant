@@ -12,7 +12,7 @@ op € 1 voor het geval dat.
 | Cloud Run-job | `thuis-verzamel` | Eén ronde: Frank Energie, Easee, Kia, Open-Meteo, Slim laden, meldingen |
 | Cloud Scheduler | `thuis-verzamel-elk-kwartier` | Start de job om :00, :15, :30 en :45 |
 | BigQuery | dataset `thuis` (EU) | Alle historie; tabellen maakt de verzamelaar zelf |
-| Secret Manager | `thuis-geheimen` | Alle wachtwoorden in één JSON; alleen de verzamelaar kan het lezen |
+| Secret Manager | `thuis-geheimen` | De kluis: tokens van de koppelingen (en eventuele oude logins) in één JSON; alleen `thuis-run` kan erbij |
 | Artifact Registry | `thuis` | Container-images; na 7 dagen weg, de laatste 5 blijven |
 | Service-accounts | `thuis-run`, `thuis-deploy` | De app en job draaien als `thuis-run`; GitHub deployt als `thuis-deploy` |
 | Workload Identity | pool `github` | GitHub Actions logt in zonder sleutel, alleen vanaf `main` van deze repository |
@@ -38,8 +38,9 @@ gcloud config set project JOUW-PROJECT
 bash deploy/setup-gcp.sh
 ```
 
-Het script vraagt de wachtwoorden (Enter = overslaan, dan blijft die bron uit), bouwt het
-eerste image (een paar minuten), draait één ronde en zet IAP aan. Op de vraag of jij beheerder
+Het script bouwt het eerste image (een paar minuten), draait één ronde en zet IAP aan. Je
+accounts koppel je daarna in de app (pagina **Koppelingen**); het script kan ze ook vragen,
+maar dan staan de wachtwoorden in de kluis in plaats van alleen tokens. Op de vraag of jij beheerder
 bent van de GitHub-repository antwoord je met `j` (of zet `GITHUB=j` vóór het commando): dan
 mag GitHub Actions in dit project deployen. Aan het eind staan de URL van de app en vier
 GitHub-variabelen. Is `gh` ingelogd, dan zet het script die zelf.
@@ -53,7 +54,8 @@ Wie mogen er in? Standaard alleen jij. Meer mensen:
 EMAILS=frank@herling.nl,partner@herling.nl bash deploy/setup-gcp.sh
 ```
 
-Het script is herhaalbaar: wat bestaat blijft staan, instellingen worden bijgewerkt.
+Het script is herhaalbaar: wat bestaat blijft staan, instellingen worden bijgewerkt. Draai het
+na een update van de app die nieuwe rechten of instellingen nodig heeft opnieuw (de PR zegt het).
 
 ## Automatisch deployen
 
@@ -75,13 +77,23 @@ doet elke push naar `main` dit (`.github/workflows/deploy.yml`):
 
 Zonder de variabelen slaat de workflow stap 2–4 over in plaats van te falen.
 
-## Wachtwoorden wijzigen
+## Accounts koppelen
 
-Het makkelijkst: draai `bash deploy/setup-gcp.sh` opnieuw en antwoord `j` op *Logins
-(opnieuw) invullen of wijzigen?*. Enter laat een waarde staan, `-` maakt hem leeg; oude
-versies van het geheim worden uitgezet.
+In de app, pagina **Koppelingen**: per dienst één keer inloggen. Thuis bewaart alleen de tokens
+die de dienst teruggeeft (Frank Energie, Easee, Kia/Hyundai) of het webhook-adres (Google Chat),
+niet het wachtwoord. De verzamelaar ververst de tokens elke ronde en schrijft de nieuwe terug;
+oude versies van het geheim worden opgeruimd. Werkt een koppeling niet meer, dan staat er
+"Opnieuw koppelen" en komt er een melding in Google Chat.
 
-Met de hand kan ook. Alle wachtwoorden staan samen in één JSON. Sleutels: `FRANK_EMAIL`, `FRANK_WACHTWOORD`,
+Koppelingen gaan vóór oude logins uit het setup-script. Hoe lang de tokens van Frank, Easee en
+Kia geldig blijven, publiceren die diensten niet; elk kwartier verversen houdt ze normaal in leven.
+
+### Oude logins (setup-script)
+
+Het script kan ook logins vragen: draai `bash deploy/setup-gcp.sh` en antwoord `j` op *Logins
+(opnieuw) invullen of wijzigen?*. Enter laat een waarde staan, `-` maakt hem leeg.
+
+Met de hand kan ook. Alles staat samen in één JSON. Sleutels: `FRANK_EMAIL`, `FRANK_WACHTWOORD`,
 `FRANK_SITE` (alleen bij meer adressen), `EASEE_GEBRUIKER`, `EASEE_WACHTWOORD`, `EASEE_LADER`
 (alleen bij meer laders), `KIA_GEBRUIKER`, `KIA_WACHTWOORD`, `KIA_PIN`, `KIA_MERK`
 (`kia`/`hyundai`/`genesis`), `GOOGLE_CHAT_WEBHOOK`.
@@ -92,19 +104,17 @@ nano geheimen.json
 gcloud secrets versions add thuis-geheimen --data-file=geheimen.json && rm geheimen.json
 ```
 
-De volgende ronde van de verzamelaar gebruikt de nieuwe versie. Zet oude versies uit
-(`gcloud secrets versions list thuis-geheimen`, dan `… versions disable NUMMER`): zes
-actieve versies zijn gratis.
+Bewaar daarbij het onderdeel `koppelingen` zoals het is. De volgende ronde gebruikt de nieuwe versie.
 
 **Google Chat-meldingen**: maak in een Chat-ruimte een webhook (Apps en integraties →
-Webhooks) en zet de URL als `GOOGLE_CHAT_WEBHOOK`.
+Webhooks) en koppel die in de app.
 
 **Plaats voor het weer**: standaard De Bilt. Een eigen plek:
 `gcloud run jobs update thuis-verzamel --region=europe-west4 --update-env-vars=THUIS_LAT=52.37,THUIS_LON=4.89`.
 
 ## Controleren en beheren
 
-- De pagina **Bronnen** in de app toont per bron de laatste ronde en wat er misging.
+- De pagina **Koppelingen** in de app toont per bron de laatste ronde en wat er misging.
 - Een ronde nu draaien: `gcloud run jobs execute thuis-verzamel --region=europe-west4 --wait`
 - Logs: `gcloud logging read 'resource.labels.job_name="thuis-verzamel"' --limit=50 --freshness=1h`
 - IAP aan? `gcloud run services describe thuis-app --region=europe-west4 | grep -i iap`

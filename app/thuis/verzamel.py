@@ -4,8 +4,11 @@ Draait in Google Cloud elke 15 minuten als Cloud Run-job (Cloud Scheduler start 
 Lokaal: `python -m thuis.verzamel`.
 
 Elke bron staat los: valt Kia uit, dan komen Frank en Easee gewoon binnen. De uitslag per
-stap komt in de rondelog (tabel `ronde`, pagina "Bronnen"). De job eindigt met exit-code 1
+stap komt in de rondelog (tabel `ronde`, pagina "Koppelingen"). De job eindigt met exit-code 1
 als er iets misging, zodat de fout ook zichtbaar is in Cloud Run.
+
+De accounts komen uit de kluis (gekoppeld in de app). Ververste tokens gaan aan het eind van de
+ronde terug de kluis in; werkt een koppeling niet meer, dan krijgt die status "opnieuw".
 """
 
 from __future__ import annotations
@@ -17,77 +20,88 @@ from collections.abc import Callable
 from datetime import timedelta
 
 from .config import TZ, Config
-from .connectors.easee import Easee
-from .connectors.frank import Frank, dagen
+from .connectors import KoppelingVerlopen
+from .connectors.frank import dagen
 from .connectors.weer import OpenMeteo
+from .kluis import Kluis, maak_kluis, werk_bij
+from .koppelingen import DIENSTEN, maak_connectoren, nieuwe_stand
 from .laden import stuur
-from .meldingen import GoogleChat, controleer
+from .meldingen import controleer
 from .opslag import Opslag, maak_opslag, nu, voeg_toe_gewijzigd
 from .schema import AUTO, LADER, PRIJS, RONDE, VERBRUIK, WEER
 
 _LOG = logging.getLogger("thuis.verzamel")
+# Welke koppeling een stap gebruikt (voor de status "opnieuw koppelen").
+DIENST_VAN_STAP = {"verbruik": "frank", "lader": "easee", "sturen": "easee", "auto": "kia"}
 
 
 def ronde(
     cfg: Config,
     opslag: Opslag,
-    frank: Frank | None = None,
-    easee: Easee | None = None,
+    frank: object | None = None,
+    easee: object | None = None,
     kia: object | None = None,
     weer: OpenMeteo | None = None,
-    chat: GoogleChat | None = None,
+    chat: object | None = None,
+    kluis: Kluis | None = None,
 ) -> dict[str, str]:
     """Voert alle stappen uit; geeft per stap 'ok', 'overgeslagen' of de fout terug."""
     begin = nu()
     vandaag = begin.astimezone(TZ).date()
-    frank = frank or Frank(cfg.frank_email, cfg.frank_wachtwoord, cfg.frank_site)
+    data = kluis.lees() if kluis else {}
+    cfg = cfg.met_geheimen(data)
+    c = maak_connectoren(cfg, data)
+    c.frank, c.easee, c.kia, c.chat = frank or c.frank, easee or c.easee, kia or c.kia, chat or c.chat
     weer = weer or OpenMeteo(cfg.lat, cfg.lon)
-    if easee is None and cfg.easee:
-        easee = Easee(cfg.easee_gebruiker, cfg.easee_wachtwoord)
-    if kia is None and cfg.kia:
-        from .connectors.kia import Kia
-
-        kia = Kia(cfg.kia_gebruiker, cfg.kia_wachtwoord, cfg.kia_pin, cfg.kia_merk)
-    if chat is None and cfg.chat_webhook:
-        chat = GoogleChat(cfg.chat_webhook)
+    verlopen: set[str] = set()
 
     def prijzen() -> None:
         # Vandaag en morgen (morgen is er vanaf ±13:00).
-        voeg_toe_gewijzigd(opslag, PRIJS, frank.prijzen(vandaag, vandaag + timedelta(days=2)))
+        voeg_toe_gewijzigd(opslag, PRIJS, c.frank.prijzen(vandaag, vandaag + timedelta(days=2)))
 
     def verbruik() -> None:
         # Frank levert meterdata met vertraging; gisteren opnieuw ophalen maakt hem definitief.
-        rijen = [r for dag in dagen(vandaag, terug=2, vooruit=0) for r in frank.verbruik(dag)]
+        rijen = [r for dag in dagen(vandaag, terug=2, vooruit=0) for r in c.frank.verbruik(dag)]
         voeg_toe_gewijzigd(opslag, VERBRUIK, rijen)  # één laadtaak per ronde
 
     def lader() -> None:
-        laders = easee.laders()
+        laders = c.easee.laders()
         if cfg.easee_lader:
             laders = [lad for lad in laders if lad["id"] == cfg.easee_lader]
-        opslag.voeg_toe(LADER, [easee.meting(lad["id"], lad["naam"]) for lad in laders])
+        opslag.voeg_toe(LADER, [c.easee.meting(lad["id"], lad["naam"]) for lad in laders])
 
     def auto() -> None:
-        opslag.voeg_toe(AUTO, kia.metingen())
+        opslag.voeg_toe(AUTO, c.kia.metingen())
 
     def temperatuur() -> None:
         voeg_toe_gewijzigd(opslag, WEER, weer.temperaturen(terug=2, vooruit=2))
 
     def sturen() -> None:
-        stuur(opslag, easee)
+        stuur(opslag, c.easee)
 
     def meldingen() -> None:
-        controleer(opslag, chat)
+        datum = vandaag.isoformat()
+        extra = [
+            (
+                f"verlopen:{d}:{datum}",
+                "koppeling_verlopen",
+                f"De koppeling met {DIENSTEN[d]['naam']} werkt niet meer. Open Thuis, ga naar Koppelingen en koppel opnieuw.",
+            )
+            for d in sorted(verlopen)
+        ]
+        controleer(opslag, c.chat, extra=extra)
 
     stappen: list[tuple[str, bool, Callable[[], None]]] = [
         ("prijzen", True, prijzen),
-        ("verbruik", cfg.frank_login, verbruik),
-        ("lader", easee is not None, lader),
-        ("auto", kia is not None, auto),
+        ("verbruik", c.frank_account, verbruik),
+        ("lader", c.easee is not None, lader),
+        ("auto", c.kia is not None, auto),
         ("weer", True, temperatuur),
-        ("sturen", easee is not None, sturen),  # na lader en auto: rekent met verse metingen
-        ("meldingen", chat is not None, meldingen),  # als laatste: ziet alles van deze ronde
+        ("sturen", c.easee is not None, sturen),  # na lader en auto: rekent met verse metingen
+        ("meldingen", c.chat is not None, meldingen),  # als laatste: ziet alles van deze ronde
     ]
     uitslag: dict[str, str] = {}
+    gelukt: set[str] = set()
     log = []
     for naam, actief, stap in stappen:
         start = time.monotonic()
@@ -97,6 +111,12 @@ def ronde(
             try:
                 stap()
                 uitslag[naam] = "ok"
+                if naam in DIENST_VAN_STAP:
+                    gelukt.add(DIENST_VAN_STAP[naam])
+            except KoppelingVerlopen as err:
+                _LOG.warning("Stap %s: %s", naam, err)
+                verlopen.add(DIENST_VAN_STAP.get(naam, ""))
+                uitslag[naam] = f"fout: {err}"
             except Exception as err:  # noqa: BLE001 — elke bron los laten falen
                 _LOG.exception("Stap %s mislukt", naam)
                 uitslag[naam] = f"fout: {err}"
@@ -108,6 +128,13 @@ def ronde(
                 "duur_s": round(time.monotonic() - start, 2),
             }
         )
+    if kluis is not None:
+        wijzig = nieuwe_stand(c, verlopen - {""}, gelukt - verlopen)
+        if wijzig:
+            try:
+                werk_bij(kluis, wijzig)
+            except Exception:  # noqa: BLE001 — volgende ronde opnieuw; tokens zijn dan mogelijk één keer oud
+                _LOG.exception("Koppelingen niet bijgewerkt in de kluis")
     try:
         opslag.voeg_toe(RONDE, log)
     except Exception:  # noqa: BLE001 — de uitslag staat dan nog in de logs van Cloud Run
@@ -120,7 +147,7 @@ def main() -> int:
     cfg = Config()
     opslag = maak_opslag(cfg)
     opslag.maak_tabellen()
-    uitslag = ronde(cfg, opslag)
+    uitslag = ronde(cfg, opslag, kluis=maak_kluis(cfg))
     _LOG.info("Uitslag: %s", uitslag)
     return 1 if any(v.startswith("fout") for v in uitslag.values()) else 0
 

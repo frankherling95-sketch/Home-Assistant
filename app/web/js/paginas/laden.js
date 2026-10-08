@@ -54,7 +54,7 @@ export async function toon(main, params, ctx) {
 }
 
 function autoKaart(auto, instellingen) {
-  if (!auto) return kaart({ titel: "Auto", klasse: "b-6 half-tablet", inhoud: leeg("Nog geen gegevens van de auto. Staat Kia Connect ingesteld?") });
+  if (!auto) return kaart({ titel: "Auto", klasse: "b-6 half-tablet", inhoud: '<p class="leeg">Nog geen gegevens van de auto. <a href="#/koppelingen">Koppel je auto</a></p>' });
   const pct = auto.accu_pct ?? 0;
   return kaart({
     titel: auto.naam || "Auto",
@@ -76,7 +76,7 @@ function autoKaart(auto, instellingen) {
 }
 
 function laderKaart(lader) {
-  if (!lader) return kaart({ titel: "Lader", klasse: "b-6 half-tablet", inhoud: leeg("Nog geen gegevens van de lader. Staat Easee ingesteld?") });
+  if (!lader) return kaart({ titel: "Lader", klasse: "b-6 half-tablet", inhoud: '<p class="leeg">Nog geen gegevens van de lader. <a href="#/koppelingen">Koppel je Easee</a></p>' });
   const klasse = lader.status === "laden" ? "goed" : lader.status === "fout" ? "fout" : "";
   return kaart({
     titel: lader.naam || "Lader",

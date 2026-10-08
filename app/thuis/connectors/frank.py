@@ -9,10 +9,15 @@ Assistant-integratie gebruikt (python-frank-energie, gecontroleerd op versie 202
 
 from __future__ import annotations
 
+import base64
+import json
+import time
 from datetime import date, datetime, timedelta
 from typing import Any
 
 import httpx
+
+from . import KoppelFout, KoppelingVerlopen
 
 URL = "https://frank-graphql-prod.graphcdn.app/"
 
@@ -30,6 +35,12 @@ _NOG_GEEN_PRIJZEN = "no marketprices found"
 _LOGIN = """
 mutation Login($email: String!, $password: String!) {
   login(email: $email, password: $password) { authToken refreshToken }
+}"""
+
+# Zonder Authorization-header; geeft een nieuw paar (beide bewaren).
+_VERNIEUW = """
+mutation RenewToken($authToken: String!, $refreshToken: String!) {
+  renewToken(authToken: $authToken, refreshToken: $refreshToken) { authToken refreshToken }
 }"""
 
 _SITES = "query UserSites { userSites { reference status } }"
@@ -55,19 +66,51 @@ def _tijd(waarde: str) -> datetime:
     return dt
 
 
+def verloopt_om(jwt: str) -> float | None:
+    """`exp` uit een JWT (zonder de handtekening te controleren: alleen om op tijd te vernieuwen)."""
+    try:
+        deel = jwt.split(".")[1]
+        return float(json.loads(base64.urlsafe_b64decode(deel + "=" * (-len(deel) % 4)))["exp"])
+    except (IndexError, ValueError, KeyError, TypeError):
+        return None
+
+
+_GEEN_TOEGANG = ("unauthorized", "not authorized", "unauthenticated", "auth required", "jwt", "token")
+
+
 class Frank:
+    """Met e-mail en wachtwoord, of met bewaarde tokens (`auth_token`, `refresh_token`)."""
+
     def __init__(
         self,
         email: str = "",
         wachtwoord: str = "",
         site: str = "",
         client: httpx.Client | None = None,
+        tokens: dict[str, Any] | None = None,
     ) -> None:
         self.email, self.wachtwoord, self.site = email, wachtwoord, site
         self.client = client or httpx.Client(timeout=30)
-        self._token: str | None = None
+        self.tokens: dict[str, Any] = dict(tokens or {})
+        self.gewijzigd = False
+
+    @property
+    def _token(self) -> str | None:
+        return self.tokens.get("auth_token")
 
     def _post(self, query: str, variabelen: dict[str, Any], auth: bool = False) -> dict[str, Any]:
+        if auth:
+            self._zorg_voor_token()
+        try:
+            return self._stuur(query, variabelen, auth)
+        except FrankFout as err:
+            # Token toch verlopen (klok, ingetrokken): één keer vernieuwen en opnieuw proberen.
+            if not auth or not any(w in str(err).lower() for w in _GEEN_TOEGANG):
+                raise
+            self.vernieuw()
+            return self._stuur(query, variabelen, auth)
+
+    def _stuur(self, query: str, variabelen: dict[str, Any], auth: bool) -> dict[str, Any]:
         headers = {"Authorization": f"Bearer {self._token}"} if auth and self._token else {}
         r = self.client.post(URL, json={"query": query, "variables": variabelen}, headers=headers)
         r.raise_for_status()
@@ -75,6 +118,30 @@ class Frank:
         if body.get("errors"):
             raise FrankFout("; ".join(e.get("message", "?") for e in body["errors"]))
         return body["data"]
+
+    def _zorg_voor_token(self) -> None:
+        if not self._token:
+            self.login()
+            return
+        exp = verloopt_om(self._token)
+        if exp is not None and exp - 300 < time.time():
+            self.vernieuw()
+
+    def vernieuw(self) -> None:
+        try:
+            data = self._stuur(
+                _VERNIEUW,
+                {"authToken": self._token, "refreshToken": self.tokens.get("refresh_token")},
+                auth=False,
+            )
+        except (FrankFout, httpx.HTTPStatusError) as err:
+            if self.email and self.wachtwoord:
+                self.login()
+                return
+            raise KoppelingVerlopen("Frank Energie", str(err)[:80]) from err
+        nieuw = data["renewToken"]
+        self.tokens = {"auth_token": nieuw["authToken"], "refresh_token": nieuw["refreshToken"]}
+        self.gewijzigd = True
 
     # ── openbaar ──────────────────────────────────────────────────────────────
 
@@ -104,19 +171,38 @@ class Frank:
     def login(self) -> None:
         if not (self.email and self.wachtwoord):
             raise FrankFout("Geen Frank Energie-login ingesteld")
-        data = self._post(_LOGIN, {"email": self.email, "password": self.wachtwoord})
-        self._token = data["login"]["authToken"]
-        if not self.site:
-            sites = self._post(_SITES, {}, auth=True)["userSites"]
-            actief = [s for s in sites if s.get("status") in (None, "IN_DELIVERY")] or sites
-            if not actief:
-                raise FrankFout("Geen leveringsadres gevonden bij Frank Energie")
-            self.site = actief[0]["reference"]
+        data = self._stuur(_LOGIN, {"email": self.email, "password": self.wachtwoord}, auth=False)
+        self.tokens = {
+            "auth_token": data["login"]["authToken"],
+            "refresh_token": data["login"]["refreshToken"],
+        }
+        self.gewijzigd = True
+
+    def _zorg_voor_site(self) -> None:
+        if self.site:
+            return
+        sites = self._post(_SITES, {}, auth=True)["userSites"]
+        actief = [s for s in sites if s.get("status") in (None, "IN_DELIVERY")] or sites
+        if not actief:
+            raise FrankFout("Geen leveringsadres gevonden bij Frank Energie")
+        self.site = actief[0]["reference"]
+
+    @classmethod
+    def koppel(cls, email: str, wachtwoord: str) -> dict[str, Any]:
+        """Eenmalig inloggen; geeft wat bewaard wordt (tokens en leveringsadres, geen wachtwoord)."""
+        f = cls(email, wachtwoord)
+        try:
+            f.login()
+        except FrankFout as err:
+            raise KoppelFout(
+                "Inloggen bij Frank Energie mislukt: controleer je e-mailadres en wachtwoord."
+            ) from err
+        f._zorg_voor_site()
+        return {"tokens": f.tokens, "site": f.site, "account": email, "bericht": "Leveringsadres gevonden"}
 
     def verbruik(self, dag: date) -> list[dict[str, Any]]:
         """Verbruik en kosten per blok voor één dag: stroom, teruglevering en gas."""
-        if self._token is None:
-            self.login()
+        self._zorg_voor_site()
         data = self._post(_VERBRUIK, {"date": str(dag), "siteReference": self.site}, auth=True)
         periode = data.get("periodUsageAndCosts") or {}
         rijen = []

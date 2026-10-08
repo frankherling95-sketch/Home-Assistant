@@ -142,13 +142,20 @@ if stil gcloud secrets describe "$GEHEIM" --project="$PROJECT"; then
   fi
 else
   json='{}'
-  if [ -t 0 ]; then json="$(vraag_logins '{}')"; fi
+  info "Aanbevolen: koppel je accounts straks in de app (pagina Koppelingen); dan bewaart Thuis geen wachtwoorden."
+  antwoord=n
+  if [ -t 0 ]; then read -rp "   Toch hier logins invullen? [j/N] " antwoord; fi
+  if [[ "$antwoord" =~ ^[jJyY] ]]; then json="$(vraag_logins '{}')"; fi
   printf '%s' "$json" | gcloud secrets create "$GEHEIM" --project="$PROJECT" --replication-policy=automatic --data-file=- >/dev/null
-  info "opgeslagen"
+  info "aangemaakt"
 fi
-gcloud secrets add-iam-policy-binding "$GEHEIM" --project="$PROJECT" \
-  --member="serviceAccount:$RUN_SA" --role=roles/secretmanager.secretAccessor --quiet >/dev/null
-info "alleen de verzamelaar kan ze lezen"
+# Lezen, en nieuwe versies toevoegen en oude opruimen: de app (bij koppelen) en de verzamelaar
+# (als tokens ververst zijn) werken de koppelingen zelf bij.
+for rol in roles/secretmanager.secretAccessor roles/secretmanager.secretVersionManager; do
+  gcloud secrets add-iam-policy-binding "$GEHEIM" --project="$PROJECT" \
+    --member="serviceAccount:$RUN_SA" --role="$rol" --quiet >/dev/null
+done
+info "alleen thuis-run (app en verzamelaar) kan erbij"
 
 stap "Artifact Registry $REPO met opruimregels"
 if stil gcloud artifacts repositories describe "$REPO" --project="$PROJECT" --location="$REGIO"; then
@@ -184,10 +191,11 @@ else
 fi
 
 stap "Verzamelaar: Cloud Run-job $JOB"
+# De kluis (logins en tokens) leest de job zelf via de API: dan ziet hij altijd de nieuwste
+# koppelingen en kan hij ververste tokens terugschrijven.
 gcloud run jobs deploy "$JOB" --project="$PROJECT" --region="$REGIO" --image="$IMAGE" \
-  --service-account="$RUN_SA" --command=python --args=-m,thuis.verzamel \
-  --set-secrets="THUIS_GEHEIMEN=$GEHEIM:latest" \
-  --set-env-vars="THUIS_OPSLAG=bigquery,GCP_PROJECT=$PROJECT,BQ_DATASET=$DATASET" \
+  --service-account="$RUN_SA" --command=python --args=-m,thuis.verzamel --clear-secrets \
+  --set-env-vars="THUIS_OPSLAG=bigquery,GCP_PROJECT=$PROJECT,BQ_DATASET=$DATASET,THUIS_KLUIS=secretmanager,THUIS_GEHEIM=$GEHEIM" \
   --cpu=1 --memory=512Mi --max-retries=0 --task-timeout=5m --labels=app=thuis --quiet
 info "eerste ronde draaien (maakt ook de tabellen aan)…"
 gcloud run jobs execute "$JOB" --project="$PROJECT" --region="$REGIO" --wait --quiet ||
@@ -197,7 +205,7 @@ stap "App: Cloud Run-service $APP achter IAP"
 # ^;^ = puntkomma als scheidingsteken, want EMAILS kan komma's bevatten.
 gcloud run deploy "$APP" --project="$PROJECT" --region="$REGIO" --image="$IMAGE" \
   --service-account="$RUN_SA" --no-allow-unauthenticated --iap \
-  --set-env-vars="^;^THUIS_OPSLAG=bigquery;GCP_PROJECT=$PROJECT;BQ_DATASET=$DATASET;TOEGESTANE_EMAILS=$EMAILS;IAP_AUDIENCE=/projects/$NUMMER/locations/$REGIO/services/$APP" \
+  --set-env-vars="^;^THUIS_OPSLAG=bigquery;GCP_PROJECT=$PROJECT;BQ_DATASET=$DATASET;TOEGESTANE_EMAILS=$EMAILS;IAP_AUDIENCE=/projects/$NUMMER/locations/$REGIO/services/$APP;THUIS_KLUIS=secretmanager;THUIS_GEHEIM=$GEHEIM;THUIS_JOB=projects/$PROJECT/locations/$REGIO/jobs/$JOB" \
   --cpu=1 --memory=512Mi --min-instances=0 --max-instances=2 --concurrency=40 --timeout=60 \
   --labels=app=thuis --quiet
 gcloud beta services identity create --service=iap.googleapis.com --project="$PROJECT" >/dev/null 2>&1 || true
@@ -297,6 +305,7 @@ fi
 
 stap "Klaar"
 info "App: https://$APP-$NUMMER.$REGIO.run.app  (inloggen met $EMAILS)"
+info "Koppel daar je accounts: menu Koppelingen (Frank Energie, Easee, je auto, Google Chat)."
 if [ "$TOEGANG_OK" = 0 ]; then
   let_op "je hebt nog geen toegang: doe de stappen bij 'App' hierboven en draai dit script daarna opnieuw"
 fi

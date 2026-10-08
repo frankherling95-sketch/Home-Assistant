@@ -8,7 +8,8 @@ en het laden van je auto.
 - **Kosten:** € 0 per maand. Alles blijft binnen de gratis ruimte van Google Cloud. Je krijgt een
   mail als er toch iets dreigt te gaan kosten (vanaf € 0,50).
 - **Privacy:** alles staat in je eigen account. Niemand anders, ook de maker van de app niet,
-  kan bij je gegevens of wachtwoorden.
+  kan bij je gegevens. Je wachtwoorden bewaart de app helemaal niet: je logt één keer in, daarna
+  gebruikt Thuis alleen een sleutel van de dienst.
 
 Je hoeft geen programmeur te zijn. Je volgt de stappen en kopieert een paar opdrachten.
 Loop je vast, maak dan een schermafdruk en stuur die naar Frank.
@@ -26,8 +27,8 @@ Loop je vast, maak dan een schermafdruk en stuur die naar Frank.
     - Kia Connect of Hyundai Bluelink: e-mailadres en wachtwoord. Je pincode is **niet** nodig.
 4. **Een computer** met Chrome of Edge. Dat werkt makkelijker dan een telefoon.
 
-Heb je een login nog niet bij de hand? Geen probleem, die kun je later toevoegen (zie
-[Logins wijzigen](#logins-wijzigen)).
+De logins vul je pas aan het eind in, in de app zelf (deel 7). Heb je er een nog niet bij de
+hand? Geen probleem, die kun je later toevoegen.
 
 ---
 
@@ -93,24 +94,11 @@ bash deploy/setup-gcp.sh
 ```
 
 De installatie loopt nu vanzelf. Blauwe regels die met `==` beginnen, laten zien waar hij is.
-Onderweg krijg je een paar vragen.
+Onderweg krijg je twee vragen. Bij allebei druk je op **Enter**.
 
-**De logins.** Typ ze één voor één in en druk na elke vraag op Enter. Bij wachtwoorden zie je
-niets terwijl je typt; dat is de bedoeling.
-
-| Vraag | Wat je invult |
-| --- | --- |
-| Frank Energie: e-mailadres | je e-mailadres bij Frank Energie |
-| Frank Energie: wachtwoord | je wachtwoord bij Frank Energie |
-| Easee: e-mailadres of telefoonnummer | waarmee je inlogt in de Easee-app |
-| Easee: wachtwoord | je Easee-wachtwoord |
-| Auto: merk | `kia` of `hyundai` |
-| Kia Connect / Hyundai Bluelink: e-mailadres | waarmee je inlogt in de app van je auto |
-| Kia Connect / Hyundai Bluelink: wachtwoord | dat wachtwoord |
-| pincode | niets, druk op **Enter** |
-| Google Chat-webhook | niets, druk op **Enter** |
-
-Iets niet bij de hand? Druk op **Enter** en vul het later in.
+**"Toch hier logins invullen?"** Druk op **Enter**: dat betekent **nee**. Je koppelt je accounts
+straks in de app (deel 7). Dat is makkelijker en veiliger, want dan bewaart de app je
+wachtwoorden niet.
 
 **De vraag over GitHub.** Je krijgt de vraag *"Ben jij beheerder van github.com/… en moet
 die hier mogen deployen?"*. Druk op **Enter**: dat betekent **nee**. Deze stap is alleen voor
@@ -187,12 +175,29 @@ Wat je op elke pagina vindt:
 | Prijzen | de stroomprijs per kwartier, vandaag en morgen |
 | Laden | je auto, de lader, het laadplan en je laadsessies |
 | Inzichten | besparingen en vergelijkingen |
-| Bronnen (bolletje rechtsboven) | of alle koppelingen werken |
+| Koppelingen (ook via het bolletje rechtsboven) | je accounts koppelen, en of alles werkt |
+
+---
+
+## Deel 7: Je accounts koppelen (±5 minuten)
+
+1. Open in de app **Koppelingen**. Op je telefoon tik je op het bolletje rechtsboven.
+2. Klik bij **Frank Energie** op **Koppelen**. Vul je e-mailadres en wachtwoord in en klik op
+   **Koppelen**. Na een paar seconden staat er **Gekoppeld**.
+3. Doe hetzelfde bij **Easee** en bij **Kia / Hyundai**. Kies daar eerst het merk; je pincode is
+   niet nodig.
+4. Optioneel: **Google Chat**, voor meldingen op je telefoon. Hoe je het webhook-adres maakt,
+   staat bij het formulier.
+
+Thuis logt één keer in en bewaart daarna alleen een sleutel van de dienst, niet je wachtwoord.
+Binnen een paar minuten staan de eerste gegevens in de app. Je verbruik komt via Frank Energie
+met ongeveer een dag vertraging.
 
 Goed om te weten:
 
-- **Gegevens:** elk kwartier haalt de app nieuwe gegevens op. Je verbruik komt via Frank Energie
-  met ongeveer een dag vertraging.
+- **Gegevens:** elk kwartier haalt de app nieuwe gegevens op.
+- **Opnieuw koppelen:** staat er ooit **Opnieuw koppelen** bij een dienst, bijvoorbeeld omdat je
+  je wachtwoord daar hebt veranderd? Klik erop en log opnieuw in.
 - **Slim laden:** de app laat je zien wanneer laden het goedkoopst is. Hij stuurt de lader
   **niet** zelf aan. Dat zet je pas aan bij Laden → Instellingen, als het plan een paar dagen
   klopt.
@@ -200,28 +205,6 @@ Goed om te weten:
 ---
 
 ## Later
-
-### Logins wijzigen
-
-Open **https://shell.cloud.google.com** en plak deze opdrachten:
-
-```bash
-cd ~/Home-Assistant
-```
-```bash
-gcloud config set project JOUW-PROJECT-ID
-```
-```bash
-bash deploy/setup-gcp.sh
-```
-
-Typ bij **Logins (opnieuw) invullen of wijzigen?** een `j` en druk op Enter.
-
-- **Enter** laat een login staan zoals hij is.
-- **Iets intypen** vervangt hem.
-- **Een `-`** maakt hem leeg.
-
-Bij de vraag over GitHub druk je op **Enter**. Binnen 15 minuten gebruikt de app de nieuwe logins.
 
 ### Een nieuwe versie installeren
 
@@ -259,5 +242,6 @@ Wil je de app niet meer? Verwijder dan het project. Daarmee is alles weg, ook je
 | *No such file or directory* | Plak eerst `cd ~/Home-Assistant` en daarna de opdracht opnieuw. |
 | De verbinding met Cloud Shell viel weg | Open Cloud Shell opnieuw en plak de twee opdrachten uit de tip in deel 5. |
 | In de app: *You don't have access* | Doe deel 5 (nog eens), en log in met hetzelfde Google-account als in Cloud Shell. |
-| Op de pagina **Bronnen** staat bij iets **Mislukt** | Klopt die login? Pas hem aan via [Logins wijzigen](#logins-wijzigen). |
+| Op de pagina **Koppelingen** staat bij iets **Mislukt** of **Opnieuw koppelen** | Klik bij die dienst op **Opnieuw koppelen** en log opnieuw in. |
+| Bij koppelen: *Inloggen mislukt* | Controleer e-mailadres en wachtwoord: log ter controle in de app van die dienst in. |
 | Iets anders, of rode tekst met *ERROR* | Maak een schermafdruk en stuur die naar Frank. |

@@ -121,6 +121,30 @@ Voor een eerdere datum wordt gerekend alsof het het eind van die dag is.
   maand), `gem_laadprijs` (t.o.v. de gemiddelde stroomprijs), `gas_vs_vorige_week` (per graaddag,
   basis 18 °C). Een inzicht zonder data wordt weggelaten.
 
+### `GET /api/koppelingen`
+Per dienst de status, voor de pagina "Koppelingen". Nooit tokens of wachtwoorden.
+```json
+[
+  {"dienst": "easee", "naam": "Easee", "uitleg": "Voor de lader: …",
+   "velden": [{"naam": "gebruiker", "label": "E-mailadres of telefoonnummer", "type": "text"},
+              {"naam": "wachtwoord", "label": "Wachtwoord", "type": "password"}],
+   "status": "ok", "account": "fr…@herling.nl", "sinds": "2026-10-08T14:00:00+00:00"}
+]
+```
+- `dienst`: `frank` | `easee` | `kia` | `google_chat`
+- `status`: `ok` | `opnieuw` (bewaarde tokens werken niet meer) | `script` (oude login uit het
+  setup-script) | `niet`
+- `velden[].type`: `text` | `email` | `password` | `url` | `keuze` (met `keuzes`)
+
+### `POST /api/koppelingen/{dienst}` · `DELETE /api/koppelingen/{dienst}`
+POST-body = de velden van die dienst, bijv. `{"gebruiker": "…", "wachtwoord": "…"}`. Thuis logt één
+keer in en bewaart alleen wat de dienst teruggeeft (tokens, leveringsadres); het wachtwoord niet.
+Antwoord: `{"bericht": "Laders gevonden: Oprit", "koppelingen": [ …zoals GET… ]}`. Daarna start
+Thuis meteen een ronde van de verzamelaar.
+- 400 met `detail` voor de gebruiker (verkeerde login, ontbrekend veld), 404 onbekende dienst,
+  422 ongeldig veld (wachtwoorden worden nooit teruggegeven), 502 als de dienst onverwacht antwoordt.
+- DELETE haalt de koppeling weg; antwoord zoals GET.
+
 ### `GET /api/status?tabellen=true|false`
 Gezondheid per bron uit de rondelog van de verzamelaar, voor de statusstip en de pagina "Bronnen".
 Standaard zonder `tabellen` (één query); `tabellen=true` voegt ze toe (een query per tabel).

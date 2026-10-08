@@ -15,7 +15,8 @@ const PAGINAS = {
   prijzen: { titel: "Prijzen", module: prijzen },
   laden: { titel: "Laden", module: laden },
   inzichten: { titel: "Inzichten", module: inzichten },
-  bronnen: { titel: "Bronnen", module: bronnen },
+  koppelingen: { titel: "Koppelingen", module: bronnen },
+  bronnen: { titel: "Koppelingen", module: bronnen, als: "koppelingen" }, // oude links
 };
 
 let huidige = null;
@@ -23,7 +24,8 @@ let teller = 0;
 
 function leesRoute() {
   const [pad, query] = location.hash.replace(/^#\/?/, "").split("?");
-  return { naam: PAGINAS[pad] ? pad : "overzicht", params: new URLSearchParams(query || "") };
+  const naam = PAGINAS[pad] ? PAGINAS[pad].als || pad : "overzicht";
+  return { naam, params: new URLSearchParams(query || "") };
 }
 
 /** Naar een pagina; parameters komen in de hash, zodat terug/vooruit en delen werken. */
@@ -90,7 +92,7 @@ async function gezondheid() {
     }
   } catch { /* stip blijft grijs */ }
   for (const el of $$("[data-gezondheid]")) el.dataset.status = status;
-  $("#gezondheid").setAttribute("aria-label", `Bronnen: ${tekst}`);
+  $("#gezondheid").setAttribute("aria-label", `Koppelingen: ${tekst}`);
   $("#gezondheid").title = tekst;
   return laatste;
 }

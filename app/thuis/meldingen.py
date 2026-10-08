@@ -92,8 +92,13 @@ def sessie_klaar(opslag: Opslag, moment: datetime) -> list[Kandidaat]:
 CONTROLES = (negatief_morgen, lader_fout, sessie_klaar)
 
 
-def controleer(opslag: Opslag, chat: Any, moment: datetime | None = None) -> list[str]:
-    """Stuur nieuwe meldingen; geeft de sleutels van wat er verstuurd is terug."""
+def controleer(
+    opslag: Opslag, chat: Any, moment: datetime | None = None, extra: list[Kandidaat] | None = None
+) -> list[str]:
+    """Stuur nieuwe meldingen; geeft de sleutels van wat er verstuurd is terug.
+
+    `extra`: meldingen die de verzamelaar zelf ziet (bijv. een verlopen koppeling).
+    """
     moment = moment or nu()
     al = {
         r["sleutel"]
@@ -102,18 +107,18 @@ def controleer(opslag: Opslag, chat: Any, moment: datetime | None = None) -> lis
         )
     }
     verstuurd, fouten = [], []
-    for controle in CONTROLES:
-        for sleutel, soort, tekst in controle(opslag, moment):
-            if sleutel in al:
-                continue
-            try:
-                chat.stuur(tekst)
-            except Exception as err:  # noqa: BLE001 — de andere meldingen gaan gewoon door
-                _LOG.exception("Melding %s niet verstuurd", sleutel)
-                fouten.append(f"{soort}: {err}")
-                continue
-            opslag.voeg_toe(MELDING, [{"sleutel": sleutel, "tijd": moment, "soort": soort, "tekst": tekst}])
-            verstuurd.append(sleutel)
+    kandidaten = [k for controle in CONTROLES for k in controle(opslag, moment)] + list(extra or [])
+    for sleutel, soort, tekst in kandidaten:
+        if sleutel in al:
+            continue
+        try:
+            chat.stuur(tekst)
+        except Exception as err:  # noqa: BLE001 — de andere meldingen gaan gewoon door
+            _LOG.exception("Melding %s niet verstuurd", sleutel)
+            fouten.append(f"{soort}: {err}")
+            continue
+        opslag.voeg_toe(MELDING, [{"sleutel": sleutel, "tijd": moment, "soort": soort, "tekst": tekst}])
+        verstuurd.append(sleutel)
     if fouten:
         raise RuntimeError("; ".join(fouten))
     return verstuurd
