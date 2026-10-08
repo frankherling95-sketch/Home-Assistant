@@ -21,6 +21,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, SecretStr
 
+from .auto import auto_overzicht, zet_thuis
 from .config import Config
 from .connectors import KoppelFout
 from .inzicht import dagen_grenzen, dagoverzicht, laatste, periodeoverzicht, vandaag
@@ -199,6 +200,26 @@ def api_nu(_: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str
         "plan": maak_plan(o, instellingen, auto=auto),
         "instellingen": instellingen,
     }
+
+
+@app.get("/api/auto")
+def api_auto(_: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str, Any]:
+    """Alles over de auto voor de pagina Auto (zie docs/api.md)."""
+    return auto_overzicht(o)
+
+
+@app.put("/api/auto/thuis")
+def api_auto_thuis(_: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str, Any]:
+    """Waar de auto nu staat, is thuis."""
+    if not zet_thuis(o):
+        raise HTTPException(409, "De auto heeft nog geen locatie doorgegeven.")
+    return auto_overzicht(o)
+
+
+@app.delete("/api/auto/thuis")
+def api_auto_thuis_weg(_: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str, Any]:
+    schrijf_instellingen(o, {"auto_thuis": None})
+    return auto_overzicht(o)
 
 
 @app.get("/api/instellingen")

@@ -14,6 +14,7 @@ from thuis import api as api_mod
 from thuis.config import Config
 from thuis.connectors import KoppelFout, KoppelingVerlopen
 from thuis.connectors import bmw as bmw_mod
+from thuis.connectors import bmw_gegevens as G
 from thuis.connectors.bmw import API, AUTH, BMW, BmwFout, naar_rij
 from thuis.kluis import GeheugenKluis
 from thuis.verzamel import ronde
@@ -33,6 +34,9 @@ def _record(**extra):
         "vin": VIN,
         "naam": "BMW i4 eDrive40",
         "container_id": "C1",
+        "container_doel": bmw_mod.CONTAINER_DOEL,
+        "basis_op": time.time(),  # autogegevens net opgehaald
+        "historie_op": NU.date().isoformat(),  # laadhistorie van NU al opgehaald
         **extra,
     }
 
@@ -53,6 +57,48 @@ LAADT = _telematisch(
         bmw_mod.LAADSTATUS: "CHARGINGACTIVE",
     }
 )
+
+VOL = _telematisch(
+    **{
+        G.ACCU[0]: "64",
+        G.BEREIK[0]: "301",
+        G.STEKKER: "true",
+        G.LAADSTATUS: "CHARGINGACTIVE",
+        G.LAADVERMOGEN: "10950",
+        G.LAADTIJD: "95",
+        G.TOT_VOL: "26.4",
+        G.LAADDOEL: "80",
+        G.CAPACITEIT[0]: "80.7",
+        G.GEZONDHEID: "97",
+        G.FASEN: "3-PHASES",
+        G.KM_STAND: "12345",
+        G.VERBRUIK: "17.3",
+        G.RIT_EIND: "07.10.2026 18:42:00 UTC",
+        G.SERVICE_KM: "21000",
+        G.APK: "30.09.2028 23:00 UTC",
+        G.MELDINGEN: '[{"name": "Bandenspanning", "severity": "LOW"}]',
+        f"{G.BANDEN['linksvoor']}.pressure": "250",
+        f"{G.BANDEN['linksvoor']}.pressureTarget": "260",
+        G.SLOT: "SECURED",
+        G.DEUREN["linksvoor"]: "CLOSED",
+        G.RAMEN["linksvoor"]: "INTERMEDIATE",
+        G.LAT: "52.09073",
+        G.LON: "5.12142",
+    }
+)
+VOL["telematicData"][G.LAADVERMOGEN]["unit"] = "W"
+SESSIE = {
+    "startTime": 1791400000,
+    "endTime": 1791403600,
+    "energyConsumedFromPowerGridKwh": 41.2,
+    "displayedStartSoc": 22,
+    "displayedSoc": 80,
+    "mileage": 7000,
+    "mileageUnits": "MileageUnits.MI",
+    "chargingLocation": {"municipality": "Utrecht", "mapMatchedLatitude": 52.09, "mapMatchedLongitude": 5.12},
+    "publicChargingPoint": {"potentialChargingPointMatches": [{"providerName": "Fastned"}]},
+    "chargingCostInformation": {"currency": "EUR", "calculatedChargingCost": 24.3, "calculatedSavings": 0},
+}
 
 # ── koppelen ──────────────────────────────────────────────────────────────────
 
@@ -315,18 +361,36 @@ def test_ronde_leest_bmw_en_bewaart_de_stand(opslag, monkeypatch):
         )
     )
     lees = respx.get(f"{API}/customers/vehicles/{VIN}/telematicData").mock(
-        return_value=httpx.Response(200, json=LAADT)
+        return_value=httpx.Response(200, json=VOL)
+    )
+    historie = respx.get(f"{API}/customers/vehicles/{VIN}/chargingHistory").mock(
+        return_value=httpx.Response(200, json={"data": [SESSIE]})
     )
     kluis = GeheugenKluis(
-        {"koppelingen": {"bmw": {**_record(tokens={"refresh_token": "R1"}), "status": "ok", "account": "x"}}}
+        {
+            "koppelingen": {
+                "bmw": {
+                    **_record(tokens={"refresh_token": "R1"}, historie_op=None),
+                    "status": "ok",
+                    "account": "x",
+                }
+            }
+        }
     )
     uitslag = ronde(Config(), opslag, frank=NepPrijzen(), weer=NepWeer(), kluis=kluis)
     assert uitslag["bmw"] == "ok" and uitslag["auto"] == "overgeslagen"
-    rijen = opslag.lees("SELECT auto_id, accu_pct, laadt FROM {auto_meting}")
-    assert rijen == [{"auto_id": VIN, "accu_pct": 64.0, "laadt": True}]
+    rijen = opslag.lees("SELECT auto_id, accu_pct, laadt, km_stand, capaciteit_kwh FROM {auto_meting}")
+    assert rijen == [
+        {"auto_id": VIN, "accu_pct": 64.0, "laadt": True, "km_stand": 12345.0, "capaciteit_kwh": 80.7}
+    ]
+    [details] = opslag.lees("SELECT gegevens FROM {auto_details}")
+    assert json.loads(details["gegevens"])["onderhoud"]["service_km"] == 21000
+    [sessie] = opslag.lees("SELECT plaats, kwh, publiek FROM {auto_laadsessie}")
+    assert sessie == {"plaats": "Fastned, Utrecht", "kwh": 41.2, "publiek": True}
     bewaard = kluis.data["koppelingen"]["bmw"]
-    assert bewaard["tokens"]["refresh_token"] == "R2" and len(bewaard["vragen"]) == 1
-    assert bewaard["status"] == "ok" and bewaard["account"] == "x"
+    assert bewaard["tokens"]["refresh_token"] == "R2" and len(bewaard["vragen"]) == 2  # meting + historie
+    assert bewaard["status"] == "ok" and bewaard["account"] == "x" and bewaard["historie_op"]
+    assert historie.calls[0].request.url.params["from"].endswith(".000Z")
 
     # Een kwartier later niet opnieuw als de vorige ronde net was: de rij komt pas de ronde erna.
     ronde(Config(), opslag, frank=NepPrijzen(), weer=NepWeer(), kluis=kluis)

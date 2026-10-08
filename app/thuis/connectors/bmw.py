@@ -15,12 +15,17 @@ geeft BMW een nieuw refresh-token, dus steeds het nieuwste bewaren.
 
 Alles wat bewaard moet blijven (tokens, auto, container, telling van verzoeken) staat in één
 dict, `record`: dat is de koppeling zoals die in de kluis staat.
+
+Bovenop de accu en het bereik (elke keer) haalt Thuis één keer per dag de laadhistorie en één keer
+per week de gegevens van de auto zelf (model, bouwdatum) op. Welke gegevens en hoe ze in Thuis
+terechtkomen: bmw_gegevens.py.
 """
 
 from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import re
 import secrets
 import time
@@ -30,6 +35,20 @@ from typing import Any
 import httpx
 
 from . import KoppelFout, KoppelingVerlopen
+from .bmw_gegevens import (  # noqa: F401 — ook voor de tests
+    ACCU,
+    BEREIK,
+    DESCRIPTORS,
+    HV_STATUS,
+    KERN,
+    LAADPOORT,
+    LAADSTATUS,
+    STEKKER,
+    basisgegevens,
+    naar_details,
+    naar_laadsessies,
+    naar_rij,
+)
 
 AUTH = "https://customer.bmwgroup.com/gcdm/oauth"
 API = "https://api-cardata.bmwgroup.com"
@@ -38,29 +57,19 @@ SCOPE = "authenticate_user openid cardata:api:read"
 DIENST = "BMW"
 
 MAX_PER_DAG = 45  # BMW: 50 per dag
-ZUINIG_VANAF = 35  # daarboven hooguit één keer per uur
+ZUINIG_VANAF = 35  # daarboven hooguit één keer per uur, en geen laadhistorie of autogegevens
 SPELING = timedelta(minutes=3)  # Cloud Scheduler start niet op de seconde
+HISTORIE_DAGEN = 30  # laadhistorie: elke dag de laatste 30 dagen (dubbele sessies vallen weg)
+BASIS_ELKE = 7 * 86400  # model, bouwdatum: één keer per week
 
-# Welke gegevens Thuis vraagt (een "container" bij BMW). Verandert deze lijst, verhoog dan de
+# Welke gegevens Thuis vraagt (een "container" bij BMW). Verandert de lijst, verhoog dan de
 # versie in CONTAINER_DOEL: bij de volgende ronde komt er een nieuwe container voor de oude.
+# Weigert BMW de grote lijst, dan valt Thuis een week terug op alleen de kern.
 CONTAINER_NAAM = "Thuis"
-CONTAINER_DOEL = "Thuis energieplatform v1"
-ACCU = (
-    "vehicle.powertrain.electric.battery.stateOfCharge.displayed",
-    "vehicle.drivetrain.batteryManagement.header",
-    "vehicle.drivetrain.electricEngine.charging.level",
-)
-BEREIK = (
-    "vehicle.drivetrain.electricEngine.kombiRemainingElectricRange",
-    "vehicle.drivetrain.electricEngine.remainingElectricRange",
-)
-STEKKER = "vehicle.powertrain.tractionBattery.charging.port.anyPosition.isPlugged"
-LAADPOORT = "vehicle.body.chargingPort.status"  # CONNECTED, DISCONNECTED
-LAADSTATUS = "vehicle.drivetrain.electricEngine.charging.status"  # CHARGINGACTIVE, NOCHARGING, …
-HV_STATUS = "vehicle.drivetrain.electricEngine.charging.hvStatus"  # CHARGING, NOT_CHARGING, …
-DESCRIPTORS = (*ACCU, *BEREIK, STEKKER, LAADPOORT, LAADSTATUS, HV_STATUS)
+CONTAINER_DOEL = "Thuis energieplatform v2"
+CONTAINER_DOEL_KERN = "Thuis energieplatform kern"
+TERUGVAL = 7 * 86400
 
-ONGELDIG = {"", "INVALID", "-NA-", "UNKNOWN"}
 VIN = re.compile(r"^[A-HJ-NPR-Z0-9]{17}$")
 CONTAINER_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
@@ -188,6 +197,8 @@ class BMW:
         self.record: dict[str, Any] = {**record, "tokens": dict(record.get("tokens") or {})}
         self.client = client or httpx.Client(timeout=30)
         self.gewijzigd = False
+        self.details: list[dict[str, Any]] = []
+        self.laadsessies: list[dict[str, Any]] = []
 
     # tokens
 
@@ -262,18 +273,32 @@ class BMW:
                 "Er staat geen auto op je BMW-account waarvan jij de hoofdgebruiker bent. "
                 "Voeg de auto eerst toe in de My BMW-app."
             )
-        vin = auto[0]["vin"]
+        self.record["vin"] = auto[0]["vin"]
+        self._basisgegevens()
+
+    def _basisgegevens(self) -> None:
+        """Model, bouwdatum en dergelijke; daaruit ook de naam van de auto."""
+        self.record["basis_op"] = round(time.time())
         try:
-            basis = self._api("GET", f"/customers/vehicles/{vin}/basicData") or {}
+            d = self._api("GET", f"/customers/vehicles/{self.record['vin']}/basicData") or {}
         except BmwFout:
-            basis = {}
-        merk = "MINI" if basis.get("brand") == "MINI" else "BMW"
-        model = str(basis.get("modelName") or "").strip()
-        self.record["vin"] = vin
+            d = {}
+        if not d:
+            self.record.setdefault("naam", DIENST)
+            return
+        self.record["basis"] = basisgegevens(d)
+        merk = "MINI" if d.get("brand") == "MINI" else "BMW"
+        model = str(d.get("modelName") or "").strip()
         self.record["naam"] = model if model.upper().startswith(merk) else f"{merk} {model}".strip()
 
     def zorg_voor_container(self) -> None:
-        """Hergebruik de container van Thuis; een oude versie gaat weg (maximaal 10 per account)."""
+        """Hergebruik de container van Thuis; een oude versie gaat weg (maximaal 10 per account).
+
+        Weigert BMW de volledige lijst gegevens, dan een week lang alleen de kern (accu, bereik,
+        stekker); daarna probeert Thuis het opnieuw.
+        """
+        kern = time.time() < float(self.record.get("kern_tot") or 0)
+        doel = CONTAINER_DOEL_KERN if kern else CONTAINER_DOEL
         bestaand = _lijst(self._api("GET", "/customers/containers"), "containers", "items")
         van_thuis = [
             c
@@ -283,29 +308,31 @@ class BMW:
             and CONTAINER_ID.match(str(c.get("containerId")))
         ]
         for c in van_thuis:
-            if c.get("purpose") == CONTAINER_DOEL:
-                self.record["container_id"] = c["containerId"]
+            if c.get("purpose") == doel:
+                self.record["container_id"], self.record["container_doel"] = c["containerId"], doel
                 return
         for c in van_thuis:
             self._api("DELETE", f"/customers/containers/{c['containerId']}")
         try:
-            nieuw = self._api(
-                "POST",
-                "/customers/containers",
-                json={
-                    "name": CONTAINER_NAAM,
-                    "purpose": CONTAINER_DOEL,
-                    "technicalDescriptors": list(DESCRIPTORS),
-                },
-            )
+            self._maak_container(doel, KERN if kern else DESCRIPTORS)
         except BmwFout as err:
             if err.code == "CU-124":
                 raise KoppelFout(
                     "Je account heeft al 10 containers bij BMW CarData. Verwijder er een in het "
                     "CarData-portaal en koppel opnieuw."
                 ) from err
-            raise
-        self.record["container_id"] = nieuw["containerId"]
+            if kern or not (400 <= err.status < 500) or err.status == 429:
+                raise
+            self.record["kern_tot"] = round(time.time() + TERUGVAL)
+            self._maak_container(CONTAINER_DOEL_KERN, KERN)
+
+    def _maak_container(self, doel: str, descriptors: tuple[str, ...]) -> None:
+        nieuw = self._api(
+            "POST",
+            "/customers/containers",
+            json={"name": CONTAINER_NAAM, "purpose": doel, "technicalDescriptors": list(descriptors)},
+        )
+        self.record["container_id"], self.record["container_doel"] = nieuw["containerId"], doel
 
     # elke ronde
 
@@ -329,14 +356,26 @@ class BMW:
         laatst = self.record.get("laatst")
         return not laatst or moment - datetime.fromisoformat(laatst) >= wacht - SPELING
 
+    def _ruim(self) -> bool:
+        """Is er ruimte voor een extra verzoek (laadhistorie, autogegevens)?"""
+        return len(self._vragen()) < ZUINIG_VANAF
+
     def metingen(self, moment: datetime | None = None) -> list[dict[str, Any]]:
-        """Eén rij voor auto_meting, of niets als de auto deze ronde niet aan de beurt is."""
+        """Eén rij voor auto_meting, of niets als de auto deze ronde niet aan de beurt is.
+
+        Daarnaast staan `details` (voor auto_details) en `laadsessies` (voor auto_laadsessie)
+        klaar; die zijn leeg als er deze ronde niets nieuws is.
+        """
         moment = moment or datetime.now(UTC)
+        self.details, self.laadsessies = [], []
         if not self.aan_de_beurt(moment):
             return []
         self.record["laatst"] = moment.isoformat()  # ook bij een fout: niet elke ronde opnieuw
         self.gewijzigd = True
-        if not self.record.get("container_id"):
+        verouderd = self.record.get("container_doel") != CONTAINER_DOEL and time.time() >= float(
+            self.record.get("kern_tot") or 0
+        )
+        if not self.record.get("container_id") or verouderd:
             self.zorg_voor_container()
         try:
             data = self._telematisch()
@@ -346,8 +385,18 @@ class BMW:
             self.record.pop("container_id", None)
             self.zorg_voor_container()
             data = self._telematisch()
-        rij = naar_rij(self.record["vin"], self.record.get("naam") or DIENST, data, moment)
+        vin, naam = self.record["vin"], self.record.get("naam") or DIENST
+        rij = naar_rij(vin, naam, data, moment)
         self.record["toestand"] = {"laadt": bool(rij["laadt"]), "ingeplugd": bool(rij["ingeplugd"])}
+
+        if self._ruim() and time.time() - float(self.record.get("basis_op") or 0) > BASIS_ELKE:
+            self._basisgegevens()
+            rij["naam"] = self.record.get("naam") or naam
+        details = naar_details(data, self.record.get("basis"))
+        if set(details) - {"basis"}:
+            self.details = [{"tijd": moment, "auto_id": vin, "gegevens": json.dumps(details)}]
+        if self._ruim() and self.record.get("historie_op") != moment.date().isoformat():
+            self.laadsessies = self._laadhistorie(moment)
         return [rij]
 
     def _telematisch(self) -> dict[str, Any]:
@@ -357,6 +406,22 @@ class BMW:
             params={"containerId": self.record["container_id"]},
         )
         return (d or {}).get("telematicData") or {}
+
+    def _laadhistorie(self, moment: datetime) -> list[dict[str, Any]]:
+        """Eén keer per dag; mislukt het, dan morgen weer (de accu gaat voor)."""
+        self.record["historie_op"] = moment.date().isoformat()
+        try:
+            d = self._api(
+                "GET",
+                f"/customers/vehicles/{self.record['vin']}/chargingHistory",
+                params={
+                    "from": (moment - timedelta(days=HISTORIE_DAGEN)).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                    "to": moment.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                },
+            )
+        except BmwFout:
+            return []
+        return naar_laadsessies(self.record["vin"], _lijst(d, "data"))
 
 
 def _lijst(d: Any, *sleutels: str) -> list[dict[str, Any]]:
@@ -370,71 +435,3 @@ def _lijst(d: Any, *sleutels: str) -> list[dict[str, Any]]:
         if "vin" in d or "containerId" in d:
             return [d]
     return []
-
-
-def _waarde(data: dict[str, Any], *sleutels: str) -> tuple[str, dict[str, Any]] | None:
-    for s in sleutels:
-        e = data.get(s)
-        if isinstance(e, dict) and e.get("value") is not None and str(e["value"]).strip() not in ONGELDIG:
-            return str(e["value"]).strip(), e
-    return None
-
-
-def _getal(x: str) -> float | None:
-    try:
-        return float(x)
-    except ValueError:
-        return None
-
-
-def naar_rij(vin: str, naam: str, data: dict[str, Any], moment: datetime) -> dict[str, Any]:
-    gebruikt: list[dict[str, Any]] = []
-
-    def lees(*sleutels: str) -> str | None:
-        w = _waarde(data, *sleutels)
-        if w is None:
-            return None
-        gebruikt.append(w[1])
-        return w[0]
-
-    accu = lees(*ACCU)
-    bereik = None
-    w = _waarde(data, *BEREIK)
-    if w is not None and (km := _getal(w[0])) is not None:
-        gebruikt.append(w[1])
-        bereik = km * 1.609344 if str(w[1].get("unit", "")).lower() in ("mi", "miles") else km
-    stekker = lees(STEKKER)
-    if stekker is not None:
-        ingeplugd = stekker.lower() == "true"
-    else:
-        poort = lees(LAADPOORT)
-        ingeplugd = None if poort is None else poort.upper() == "CONNECTED"
-    status = lees(LAADSTATUS)
-    if status is not None:
-        laadt = status.upper() == "CHARGINGACTIVE"
-    else:
-        hv = lees(HV_STATUS)
-        laadt = None if hv is None else hv.upper() == "CHARGING"
-    if laadt:
-        ingeplugd = True
-    tijden = [t for e in gebruikt if (t := _tijd(e.get("timestamp")))]
-    return {
-        "tijd": moment,
-        "auto_id": vin,
-        "naam": naam,
-        "accu_pct": _getal(accu) if accu is not None else None,
-        "bereik_km": round(bereik, 1) if bereik is not None else None,
-        "ingeplugd": ingeplugd,
-        "laadt": laadt,
-        "bijgewerkt": max(tijden) if tijden else None,
-    }
-
-
-def _tijd(x: Any) -> datetime | None:
-    if not x:
-        return None
-    try:
-        t = datetime.fromisoformat(str(x).replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return t if t.tzinfo else t.replace(tzinfo=UTC)

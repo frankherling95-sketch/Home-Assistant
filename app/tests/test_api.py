@@ -46,7 +46,7 @@ def test_dag_en_nu(client):
         len(dag["reeksen"]["temperatuur"]) == len(dag["uren"]) and None not in dag["reeksen"]["temperatuur"]
     )
     nu_ = client.get("/api/nu", headers=IAP).json()
-    assert nu_["lader"]["naam"] == "Oprit" and nu_["auto"]["naam"] == "EV6"
+    assert nu_["lader"]["naam"] == "Oprit" and nu_["auto"]["naam"] == "BMW i4 eDrive40"
     assert "blokken" in nu_["plan"]
 
 

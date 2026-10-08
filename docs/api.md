@@ -74,10 +74,13 @@ Week/maand: bakjes per dag; jaar: per maand.
 ```json
 {
   "tijd": "...",
-  "auto":  {"naam": "EV6", "accu_pct": 59.3, "bereik_km": 273, "ingeplugd": true, "laadt": false, "bijgewerkt": "...", "tijd": "..."} | null,
+  "auto":  {"naam": "BMW i4 eDrive40", "accu_pct": 59.3, "bereik_km": 273, "ingeplugd": true, "laadt": false,
+            "bijgewerkt": "...", "tijd": "...", "km_stand": 35188, "laadvermogen_kw": 0, "laadtijd_min": null,
+            "kwh_tot_vol": 31.5, "doel_pct": 80, "capaciteit_kwh": 77.4} | null,
   "lader": {"naam": "Oprit", "status": "wacht_op_start", "vermogen_kw": 0, "sessie_kwh": 32.4, "totaal_kwh": 4242.4, "tijd": "..."} | null,
   "plan": {"nu_laden": false, "reden": "wachten", "nodig_kwh": 17.8, "kosten": 3.2, "volledig": true,
-           "vertrek": "...", "prijs_nu": 0.283, "accu_pct": 59.3,
+           "vertrek": "...", "prijs_nu": 0.283, "accu_pct": 59.3, "doel_pct": 80, "capaciteit_kwh": 77.4,
+           "doel_van_auto": false, "capaciteit_van_auto": true,
            "blokken": [{"van": "...", "tot": "...", "prijs": 0.18}]},
   "instellingen": {"doel_pct": 80, "vertrek": "07:30", "capaciteit_kwh": 77.4, "vermogen_kw": 11,
                    "rendement_pct": 90, "altijd_onder": 0, "sturen": false}
@@ -86,6 +89,46 @@ Week/maand: bakjes per dag; jaar: per maand.
 Lader-statussen: `laden, wacht_op_start, klaar_om_te_laden, niet_verbonden, klaar, offline, fout,
 wacht_op_smart_start, wacht_op_schema, wacht_op_autorisatie, ...` (zie `connectors/easee.py`).
 Plan-redenen: `gepland, onder_drempel, wachten, doel_bereikt, geen_prijzen, uitgeschakeld`.
+- De extra velden van `auto` (`km_stand` … `capaciteit_kwh`) komen van BMW en deels van Kia/Hyundai;
+  anders `null`.
+- Het plan rekent met de accu-inhoud van de auto als die die doorgeeft (anders de instelling), en
+  nooit verder dan het laaddoel in de auto: `doel_pct` = de laagste van beide.
+
+### `GET /api/auto`
+Alles over de auto voor de pagina Auto. Vier queries: metingen (31 dagen), de nieuwste details,
+laadhistorie (90 dagen) en instellingen.
+```json
+{
+  "auto": { …zoals bij /api/nu… } | null,
+  "details": {
+    "laden":       {"doel_pct": 80, "capaciteit_kwh": 77.4, "gezondheid_pct": 96, "methode": "AC_TYPE2PLUG", "…": "…", "bijgewerkt": "…"},
+    "rijden":      {"km_stand": 35188, "verbruik_kwh_100km": 17.4, "rit": {"eind": "…", "teruggewonnen": 1.8}, "rijstijl": {…}},
+    "onderhoud":   {"service_km": 12400, "apk": "…", "services": […], "meldingen": […],
+                    "banden": {"linksvoor": {"bar": 2.6, "doel_bar": 2.6}, "…": {}}, "accu_12v_pct": 84},
+    "beveiliging": {"slot": "SECURED", "alarm": "…", "deuren_open": {"linksvoor": false}, "ramen": {"linksvoor": "CLOSED"}, "…": "…"},
+    "klimaat":     {"activiteit": "standby"},
+    "locatie":     {"lat": 52.1009, "lon": 5.1801, "afstand_km": 0.0, "thuis": true},
+    "basis":       {"merk": "BMW", "model": "i4 eDrive40", "bouwdatum": "2024-03", "…": "…"}
+  } | null,
+  "thuis": {"lat": 52.1009, "lon": 5.1801} | null,
+  "accu": [{"tijd": "…", "pct": 64.0, "laadt": false}],
+  "km_per_dag": [{"dag": "2026-10-07", "km": 42.1}],
+  "km": {"zeven_dagen": 289.3, "dertig_dagen": 1301.3},
+  "laadsessies": [{"start": "…", "eind": "…", "kwh": 38.6, "start_pct": 18, "eind_pct": 70,
+                   "plaats": "Fastned, Utrecht", "publiek": true, "kosten": 22.77, "valuta": "EUR", "thuis": false}],
+  "laden_30_dagen": {"sessies": 13, "kwh": 306.7, "kwh_onderweg": 82.8}
+}
+```
+- Zonder auto: `{"auto": null}`. Alles in `details` mag ontbreken: wat de auto niet doorgeeft, staat er
+  niet in. BMW vult het meeste; Kia/Hyundai vult laden, kilometerstand, onderhoud (bandenspanning,
+  waarschuwingen), deuren, ramen, klimaat en locatie voor zover de bibliotheek die kent.
+- Waarden als `slot`, `methode` en `ramen` zijn de codes van de auto; de app vertaalt ze.
+- `laadsessies`: de laadhistorie van de auto zelf (BMW, één keer per dag opgehaald), ook laden onderweg.
+  `thuis` alleen als er een thuislocatie is.
+
+### `PUT /api/auto/thuis` · `DELETE /api/auto/thuis`
+PUT onthoudt de huidige plek van de auto als thuis (409 als de auto nog geen locatie doorgaf); DELETE
+vergeet hem. Antwoord: zoals `GET /api/auto`.
 
 ### `GET /api/instellingen` · `PUT /api/instellingen`
 Body/antwoord = `instellingen` hierboven. Validatiefout → 422.

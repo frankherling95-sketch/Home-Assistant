@@ -132,6 +132,37 @@ Webhooks) en koppel die in de app.
 - De app controleert de door IAP ondertekende JWT (`IAP_AUDIENCE`), niet alleen de e-mailheader,
   en daarna nog `TOEGESTANE_EMAILS`.
 
+## Eigen domein (bijvoorbeeld home.herling-analytics.nl)
+
+Standaard is de app bereikbaar op `https://thuis-app-NUMMER.europe-west4.run.app`. Een eigen adres
+kan gratis met een **domeinkoppeling van Cloud Run**. IAP blijft gewoon werken: het beschermt alle
+ingangen van de service, en de app controleert de IAP-handtekening op de service, niet op het
+adres. Het run.app-adres blijft ook werken.
+
+1. Laat Google weten dat het domein van jou is (eenmalig, voor het hoofddomein):
+   ```bash
+   gcloud domains list-user-verified
+   gcloud domains verify herling-analytics.nl
+   ```
+   Staat het domein er niet bij, dan opent `verify` Search Console. Zet het TXT-record dat je daar
+   krijgt bij je domeinbeheerder en klik op Verifiëren.
+2. Koppel het adres aan de app:
+   ```bash
+   gcloud beta run domain-mappings create --service=thuis-app --domain=home.herling-analytics.nl --region=europe-west4
+   gcloud beta run domain-mappings describe --domain=home.herling-analytics.nl --region=europe-west4
+   ```
+3. Zet bij je domeinbeheerder het record dat `describe` onder `resourceRecords` noemt. Voor een
+   subdomein is dat een **CNAME**: naam `home`, waarde `ghs.googlehosted.com.`
+4. Wacht op het certificaat: meestal een kwartier, soms tot 24 uur. Open daarna
+   `https://home.herling-analytics.nl` in een privévenster: je krijgt de Google-login en daarna Thuis.
+
+Goed om te weten:
+- Domeinkoppelingen zijn bij Google nog **Preview**: "niet geschikt voor productie" vanwege
+  mogelijk extra vertraging. Voor een app voor thuis is dat geen bezwaar; werkt het niet goed, dan
+  haal je hem weg met `gcloud beta run domain-mappings delete --domain=home.herling-analytics.nl --region=europe-west4`.
+- Het alternatief zonder Preview is een load balancer met IAP: ±€17 per maand.
+- Firebase Hosting werkt niet met IAP (de inlogcookie komt niet door).
+
 ## Zonder Google Workspace (los gmail-account)
 
 IAP heeft dan een eigen OAuth-client nodig; die kan alleen in de console:

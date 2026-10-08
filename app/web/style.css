@@ -186,15 +186,15 @@ main { padding: 0 24px 32px; width: 100%; max-width: 1360px; outline: none; }
   .kop .themaknop { display: inline-grid; }
   main { padding: 0 12px calc(var(--tab-hoogte) + 24px + env(safe-area-inset-bottom)); }
   .tabbalk {
-    display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; inset: auto 0 0 0; z-index: 20;
+    display: grid; grid-template-columns: repeat(6, 1fr); position: fixed; inset: auto 0 0 0; z-index: 20;
     background: var(--oppervlak); border-top: 1px solid var(--lijn);
     padding-bottom: env(safe-area-inset-bottom);
   }
   .tabbalk a {
     display: grid; justify-items: center; align-content: center; gap: 2px; height: var(--tab-hoogte);
-    color: var(--inkt-3); text-decoration: none; font-size: 12px; font-weight: 500;
+    color: var(--inkt-3); text-decoration: none; font-size: 11px; font-weight: 500; min-width: 0;
   }
-  .tabbalk a svg { width: 26px; height: 26px; padding: 2px 14px; box-sizing: content-box; border-radius: 16px; }
+  .tabbalk a svg { width: 26px; height: 26px; padding: 2px 12px; box-sizing: content-box; border-radius: 16px; }
   .tabbalk a[aria-current="page"] { color: var(--accent); }
   .tabbalk a[aria-current="page"] svg { background: var(--accent-zacht); }
 }
@@ -433,6 +433,22 @@ main { padding: 0 24px 32px; width: 100%; max-width: 1360px; outline: none; }
   .koppelingen .pil { grid-column: 2; justify-self: start; }
   .koppelingen .detail, .koppelingen .acties, .koppel-vak { grid-column: 1 / -1; }
 }
+
+/* ── auto ──────────────────────────────────────────────────────────────── */
+
+.auto-kop { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 12px; }
+.locatie-waar { font-size: 32px; }
+.gegevens { display: grid; grid-template-columns: minmax(0, 1fr) auto; margin: 0; }
+.gegevens dt, .gegevens dd { margin: 0; padding: 9px 0; border-bottom: 1px solid var(--lijn); }
+.gegevens dt { color: var(--inkt-2); padding-right: 12px; }
+.gegevens dd { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.gegevens dd small { font-weight: 400; color: var(--inkt-3); }
+.gegevens dt:last-of-type, .gegevens dd:last-of-type { border-bottom: 0; }
+.kaart .melding + .melding, .kaart .melding + .gegevens { margin-top: 8px; }
+.tussenkop { font-size: 14px; font-weight: 500; color: var(--inkt-2); margin: 16px 0 8px; }
+.banden { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tegel .waarde.tekst-let-op { color: var(--let-op); }
+.tabel th.links, .tabel td.links { text-align: left; white-space: normal; }
 
 /* ── sessies ───────────────────────────────────────────────────────────── */
 
