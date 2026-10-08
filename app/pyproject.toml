@@ -13,9 +13,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gcp = ["google-cloud-bigquery>=3.25"]
+gcp = ["google-cloud-bigquery>=3.25", "google-auth>=2.30", "cryptography>=42"]  # cryptography: ES256 voor de IAP-JWT
 kia = ["hyundai_kia_connect_api>=3.30"]
-dev = ["pytest>=8", "respx>=0.21", "ruff>=0.6"]
+dev = ["pytest>=8", "respx>=0.21", "ruff>=0.6", "google-auth>=2.30", "cryptography>=42"]
 
 [build-system]
 requires = ["setuptools>=69"]

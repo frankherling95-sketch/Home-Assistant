@@ -97,6 +97,57 @@ def test_status_uit_rondelog(client):
     assert s["tabellen"]["prijs"] and s["tabellen"]["melding"] is None
 
 
+def test_iap_jwt_wordt_gecontroleerd(monkeypatch, tmp_path):
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from google.auth import jwt
+    from google.auth.crypt import es256
+
+    sleutel = ec.generate_private_key(ec.SECP256R1())
+    prive = sleutel.private_bytes(
+        serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()
+    )
+    publiek = (
+        sleutel.public_key()
+        .public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
+        .decode()
+    )
+    monkeypatch.setattr(api_mod, "iap_sleutels", lambda vers=False: {"k1": publiek})
+    aud = "/projects/123/locations/europe-west4/services/thuis-app"
+    monkeypatch.setenv("IAP_AUDIENCE", aud)
+    monkeypatch.setenv("TOEGESTANE_EMAILS", "frank@herling.nl")
+    monkeypatch.setenv("THUIS_DUCKDB_PAD", str(tmp_path / "j.duckdb"))
+    monkeypatch.delenv("THUIS_AUTH_UIT", raising=False)
+    nu_ = int(time.time())
+
+    def token(**claims):
+        basis = {
+            "iss": "https://cloud.google.com/iap",
+            "aud": aud,
+            "email": "frank@herling.nl",
+            "iat": nu_,
+            "exp": nu_ + 600,
+        }
+        return jwt.encode(es256.ES256Signer.from_string(prive, key_id="k1"), {**basis, **claims}).decode()
+
+    with TestClient(api_mod.app) as c:
+
+        def email(t, kop=None):
+            return c.get("/api/gebruiker", headers={"x-goog-iap-jwt-assertion": t, **(kop or {})})
+
+        assert email(token()).json() == {"email": "frank@herling.nl"}
+        assert email(token(aud="/projects/999/x")).status_code == 401  # andere service
+        assert email(token(iss="https://evil.example")).status_code == 401
+        assert email(token(email="ander@x.nl")).status_code == 403
+        # Alleen de header (zonder geldige JWT) is niet genoeg meer.
+        assert (
+            c.get(
+                "/api/gebruiker", headers={"x-goog-authenticated-user-email": "x:frank@herling.nl"}
+            ).status_code
+            == 401
+        )
+
+
 def test_web_app_met_juiste_types(client):
     index = client.get("/")
     assert index.status_code == 200 and 'src="js/app.js"' in index.text

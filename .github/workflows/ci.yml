@@ -1,11 +1,10 @@
 name: CI
 
+# Op pull requests; op main draait deploy.yml deze workflow eerst.
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
-  workflow_call: # deploy.yml draait eerst deze tests
+  workflow_call:
 
 permissions:
   contents: read
@@ -18,8 +17,8 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -33,9 +32,16 @@ jobs:
     name: Docker-image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: docker build -t thuis app
       - name: Image start en kan alles importeren
         run: |
-          docker run --rm thuis python -c "import thuis.api, thuis.verzamel, google.cloud.bigquery, hyundai_kia_connect_api"
-          docker run --rm thuis id -u | grep -qv '^0$'  # niet als root
+          docker run --rm thuis python -c "import thuis.api, thuis.verzamel, google.cloud.bigquery, google.auth.crypt.es256, hyundai_kia_connect_api"
+          test "$(docker run --rm thuis id -u)" != 0  # niet als root
+
+  scripts:
+    name: Shellscripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: shellcheck deploy/*.sh

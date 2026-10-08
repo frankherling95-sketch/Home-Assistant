@@ -1,0 +1,4 @@
+# Scripts en de Dockerfile draaien op Linux (Cloud Shell, GitHub Actions): altijd LF.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf

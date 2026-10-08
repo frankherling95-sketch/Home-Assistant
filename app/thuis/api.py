@@ -5,13 +5,17 @@ Lokaal: `THUIS_AUTH_UIT=1 uvicorn thuis.api:app --reload` en open http://localho
 
 from __future__ import annotations
 
+import logging
 import mimetypes
 import os
+import threading
+import time
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Literal
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -27,29 +31,81 @@ from .sessies import laadsessies
 # In de container staat de web-app los van het geïnstalleerde pakket (THUIS_WEB=/app/web).
 WEB = Path(os.environ.get("THUIS_WEB") or Path(__file__).resolve().parent.parent / "web")
 IAP_HEADER = "x-goog-authenticated-user-email"
+IAP_JWT_HEADER = "x-goog-iap-jwt-assertion"
+IAP_SLEUTELS_URL = "https://www.gstatic.com/iap/verify/public_key"
+IAP_UITGEVER = "https://cloud.google.com/iap"
 # Windows geeft .js soms als text/plain door; de browser weigert dan de ES-modules.
 mimetypes.add_type("text/javascript", ".js")
 mimetypes.add_type("application/manifest+json", ".webmanifest")
+_LOG = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def _levensloop(app: FastAPI):
     app.state.cfg = Config()
     app.state.opslag = maak_opslag(app.state.cfg)
-    app.state.opslag.maak_tabellen()
+    # BigQuery: de verzamelaar maakt de tabellen (ook direct na elke deploy); dat scheelt
+    # hier tien API-aanroepen bij elke koude start.
+    if app.state.cfg.opslag != "bigquery":
+        app.state.opslag.maak_tabellen()
     yield
 
 
 app = FastAPI(title="Thuis", lifespan=_levensloop, docs_url=None, redoc_url=None)
 
 
+class IapSleutels:
+    """Publieke sleutels waarmee IAP zijn JWT ondertekent; een uur bewaard, of opnieuw bij een onbekende sleutel."""
+
+    def __init__(self) -> None:
+        self._sleutels: dict[str, str] | None = None
+        self._tijd = 0.0
+        self._slot = threading.Lock()
+
+    def __call__(self, vers: bool = False) -> dict[str, str]:
+        with self._slot:
+            if vers or self._sleutels is None or time.monotonic() - self._tijd > 3600:
+                r = httpx.get(IAP_SLEUTELS_URL, timeout=10)
+                r.raise_for_status()
+                self._sleutels, self._tijd = r.json(), time.monotonic()
+            return self._sleutels
+
+
+iap_sleutels = IapSleutels()
+
+
+def iap_email(token: str, audience: str) -> str:
+    """E-mail uit de door IAP ondertekende JWT (ES256), na controle van handtekening, doelgroep en uitgever."""
+    from google.auth import jwt
+
+    try:
+        claims = jwt.decode(token, certs=iap_sleutels(), audience=audience)
+    except ValueError:  # sleutel net geroteerd: één keer vers ophalen
+        claims = jwt.decode(token, certs=iap_sleutels(vers=True), audience=audience)
+    if claims.get("iss") != IAP_UITGEVER:
+        raise ValueError(f"Onverwachte uitgever {claims.get('iss')}")
+    return str(claims["email"]).lower()
+
+
 def gebruiker(request: Request) -> str:
-    """E-mail van de ingelogde gebruiker, zoals IAP die doorgeeft ("accounts.google.com:naam@domein")."""
+    """E-mail van de ingelogde gebruiker volgens IAP.
+
+    Met IAP_AUDIENCE (in Google Cloud) uit de ondertekende JWT, zoals Google aanraadt; anders
+    uit de header "accounts.google.com:naam@domein". Daarna nog de eigen lijst TOEGESTANE_EMAILS.
+    """
     cfg: Config = request.app.state.cfg
-    waarde = request.headers.get(IAP_HEADER, "")
-    email = waarde.split(":", 1)[-1].lower()
+    email = request.headers.get(IAP_HEADER, "").split(":", 1)[-1].lower()
     if cfg.auth_uit:
         return email or "lokaal"
+    if cfg.iap_audience:
+        token = request.headers.get(IAP_JWT_HEADER)
+        if not token:
+            raise HTTPException(401, "Niet ingelogd (geen IAP)")
+        try:
+            email = iap_email(token, cfg.iap_audience)
+        except Exception as err:  # noqa: BLE001 — elke fout betekent: niet vertrouwen
+            _LOG.warning("IAP-JWT afgewezen: %s", err)
+            raise HTTPException(401, "Ongeldige IAP-handtekening") from err
     if not email:
         raise HTTPException(401, "Niet ingelogd (geen IAP)")
     if cfg.toegestane_emails and email not in [e.lower() for e in cfg.toegestane_emails]:

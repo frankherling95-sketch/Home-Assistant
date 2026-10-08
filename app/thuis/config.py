@@ -61,6 +61,9 @@ class Config:
     # Inloggen regelt Identity-Aware Proxy (IAP) vóór Cloud Run. De app controleert daarnaast
     # het e-mailadres dat IAP doorgeeft tegen deze lijst. Leeg = iedereen die IAP doorlaat.
     toegestane_emails: list[str] = field(default_factory=lambda: _lijst("TOEGESTANE_EMAILS"))
+    # Doelgroep van de IAP-JWT: /projects/NUMMER/locations/REGIO/services/thuis-app. Gezet =
+    # de ondertekende JWT controleren (aanbevolen) in plaats van alleen de e-mailheader.
+    iap_audience: str = field(default_factory=lambda: _env("IAP_AUDIENCE"))
     # Alleen lokaal: zonder IAP-header werken. Nooit in Google Cloud zetten.
     auth_uit: bool = field(default_factory=lambda: _env("THUIS_AUTH_UIT") == "1")
 
