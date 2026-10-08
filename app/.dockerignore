@@ -1,11 +1,12 @@
-__pycache__/
+tests/
+**/__pycache__/
 *.pyc
 *.egg-info/
+build/
 .pytest_cache/
 .ruff_cache/
 .venv/
 *.duckdb
 *.duckdb.wal
-.DS_Store
-.claude/worktrees/
-.claude/launch.json
+Dockerfile
+.dockerignore

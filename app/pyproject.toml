@@ -1,0 +1,37 @@
+[project]
+name = "thuis"
+version = "0.1.0"
+description = "Eigen energieplatform: Frank Energie, Easee en Kia/Hyundai in één app"
+requires-python = ">=3.12"
+dependencies = [
+  "httpx>=0.27",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "duckdb>=1.1",
+  "pytz",  # duckdb heeft het nodig voor TIMESTAMPTZ
+  "tzdata",  # zoneinfo zonder tijdzonedatabase van het OS (Windows, slanke containers)
+]
+
+[project.optional-dependencies]
+gcp = ["google-cloud-bigquery>=3.25", "google-auth>=2.30", "cryptography>=42"]  # cryptography: ES256 voor de IAP-JWT
+kia = ["hyundai_kia_connect_api>=3.30"]
+dev = ["pytest>=8", "respx>=0.21", "ruff>=0.6", "google-auth>=2.30", "cryptography>=42"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["thuis*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
+# B008: FastAPI-idioom (Depends in defaults). E501: lange SQL-regels; opmaak doet ruff format.
+ignore = ["B008", "E501"]

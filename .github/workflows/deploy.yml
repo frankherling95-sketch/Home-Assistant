@@ -1,0 +1,51 @@
+name: Deploy
+
+# Elke push naar main: eerst de tests (ci.yml), dan een nieuw image voor de app en de
+# verzamelaar. Inloggen bij Google Cloud via Workload Identity Federation: geen sleutels.
+# De variabelen komen uit deploy/setup-gcp.sh; zolang die er niet zijn, wordt deployen overgeslagen.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Naar Google Cloud
+    needs: ci
+    if: vars.GCP_WIF_PROVIDER != ''
+    runs-on: ubuntu-latest
+    env:
+      REGIO: ${{ vars.GCP_REGIO || 'europe-west4' }}
+      IMAGE: ${{ vars.GCP_REGIO || 'europe-west4' }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/thuis/thuis:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Image bouwen en pushen
+        run: |
+          gcloud auth configure-docker "$REGIO-docker.pkg.dev" --quiet
+          docker build -t "$IMAGE" app
+          docker push "$IMAGE"
+      # Alleen het image wisselt; instellingen, geheimen en IAP blijven zoals setup-gcp.sh ze zette.
+      - name: App bijwerken
+        run: gcloud run services update thuis-app --image="$IMAGE" --region="$REGIO" --quiet
+      - name: Verzamelaar bijwerken
+        run: gcloud run jobs update thuis-verzamel --image="$IMAGE" --region="$REGIO" --quiet
+      - name: Eén ronde draaien (maakt nieuwe tabellen meteen aan)
+        run: gcloud run jobs execute thuis-verzamel --region="$REGIO" --async --quiet

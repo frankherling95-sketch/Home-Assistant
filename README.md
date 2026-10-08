@@ -1,120 +1,94 @@
-# Home Assistant — configuratie als code
+# Thuis — eigen energieplatform
 
-Deze repo **is** de `/config`-map van mijn Home Assistant. Wijzigingen worden hier ontwikkeld,
-getest in CI en via de Git pull-app naar Home Assistant gehaald.
+Eén app voor stroom, gas, prijzen en het laden van de auto. Haalt de data zelf op bij
+**Frank Energie**, **Easee** en **Kia/Hyundai Connect**, bewaart de historie in **BigQuery** en
+draait volledig in **Google Cloud** achter je Google Workspace-login. Geen Home Assistant nodig.
 
 ```
-ontwikkelen ─▶ PR (tests, hassfest, config-check) ─▶ main ─▶ Git pull-app ─▶ Home Assistant
+Cloud Scheduler (elke 15 min)
+  └─▶ Cloud Run-job  thuis-verzamel ──▶ Frank Energie · Easee · Kia · Open-Meteo
+          │                         ──▶ Slim laden: lader pauzeren/hervatten (optioneel)
+          ▼                         ──▶ Google Chat-meldingen (optioneel)
+      BigQuery  (dataset thuis, EU)
+          ▲
+Cloud Run-service thuis-app  (API + web-app)  ◀── jij, ingelogd via IAP (Workspace-account)
 ```
 
-Documentatie: https://frankherling95-sketch.github.io/Home-Assistant/
+## Wat het doet
+
+| Pagina | Inhoud |
+| --- | --- |
+| Overzicht | Kosten en verbruik vandaag, prijs nu, accu, energiestromen, belangrijkste inzichten |
+| Energie | Stroom, teruglevering, gas en laden per uur/dag/maand, met vergelijking t.o.v. vorige periode |
+| Prijzen | All-in prijzen vandaag en morgen per kwartier, goedkoopste momenten, negatieve prijzen |
+| Laden | Auto en lader live, laadplan (Slim laden), laadsessies met kosten, instellingen |
+| Inzichten | Besparing door slim laden, kosten deze maand, gas t.o.v. vorige week (graaddagen), … |
+| Bronnen | Status per connector: wanneer het laatst gelukt is en wat er misging |
+
+| Desktop (licht) | Mobiel (donker) |
+| --- | --- |
+| ![Overzicht op desktop](docs/screenshots/desktop-licht-overzicht.png) | ![Energie op mobiel](docs/screenshots/mobiel-donker-energie.png) |
+| ![Prijzen op desktop, donker](docs/screenshots/desktop-donker-prijzen.png) | ![Overzicht op mobiel, licht](docs/screenshots/mobiel-licht-overzicht.png) |
+
+*Schermafdrukken met de voorbeelddata uit `python -m thuis.demo`.*
+
+**Slim laden** kiest de goedkoopste prijsblokken tot je vertrektijd, op basis van het accuniveau
+van de auto. Automatisch sturen van de Easee staat standaard **uit**: zet het pas aan als het plan
+een paar dagen klopt.
 
 ## Structuur
 
 | Pad | Wat |
 | --- | --- |
-| `configuration.yaml` | Basis: packages, dashboards, valuta EUR |
-| `packages/bronnen.yaml` | **Enige plek** waar entiteiten van Frank Energie, Kia en Easee genoemd worden |
-| `packages/energie_prijzen.yaml` | Prijsinzichten: laagste/hoogste/gemiddeld, goedkoopste moment, niveau |
-| `dashboards/energie.yaml` | Energie: totalen, vermogensbronnen, elektriciteit, gas & water, prijzen |
-| `dashboards/laden.yaml` | Auto, lader en het laadplan van Slim laden |
-| `custom_components/slim_laden/` | Eigen integratie: laden op de goedkoopste uren |
-| `blueprints/automation/slim_laden/` | Stuurt de Easee-lader op basis van Slim laden |
-| `tools/koppel-git.sh` | Eenmalig: bestaande `/config` veilig aan deze repo koppelen |
-| `tests/` | pytest tegen een echte Home Assistant-testomgeving |
-| `index.html` | GitHub Pages |
+| `app/thuis/connectors/` | Frank Energie (GraphQL), Easee (REST), Kia/Hyundai (community-bibliotheek), Open-Meteo |
+| `app/thuis/schema.py` | Alle tabellen op één plek, voor DuckDB én BigQuery |
+| `app/thuis/opslag.py` | Opslaglaag: append-only, actuele stand per sleutel, alleen gewijzigde rijen erbij |
+| `app/thuis/verzamel.py` | De verzamelaar: elke bron faalt los, uitslag per stap in de rondelog |
+| `app/thuis/inzicht.py` | Dag- en periodeoverzichten (dag/week/maand/jaar), laden uit de meterstand van de lader |
+| `app/thuis/sessies.py` | Laadsessies van inpluggen tot uitpluggen, met kosten en besparing t.o.v. direct laden |
+| `app/thuis/inzichten.py` | Inzichten voor de overzichtspagina (negatieve prijzen, besparing, gas per graaddag, …) |
+| `app/thuis/meldingen.py` | Google Chat-meldingen, elk maar één keer |
+| `app/thuis/planner.py` · `laden.py` | Laadplanning en het sturen van de lader |
+| `app/thuis/demo.py` | ±400 dagen realistische voorbeelddata met seizoenen |
+| `app/thuis/api.py` | API (`docs/api.md`) en serveert de web-app |
+| `app/web/` | Web-app zonder bouwstap (ES-modules + ECharts): zijbalk op desktop, tabbalk op mobiel, licht/donker, installeerbaar op je telefoon |
+| `deploy/` | Eenmalige inrichting van Google Cloud (Cloud Shell) en beheerscripts |
+| `docs/` | API-contract en deploy-handleiding |
 
-**Niet** in git (zie `.gitignore`, die werkt met een toestaanlijst): `secrets.yaml`, `.storage/`,
-de database, logs, `automations.yaml`/`scripts.yaml`/`scenes.yaml` (die beheert de UI) en via HACS
-geïnstalleerde integraties.
-
-## Lagen
-
-```
-Frank Energie · Kia/Hyundai · Easee     (HACS-integraties, in de UI ingesteld)
-              │
-              ▼
-packages/bronnen.yaml                   stabiele namen: sensor.stroomprijs_nu, sensor.auto_accuniveau, …
-              │
-              ├─▶ packages/energie_prijzen.yaml     inzichten
-              ├─▶ Slim laden                       planning  ─▶ blueprint ─▶ Easee
-              ▼
-dashboards/*.yaml                        alleen stabiele namen
-```
-
-Andere auto, lader of leverancier: alleen `packages/bronnen.yaml` aanpassen.
-
-## Eerste keer instellen
-
-1. **Backup**: Instellingen → Systeem → Back-ups → nu maken.
-2. **HACS-integraties** installeren en instellen: Frank Energie, Easee, Kia/Hyundai Connect.
-   In HACS → Frontend ook **apexcharts-card** (voor de prijsgrafieken).
-3. **Terminal & SSH-app** openen en uitvoeren:
-   ```bash
-   curl -fsSL https://raw.githubusercontent.com/frankherling95-sketch/Home-Assistant/main/tools/koppel-git.sh | bash
-   ```
-   Dit koppelt `/config` aan de repo zonder je automatiseringen, `secrets.yaml`, `.storage` of
-   HACS-integraties te wissen. Van je oude `configuration.yaml` blijft een kopie staan; het script
-   toont wat er anders is.
-4. **`packages/bronnen.yaml`**: de regels met `# PAS AAN` moeten naar jouw entiteiten wijzen
-   (Instellingen → Apparaten en diensten → Entiteiten). Stuur ze door, dan pas ik ze aan.
-5. Herstarten: `ha core restart`.
-6. **Git pull-app** installeren en instellen:
-   ```yaml
-   repository: https://github.com/frankherling95-sketch/Home-Assistant.git
-   git_branch: main
-   git_command: pull
-   auto_restart: true
-   restart_ignore: [dashboards/, README.md, index.html, tests/, .github/]
-   repeat: { active: true, interval: 300 }
-   ```
-   Start de app pas ná stap 3: een eerste clone door de app zelf wist `.yaml`-bestanden die
-   niet in de repo staan.
-7. **Slim laden** toevoegen (Instellingen → Integratie toevoegen) met `sensor.stroomprijs_nu`
-   en `sensor.auto_accuniveau`, en een automatisering maken van de blueprint *Slim laden → Easee*.
-8. **Energie-instellingen** (Instellingen → Dashboards → Energie): bij netverbruik
-   *Gebruik een entiteit met de huidige prijs* → `sensor.stroomprijs_nu`. Optioneel bij
-   *Individuele apparaten*: `sensor.lader_energie_totaal`.
-
-Daarna: wijzigingen komen binnen 5 minuten na een merge naar `main` vanzelf binnen. De Git pull-app
-draait eerst een config-check en herstart alleen als die slaagt.
-
-## Slim laden
-
-Laadt de auto op de goedkoopste prijsblokken vóór de vertrektijd.
-
-1. Benodigde energie = `(doel-SoC − SoC) × capaciteit ÷ rendement`. Onbekende SoC telt als leeg.
-2. Alle prijsblokken (uur of kwartier) tussen nu en de vertrektijd, goedkoopste eerst, tot de energie gedekt is.
-3. `Nu laden` = aan als het huidige blok in het plan zit, **of** de prijs op/onder *Altijd laden onder* ligt
-   (standaard € 0,00 → gratis/negatieve uren altijd meepakken, tot 100%).
-4. Herberekend elke minuut en direct bij een nieuwe prijs of SoC.
-
-Prijzen voor morgen komen rond 13:00; daarvoor is het plan soms `volledig: false`.
-
-| Entiteit (vast, onafhankelijk van taal) | Functie |
-| --- | --- |
-| `binary_sensor.slim_laden_charge_now` | Stuursignaal; attribuut `reden` |
-| `sensor.slim_laden_plan_start` / `_plan_end` | Eerste/laatste blok; attribuut `blokken` |
-| `sensor.slim_laden_needed_energy` | kWh uit het net |
-| `sensor.slim_laden_estimated_cost` / `_average_price` | Op basis van de all-in prijs |
-| `number.slim_laden_target_soc` · `time.slim_laden_departure` | Doel-SoC · vertrektijd |
-| `number.slim_laden_cheap_threshold` | Prijsdrempel in €/kWh |
-| `switch.slim_laden_enabled` | Uit = gewoon laden |
-
-Zet in de Easee-app geen eigen laadschema aan; dat vecht met de blueprint.
-
-## Ontwikkelen en testen
+## Lokaal draaien (zonder accounts)
 
 ```bash
-pip install pytest-homeassistant-custom-component
+cd app
+pip install -e ".[dev]"
+python -m thuis.demo                       # realistische voorbeelddata in thuis.duckdb
+THUIS_AUTH_UIT=1 uvicorn thuis.api:app     # http://localhost:8000
 pytest
 ```
 
-CI (`.github/workflows/validate.yml`) draait pytest, de Home Assistant-configcheck, hassfest en de
-HACS-validatie. `planner.py` heeft geen Home Assistant-afhankelijkheden; daar zit de rekenlogica.
+Met echte accounts lokaal: zet `FRANK_EMAIL`, `FRANK_WACHTWOORD`, `EASEE_GEBRUIKER`, … (zie
+`app/thuis/config.py`) en draai `python -m thuis.verzamel`.
+
+| Variabele | Waarvoor |
+| --- | --- |
+| `FRANK_EMAIL`, `FRANK_WACHTWOORD`, `FRANK_SITE` | Verbruik en kosten (prijzen zijn openbaar) |
+| `EASEE_GEBRUIKER`, `EASEE_WACHTWOORD`, `EASEE_LADER` | Lader; `EASEE_LADER` alleen bij meer laders |
+| `KIA_GEBRUIKER`, `KIA_WACHTWOORD`, `KIA_PIN`, `KIA_MERK` | Auto (`kia`, `hyundai` of `genesis`) |
+| `THUIS_LAT`, `THUIS_LON` | Plaats voor het weer; standaard De Bilt |
+| `GOOGLE_CHAT_WEBHOOK` | Meldingen in een Google Chat-ruimte; leeg = geen meldingen |
+| `TOEGESTANE_EMAILS` | Wie de app mag gebruiken (naast IAP), komma-gescheiden |
+
+Wat er na versie 1.0 nog op de lijst staat: **[docs/roadmap.md](docs/roadmap.md)**.
+
+## Naar Google Cloud
+
+Zie **[docs/deploy.md](docs/deploy.md)**: één script in Cloud Shell richt alles in; daarna
+deployt elke merge naar `main` automatisch via GitHub Actions. Verwachte kosten: binnen de gratis
+laag (er moet wel een betaalaccount aan het project hangen; het script zet een budgetalarm).
 
 ## Bekende grenzen
 
-- De SoC komt via de Kia/Hyundai-cloud en ververst niet elke minuut.
-- Laadvermogen is een vaste aanname; bij een koude accu laadt de auto trager.
-- Energiebronnen en -kosten blijven in de UI ingesteld: Home Assistant kent daar geen YAML voor.
+- **Kia/Hyundai** heeft geen officiële API. De community-bibliotheek volgt wijzigingen meestal
+  snel; bij inlogproblemen is een update van `hyundai_kia_connect_api` vaak genoeg.
+- **Verbruik** komt van de slimme meter via Frank Energie, met ongeveer een dag vertraging.
+  Realtime verbruik (P1-meter) en zonnepanelen kunnen als connector worden toegevoegd zodra
+  bekend is welke apparaten het zijn.
