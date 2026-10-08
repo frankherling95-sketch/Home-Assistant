@@ -109,7 +109,8 @@ def _temperatuur(dag, graden):
 def test_week_per_dag_met_vorige_week(opslag):
     rijen = _uren("stroom", date(2026, 10, 5), 0.5, 0.2) + _uren("gas", date(2026, 10, 6), 0.1, 1.3)
     rijen += _uren("teruglevering", date(2026, 10, 6), 1.0, 0.1, uren=range(10, 14))
-    rijen += _uren("stroom", date(2026, 9, 30), 0.25, 0.2)  # vorige week
+    rijen += _uren("stroom", date(2026, 9, 28), 0.25, 0.2)  # maandag vorige week
+    rijen += _uren("stroom", date(2026, 9, 30), 1.0, 0.2)  # woensdag: valt buiten de vergelijking
     opslag.voeg_toe(VERBRUIK, rijen)
     opslag.voeg_toe(WEER, _temperatuur(date(2026, 10, 5), 8.0))
     _laadnacht(opslag)
@@ -125,13 +126,14 @@ def test_week_per_dag_met_vorige_week(opslag):
     assert r["laden"][:3] == [0.0, 0.0, 7.5]  # laden telt op de dag van de meting
     assert p["totalen"]["laden"] == {"hoeveelheid": 7.5, "kosten": 0.75, "eenheid": "kWh"}
     assert p["totalen"]["teruglevering"]["kosten"] == -0.4
-    assert p["vorige"]["stroom"]["hoeveelheid"] == 6.0 and p["vorige_label"] == "28 sep – 4 okt 2026"
+    # Meterdata t/m dinsdag: vergelijk met maandag en dinsdag van vorige week, niet de hele week.
+    assert p["vorige"]["stroom"]["hoeveelheid"] == 6.0 and p["vorige_label"] == "28 – 29 sep 2026"
 
 
 def test_jaar_per_maand(opslag):
-    opslag.voeg_toe(
-        VERBRUIK, _uren("gas", date(2026, 1, 15), 0.5, 1.4) + _uren("gas", date(2025, 3, 1), 0.1, 1.2)
-    )
+    rijen = _uren("gas", date(2026, 1, 15), 0.5, 1.4)
+    rijen += _uren("gas", date(2025, 1, 10), 0.1, 1.2) + _uren("gas", date(2025, 3, 1), 1.0, 1.2)
+    opslag.voeg_toe(VERBRUIK, rijen)
     p = periodeoverzicht(opslag, "jaar", date(2026, 7, 1))
     assert (
         p["bakjes"][0] == "2026-01"
@@ -139,7 +141,9 @@ def test_jaar_per_maand(opslag):
         and len(p["bakjes"]) == 12
     )
     assert p["reeksen"]["gas"][:2] == [12.0, None]
-    assert p["totalen"]["gas"]["kosten"] == 16.8 and p["vorige"]["gas"]["hoeveelheid"] == 2.4
+    assert p["totalen"]["gas"]["kosten"] == 16.8
+    # Meterdata t/m 15 januari: vergelijk met 1 t/m 15 januari vorig jaar, niet met maart.
+    assert p["vorige"]["gas"]["hoeveelheid"] == 2.4 and p["vorige_label"] == "1 – 15 jan 2025"
 
 
 def test_goedkoopste_venster_over_kwartieren():

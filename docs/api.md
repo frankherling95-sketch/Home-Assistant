@@ -57,10 +57,12 @@ Week/maand: bakjes per dag; jaar: per maand.
     "temperatuur": [...]
   },
   "totalen": { "...": "zelfde vorm als /api/dag totalen" },
-  "vorige":  { "...": "totalen van de hele vorige periode van hetzelfde type" },
-  "vorige_label": "28 sep – 4 okt 2026"
+  "vorige":  { "...": "totalen van de vorige periode van hetzelfde type" },
+  "vorige_label": "28 sep – 1 okt 2026"
 }
 ```
+- `vorige`: loopt de periode nog (de laatste dag met meterdata ligt vóór `tot`), dan alleen
+  dezelfde dagen van de vorige periode; `vorige_label` zegt welke.
 - Maand: `bakje_labels` = `["1", "2", ...]`, `label` = `"oktober 2026"`.
 - Jaar: `bakjes` = `["2026-01", ...]`, `bakje_labels` = `["jan", ...]`, `label` = `"2026"`.
 - `kosten` per bakje = stroom + gas − |teruglevering|.

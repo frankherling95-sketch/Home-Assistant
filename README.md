@@ -25,6 +25,13 @@ Cloud Run-service thuis-app  (API + web-app)  ◀── jij, ingelogd via IAP (W
 | Inzichten | Besparing door slim laden, kosten deze maand, gas t.o.v. vorige week (graaddagen), … |
 | Bronnen | Status per connector: wanneer het laatst gelukt is en wat er misging |
 
+| Desktop (licht) | Mobiel (donker) |
+| --- | --- |
+| ![Overzicht op desktop](docs/screenshots/desktop-licht-overzicht.png) | ![Energie op mobiel](docs/screenshots/mobiel-donker-energie.png) |
+| ![Prijzen op desktop, donker](docs/screenshots/desktop-donker-prijzen.png) | ![Overzicht op mobiel, licht](docs/screenshots/mobiel-licht-overzicht.png) |
+
+*Schermafdrukken met de voorbeelddata uit `python -m thuis.demo`.*
+
 **Slim laden** kiest de goedkoopste prijsblokken tot je vertrektijd, op basis van het accuniveau
 van de auto. Automatisch sturen van de Easee staat standaard **uit**: zet het pas aan als het plan
 een paar dagen klopt.
@@ -44,7 +51,7 @@ een paar dagen klopt.
 | `app/thuis/planner.py` · `laden.py` | Laadplanning en het sturen van de lader |
 | `app/thuis/demo.py` | ±400 dagen realistische voorbeelddata met seizoenen |
 | `app/thuis/api.py` | API (`docs/api.md`) en serveert de web-app |
-| `app/web/` | Web-app (vanilla JS + ECharts), licht/donker, installeerbaar op je telefoon |
+| `app/web/` | Web-app zonder bouwstap (ES-modules + ECharts): zijbalk op desktop, tabbalk op mobiel, licht/donker, installeerbaar op je telefoon |
 | `deploy/` | Eenmalige inrichting van Google Cloud (Cloud Shell) en beheerscripts |
 | `docs/` | API-contract en deploy-handleiding |
 

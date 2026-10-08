@@ -5,6 +5,7 @@ Lokaal: `THUIS_AUTH_UIT=1 uvicorn thuis.api:app --reload` en open http://localho
 
 from __future__ import annotations
 
+import mimetypes
 import os
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
@@ -26,6 +27,9 @@ from .sessies import laadsessies
 # In de container staat de web-app los van het geïnstalleerde pakket (THUIS_WEB=/app/web).
 WEB = Path(os.environ.get("THUIS_WEB") or Path(__file__).resolve().parent.parent / "web")
 IAP_HEADER = "x-goog-authenticated-user-email"
+# Windows geeft .js soms als text/plain door; de browser weigert dan de ES-modules.
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 
 @asynccontextmanager

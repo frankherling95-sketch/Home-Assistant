@@ -25,6 +25,7 @@ Legenda: **1.0** = zit erin · **deels** = basis zit erin, de rest volgt · **la
 | De Easee pauzeren en hervatten volgens het plan | 1.0 | Staat standaard **uit**; aanzetten in de instellingen |
 | Knop **Direct laden** (plan negeren, vol vermogen) | later | Nieuw endpoint dat de lader stuurt; tijdelijke override tot de auto is losgekoppeld |
 | Knop **Pauzeer** (nu stoppen zonder de kabel los te halen) | later | Idem |
+| Plan alleen voor momenten dat de auto thuis is | later | 1.0 plant vanaf nu tot vertrek, ook als de stekker los is (sturen gebeurt alleen als de auto aangesloten is) |
 | Kia/Hyundai alleen vaak uitlezen als de Easee zegt dat de auto aan de kabel hangt, anders ±1× per 6 uur | later | 1.0 leest alleen de gecachte status (maakt de auto niet wakker), maar wel elke ronde; minder vaak spaart ook het dagquotum van de API |
 
 ## 3. Meldingen

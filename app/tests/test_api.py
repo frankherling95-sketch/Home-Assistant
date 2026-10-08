@@ -41,7 +41,7 @@ def test_dag_en_nu(client):
     assert len(dag["uren"]) in (23, 24, 25)
     t = dag["totalen"]
     assert t["stroom"]["hoeveelheid"] > 0 and t["gas"]["eenheid"] == "m³"
-    assert 20 <= t["laden"]["hoeveelheid"] <= t["stroom"]["hoeveelheid"]  # laden zit in de netafname
+    assert 12 <= t["laden"]["hoeveelheid"] <= t["stroom"]["hoeveelheid"]  # laden zit in de netafname
     assert (
         len(dag["reeksen"]["temperatuur"]) == len(dag["uren"]) and None not in dag["reeksen"]["temperatuur"]
     )
@@ -90,9 +90,9 @@ def test_status_uit_rondelog(client):
     s = client.get("/api/status", headers=IAP).json()
     bronnen = {b["stap"]: b for b in s["bronnen"]}
     assert list(bronnen) == ["prijzen", "verbruik", "lader", "auto", "weer", "sturen", "meldingen"]
-    assert bronnen["prijzen"]["uitslag"] == "fout: HTTP 502"
-    assert bronnen["prijzen"]["laatst_ok"] == (t - timedelta(minutes=15)).isoformat()
-    assert bronnen["weer"]["uitslag"] is None and bronnen["auto"]["naam"] == "Kia Connect"
+    assert bronnen["prijzen"]["uitslag"] == "fout: HTTP 502" and bronnen["prijzen"]["tijd"] == t.isoformat()
+    assert (t - timedelta(minutes=15)).isoformat() <= bronnen["prijzen"]["laatst_ok"] < t.isoformat()
+    assert bronnen["meldingen"]["uitslag"] == "overgeslagen" and bronnen["auto"]["naam"] == "Kia Connect"
     assert s["tabellen"]["prijs"] and s["tabellen"]["melding"] is None
 
 

@@ -281,6 +281,13 @@ def periode_label(soort: str, van: date, tot: date) -> str:
         return str(van.year)
     if soort == "maand":
         return f"{MAANDEN_LANG[van.month - 1]} {van.year}"
+    return dagen_label(van, tot)
+
+
+def dagen_label(van: date, tot: date) -> str:
+    """'5 – 11 okt 2026', '28 sep – 4 okt 2026' of '29 dec 2025 – 4 jan 2026'."""
+    if van == tot:
+        return f"{van.day} {MAANDEN[van.month - 1]} {van.year}"
     if van.year != tot.year:
         return (
             f"{van.day} {MAANDEN[van.month - 1]} {van.year} – {tot.day} {MAANDEN[tot.month - 1]} {tot.year}"
@@ -372,6 +379,13 @@ def periodeoverzicht(opslag: Opslag, soort: str, dag: date) -> dict[str, Any]:
         reeksen["temperatuur"].append(round(sum(temps) / len(temps), 1) if temps else None)
 
     vvan, vtot = periode_grenzen(soort, van - timedelta(days=1))
+    vorige_label = periode_label(soort, vvan, vtot)
+    # Loopt de periode nog (of mist het eind meterdata), dan dezelfde dagen van de vorige
+    # periode vergelijken: een halve week tegen een hele week zegt niets.
+    met_meter = [d for d, c in cijfers.items() if c["verbruik"]]
+    if met_meter and max(met_meter) < tot:
+        vtot = min(vtot, vvan + (max(met_meter) - van))
+        vorige_label = dagen_label(vvan, vtot)
     return {
         "type": soort,
         "van": van.isoformat(),
@@ -382,5 +396,5 @@ def periodeoverzicht(opslag: Opslag, soort: str, dag: date) -> dict[str, Any]:
         "reeksen": reeksen,
         "totalen": _optellen(list(cijfers.values())),
         "vorige": _optellen(list(dagcijfers(opslag, vvan, vtot).values())),
-        "vorige_label": periode_label(soort, vvan, vtot),
+        "vorige_label": vorige_label,
     }

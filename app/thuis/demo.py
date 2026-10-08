@@ -20,7 +20,7 @@ from typing import Any
 from .config import TZ, Config
 from .inzicht import dag_grenzen, dagen_grenzen, vandaag
 from .opslag import DuckOpslag, Opslag, maak_opslag, nu
-from .schema import AUTO, LADER, PRIJS, STUURACTIE, TABELLEN, VERBRUIK, WEER
+from .schema import AUTO, LADER, PRIJS, RONDE, STUURACTIE, TABELLEN, VERBRUIK, WEER
 
 KWARTIER = timedelta(minutes=15)
 LAADVERMOGEN = 10.8  # kW, 3 fasen 16 A
@@ -193,7 +193,9 @@ def vul(opslag: Opslag, rond: date | None = None, dagen: int = 400, seed: int = 
             if morgen and (altijd or accu < 50 or (accu < 72 and rnd.random() < 0.2)):
                 ingeplugd, sessie = True, 0.0
                 deadline = morgen["vertrek"] - timedelta(minutes=45)
-                nodig = max((80 - accu) / 100 * ACCU_KWH / 0.9, 20 if altijd else 0)
+                # De afgedwongen nacht laadt tot 75%: dan is er vanavond weer een plan te zien.
+                doel = 75 if altijd else 80
+                nodig = max((doel - accu) / 100 * ACCU_KWH / 0.9, 12 if altijd else 0)
                 kandidaten = sorted((k for k in allin if t <= k < deadline), key=lambda k: allin[k])
                 gekozen = {}
                 for k in kandidaten:
@@ -300,6 +302,30 @@ def vul(opslag: Opslag, rond: date | None = None, dagen: int = 400, seed: int = 
     opslag.voeg_toe(AUTO, auto_rijen)
     opslag.voeg_toe(STUURACTIE, acties)
     opslag.voeg_toe(WEER, weer_rijen)
+
+    # Rondelog van de afgelopen twee uur: alles gelukt, meldingen niet ingesteld.
+    laatste_ronde = moment.replace(minute=moment.minute // 15 * 15, second=0, microsecond=0)
+    opslag.voeg_toe(
+        RONDE,
+        [
+            {
+                "tijd": laatste_ronde - i * KWARTIER,
+                "stap": stap,
+                "uitslag": uitslag,
+                "duur_s": round(rnd.uniform(0.2, 2.5), 2),
+            }
+            for i in range(8)
+            for stap, uitslag in (
+                ("prijzen", "ok"),
+                ("verbruik", "ok"),
+                ("lader", "ok"),
+                ("auto", "ok"),
+                ("weer", "ok"),
+                ("sturen", "ok"),
+                ("meldingen", "overgeslagen"),
+            )
+        ],
+    )
 
 
 def main() -> None:

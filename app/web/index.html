@@ -4,100 +4,101 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Thuis</title>
-<meta name="theme-color" content="#111318">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%2303a9f4' d='M13 2 4 14h7l-1 8 9-12h-7z'/%3E%3C/svg%3E">
+<meta name="description" content="Stroom, gas, prijzen en het laden van de auto">
+<meta name="theme-color" content="#f3f5f8">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!-- Achter IAP: zonder cookies krijgt de browser een inlogpagina in plaats van het manifest. -->
+<link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials">
+<script>
+  // Thema vóór de eerste paint zetten, anders flitst de pagina licht op.
+  try {
+    const t = new URLSearchParams(location.search).get("thema") || localStorage.getItem("thema");
+    if (t === "licht" || t === "donker") document.documentElement.dataset.theme = t;
+  } catch { /* geen opslag beschikbaar */ }
+</script>
 <link rel="stylesheet" href="style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.1/echarts.min.js" defer></script>
-<script src="app.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" defer crossorigin="anonymous"
+  integrity="sha384-Mx5lkUEQPM1pOJCwFtUICyX45KNojXbkWdYhkKUKsbv391mavbfoAmONbzkgYPzR"></script>
+<script type="module" src="js/app.js"></script>
 </head>
 <body>
-<header class="balk">
-  <span class="titel">Thuis</span>
-  <nav class="tabs" role="tablist">
-    <button role="tab" data-tab="samenvatting" aria-selected="true">Samenvatting</button>
-    <button role="tab" data-tab="elektriciteit">Elektriciteit</button>
-    <button role="tab" data-tab="gas">Gas</button>
-    <button role="tab" data-tab="laden">Laden</button>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-overzicht" viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.8l8.5 6.7V20a1 1 0 0 1-1 1H15v-6.5H9V21H4.5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-energie" viewBox="0 0 24 24"><path d="M5 20V11M10 20V5M15 20v-7M20 20V8M3 20.5h18"/></symbol>
+  <symbol id="i-prijzen" viewBox="0 0 24 24"><path d="M17.5 6.6A7 7 0 1 0 17.5 17.4M4 10.2h9M4 13.8h9"/></symbol>
+  <symbol id="i-laden" viewBox="0 0 24 24"><path d="M9 2.5V7M15 2.5V7M6.5 7h11v3.5a5.5 5.5 0 0 1-11 0zM12 16v5.5"/></symbol>
+  <symbol id="i-inzichten" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1V16h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-bronnen" viewBox="0 0 24 24"><path d="M2.5 12h4l3-7.5 5 15 3-7.5h4"/></symbol>
+  <symbol id="i-bliksem" viewBox="0 0 24 24"><path d="M13.2 2.5 5 13.6h6l-.6 7.9 8.6-11.3h-6z"/></symbol>
+  <symbol id="i-euro" viewBox="0 0 24 24"><path d="M17.5 6.6A7 7 0 1 0 17.5 17.4M4 10.2h9M4 13.8h9"/></symbol>
+  <symbol id="i-auto" viewBox="0 0 24 24"><path d="M3.5 13.5 5.6 8a2 2 0 0 1 1.9-1.3h9a2 2 0 0 1 1.9 1.3l2.1 5.5v4h-2.2M3.5 13.5v4h2.2M3.5 13.5h17M9.8 17.5h4.4"/><circle cx="7.8" cy="17.5" r="1.9"/><circle cx="16.2" cy="17.5" r="1.9"/></symbol>
+  <symbol id="i-vlam" viewBox="0 0 24 24"><path d="M12 3c1 3.2 5.5 5.3 5.5 10.5a5.5 5.5 0 0 1-11 0c0-2.6 1.4-4.3 2.6-5.3.4 1.6 1.4 2.6 2.6 2.7C11.4 8.4 10.9 5.6 12 3z"/></symbol>
+  <symbol id="i-zon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></symbol>
+  <symbol id="i-klok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-trend_op" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8M15 7h6v6"/></symbol>
+  <symbol id="i-trend_neer" viewBox="0 0 24 24"><path d="m3 7 6 6 4-4 8 8M15 17h6v-6"/></symbol>
+  <symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M14 14.6V5a2 2 0 0 0-4 0v9.6a4 4 0 1 0 4 0z"/></symbol>
+  <symbol id="i-huis" viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.8l8.5 6.7V20a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-net" viewBox="0 0 24 24"><path d="M8 21 12 3l4 18M6.5 9h11M5 15h14M9.6 14.6 15 9M14.4 14.6 9 9"/></symbol>
+  <symbol id="i-vorige" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
+  <symbol id="i-volgende" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+  <symbol id="i-vink" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-kruis" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-pauze" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-let_op" viewBox="0 0 24 24"><path d="M12 3.5 2.5 20h19zM12 10v4.5M12 17.2v.1"/></symbol>
+  <symbol id="i-thema-systeem" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17a8.5 8.5 0 0 0 0-17z" fill="currentColor"/></symbol>
+  <symbol id="i-thema-licht" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></symbol>
+  <symbol id="i-thema-donker" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></symbol>
+</svg>
+
+<a class="overslaan" href="#inhoud">Naar de inhoud</a>
+<div class="schil">
+  <nav class="zijbalk" aria-label="Hoofdmenu">
+    <div class="merk"><svg class="ic vol" style="color:var(--accent)"><use href="#i-bliksem"/></svg>Thuis</div>
+    <ul class="menu">
+      <li><a href="#/overzicht" data-pagina="overzicht"><svg class="ic"><use href="#i-overzicht"/></svg>Overzicht</a></li>
+      <li><a href="#/energie" data-pagina="energie"><svg class="ic"><use href="#i-energie"/></svg>Energie</a></li>
+      <li><a href="#/prijzen" data-pagina="prijzen"><svg class="ic"><use href="#i-prijzen"/></svg>Prijzen</a></li>
+      <li><a href="#/laden" data-pagina="laden"><svg class="ic"><use href="#i-laden"/></svg>Laden</a></li>
+      <li><a href="#/inzichten" data-pagina="inzichten"><svg class="ic"><use href="#i-inzichten"/></svg>Inzichten</a></li>
+      <li><a href="#/bronnen" data-pagina="bronnen"><svg class="ic"><use href="#i-bronnen"/></svg>Bronnen<span class="status-stip" data-gezondheid></span></a></li>
+    </ul>
+    <div class="zijbalk-voet">
+      <div class="segment vol" role="group" aria-label="Weergave" id="thema-keuze">
+        <button type="button" data-thema="systeem" aria-pressed="true">Systeem</button>
+        <button type="button" data-thema="licht" aria-pressed="false">Licht</button>
+        <button type="button" data-thema="donker" aria-pressed="false">Donker</button>
+      </div>
+      <div class="gebruiker" id="gebruiker"></div>
+    </div>
   </nav>
-</header>
 
-<main>
-  <section data-paneel="samenvatting" class="raster">
-    <article class="kaart">
-      <h2>Totalen</h2>
-      <div class="tabel-wrap"><table class="totalen" id="totalen"></table></div>
-    </article>
-    <article class="kaart">
-      <h2>Stroomprijs <span class="sub" id="prijs-sub"></span></h2>
-      <div class="grafiek" id="g-prijs"></div>
-      <div class="cijfers" id="prijs-cijfers"></div>
-    </article>
-    <article class="kaart">
-      <h2>Nu</h2>
-      <div class="tegels" id="nu-tegels"></div>
-    </article>
-  </section>
+  <div class="hoofd">
+    <header class="kop">
+      <h1 id="paginatitel">Overzicht</h1>
+      <div class="rechts">
+        <a class="icoonknop gezondheid" href="#/bronnen" id="gezondheid" aria-label="Bronnen">
+          <span class="status-stip" data-gezondheid></span>
+        </a>
+        <button class="icoonknop themaknop" type="button" id="themaknop" aria-label="Weergave: systeem">
+          <svg class="ic"><use href="#i-thema-systeem"/></svg>
+        </button>
+      </div>
+    </header>
+    <main id="inhoud" tabindex="-1"></main>
+  </div>
 
-  <section data-paneel="elektriciteit" class="raster" hidden>
-    <article class="kaart breed">
-      <h2>Elektriciteit <span class="pil" id="stroom-totaal"></span></h2>
-      <div class="grafiek hoog" id="g-stroom"></div>
-    </article>
-    <article class="kaart">
-      <h2>Laden</h2>
-      <div class="grafiek" id="g-laden"></div>
-    </article>
-    <article class="kaart">
-      <h2>Kosten per uur</h2>
-      <div class="grafiek" id="g-kosten"></div>
-    </article>
-  </section>
+  <nav class="tabbalk" aria-label="Hoofdmenu">
+    <a href="#/overzicht" data-pagina="overzicht"><svg class="ic"><use href="#i-overzicht"/></svg>Overzicht</a>
+    <a href="#/energie" data-pagina="energie"><svg class="ic"><use href="#i-energie"/></svg>Energie</a>
+    <a href="#/prijzen" data-pagina="prijzen"><svg class="ic"><use href="#i-prijzen"/></svg>Prijzen</a>
+    <a href="#/laden" data-pagina="laden"><svg class="ic"><use href="#i-laden"/></svg>Laden</a>
+    <a href="#/inzichten" data-pagina="inzichten"><svg class="ic"><use href="#i-inzichten"/></svg>Inzichten</a>
+  </nav>
+</div>
 
-  <section data-paneel="gas" class="raster" hidden>
-    <article class="kaart breed">
-      <h2>Gasverbruik <span class="pil" id="gas-totaal"></span></h2>
-      <div class="grafiek hoog" id="g-gas"></div>
-    </article>
-  </section>
-
-  <section data-paneel="laden" class="raster" hidden>
-    <article class="kaart">
-      <h2>Auto</h2>
-      <div class="accu"><div class="accu-vulling" id="accu-vulling"></div><span id="accu-tekst">–</span></div>
-      <div class="tegels" id="auto-tegels"></div>
-    </article>
-    <article class="kaart">
-      <h2>Lader</h2>
-      <div class="tegels" id="lader-tegels"></div>
-    </article>
-    <article class="kaart breed">
-      <h2>Laadplan <span class="pil" id="plan-status"></span></h2>
-      <div class="grafiek" id="g-plan"></div>
-      <div class="tegels" id="plan-tegels"></div>
-    </article>
-    <article class="kaart">
-      <h2>Instellingen</h2>
-      <form id="instellingen" class="formulier">
-        <label>Doel accu <span><input name="doel_pct" type="number" min="10" max="100" step="5"> %</span></label>
-        <label>Vertrektijd <input name="vertrek" type="time" required></label>
-        <label>Accucapaciteit <span><input name="capaciteit_kwh" type="number" min="5" max="200" step="0.1"> kWh</span></label>
-        <label>Laadvermogen <span><input name="vermogen_kw" type="number" min="1" max="22" step="0.1"> kW</span></label>
-        <label>Laadrendement <span><input name="rendement_pct" type="number" min="50" max="100" step="1"> %</span></label>
-        <label>Altijd laden onder <span>€ <input name="altijd_onder" type="number" min="-1" max="1" step="0.01"> /kWh</span></label>
-        <label class="schakel">Lader automatisch sturen <input name="sturen" type="checkbox"></label>
-        <button type="submit">Opslaan</button>
-        <output id="instellingen-melding"></output>
-      </form>
-    </article>
-  </section>
-
-  <p class="melding" id="melding" hidden></p>
-</main>
-
-<footer class="datumbalk" id="datumbalk">
-  <button id="vorige" aria-label="Vorige dag">‹</button>
-  <button id="datum" class="datum"></button>
-  <button id="volgende" aria-label="Volgende dag">›</button>
-</footer>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<noscript><p style="padding:24px">Deze app heeft JavaScript nodig.</p></noscript>
 </body>
 </html>
