@@ -95,6 +95,12 @@ export const esc = (s) =>
 
 export const icoon = (naam, klasse = "ic") => `<svg class="${klasse}" aria-hidden="true"><use href="#i-${naam}"/></svg>`;
 
+// Foto's van auto's: vrijstaand (WebP met doorzichtige achtergrond) in img/auto/, gekozen op de naam die de auto doorgeeft.
+// BMW CarData geeft "BMW <model>" (bijv. "BMW X3 30e xDrive"); Kia en Hyundai de naam uit hun app.
+// Een auto zonder regel hier krijgt geen foto. Een nieuwe auto: foto in img/auto/ en een regel erbij.
+const AUTOFOTO = [[/^BMW\b.*\bX3\b/i, "img/auto/bmw-x3.webp"]];
+export const autoFoto = (naam) => AUTOFOTO.find(([patroon]) => patroon.test(naam || ""))?.[1] ?? null;
+
 // ── datums (lokale kalenderdagen als "YYYY-MM-DD") ────────────────────────────
 
 export const isoDatum = (d) => d.toLocaleDateString("sv-SE", { timeZone: TZ });

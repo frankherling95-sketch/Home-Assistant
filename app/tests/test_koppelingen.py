@@ -215,7 +215,7 @@ def test_kia_koppelen_bewaart_token_zonder_wachtwoord(nep_kia):
 
 def test_overzicht_toont_status_zonder_geheimen():
     data = {
-        "FRANK_EMAIL": "frank@herling.nl",
+        "FRANK_EMAIL": "frank@voorbeeld.nl",
         "FRANK_WACHTWOORD": "oud",
         "koppelingen": {
             "easee": {"tokens": {"access_token": "GEHEIM"}, "account": "+31612345678", "status": "opnieuw"},
@@ -228,7 +228,7 @@ def test_overzicht_toont_status_zonder_geheimen():
         },
     }
     uit = {d["dienst"]: d for d in overzicht(data)}
-    assert uit["frank"]["status"] == "script" and uit["frank"]["account"] == "fr…@herling.nl"
+    assert uit["frank"]["status"] == "script" and uit["frank"]["account"] == "fr…@voorbeeld.nl"
     assert uit["easee"]["status"] == "opnieuw" and uit["easee"]["account"] == "+316…78"
     assert uit["kia"]["status"] == "ok" and uit["google_chat"]["status"] == "niet"
     assert "GEHEIM" not in json.dumps(uit) and "oud" not in json.dumps(uit)

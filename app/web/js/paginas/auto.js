@@ -1,7 +1,7 @@
 // Auto: alles wat de auto doorgeeft (BMW CarData, Kia/Hyundai Connect): accu en laden, rijden,
 // onderhoud, deuren en ramen, locatie en laadhistorie. Wat de auto niet doorgeeft, blijft weg.
 
-import { api, css, datumKort, esc, euro, getal, isoDatum, klok, meldFout, relatief, toast } from "../basis.js";
+import { api, autoFoto, css, datumKort, esc, euro, getal, isoDatum, klok, meldFout, relatief, toast } from "../basis.js";
 import { basis, grafiek, ruimOp, staven } from "../grafiek.js";
 import { kaart, leeg, melding, pil, skeletKaart, tegel } from "../onderdelen.js";
 
@@ -103,6 +103,13 @@ function teken(main, a, params, ctx) {
 
 // ── kaarten ───────────────────────────────────────────────────────────────────
 
+/** Met een foto van de auto (zie autoFoto in basis.js) staat die rechts naast het percentage. */
+function fotoErbij(auto, kop) {
+  const foto = autoFoto(auto.naam);
+  if (!foto) return kop;
+  return `<div class="auto-held">${kop}<div class="auto-foto"><img src="${foto}" alt="${esc(auto.naam)}" width="688" height="336"></div></div>`;
+}
+
 function hoofdKaart(auto, d) {
   const l = d.laden || {};
   const pct = auto.accu_pct;
@@ -126,10 +133,10 @@ function hoofdKaart(auto, d) {
     sub: auto.bijgewerkt ? `bijgewerkt ${relatief(auto.bijgewerkt)}` : "",
     id: "k-auto",
     rechts: status,
-    inhoud: `<div class="auto-kop">
+    inhoud: `${fotoErbij(auto, `<div class="auto-kop">
         <div class="groot">${getal(pct, 0)}<small>%</small></div>
         <div class="zacht">${auto.bereik_km != null ? `${getal(auto.bereik_km, 0)} km bereik` : ""}${l.bereik_bij_doel_km != null ? `, ${getal(l.bereik_bij_doel_km, 0)} km bij ${getal(doel, 0)}%` : ""}</div>
-      </div>
+      </div>`)}
       <div class="accu" role="meter" aria-label="Accu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct ?? 0)}">
         <div class="vulling" style="width:${pct ?? 0}%"></div>
         ${doel != null ? `<div class="doel" style="left:${doel}%" title="Laaddoel ${doel}%"></div>` : ""}

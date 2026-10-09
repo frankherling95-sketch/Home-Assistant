@@ -4,6 +4,8 @@ import { css } from "./basis.js";
 
 const actief = new Set();
 const asGetal = new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 2 });
+/** Gloed rond staven en lijnen: 0 in licht, groter in donker (--gloed-grafiek). */
+const gloed = () => Number(css("--gloed-grafiek")) || 0;
 
 export function grafiek(el) {
   if (!window.echarts) {
@@ -50,7 +52,7 @@ export function basis(extra = {}) {
         borderWidth: 1,
         padding: [8, 12],
         textStyle: { color: css("--inkt"), fontSize: 13 },
-        extraCssText: "border-radius:10px;box-shadow:0 6px 24px rgb(0 0 0 / .14)",
+        extraCssText: `border-radius:10px;box-shadow:${css("--schaduw-zwevend")}`,
       },
       xAxis: {
         type: "category",
@@ -78,7 +80,7 @@ export function staven(naam, data, kleur, { stapel, negatief = false, ...rest } 
     data,
     barMaxWidth: 18,
     barCategoryGap: "28%",
-    itemStyle: { color: kleur, borderRadius: negatief ? [0, 0, 4, 4] : [4, 4, 0, 0] },
+    itemStyle: { color: kleur, borderRadius: negatief ? [0, 0, 4, 4] : [4, 4, 0, 0], shadowBlur: gloed(), shadowColor: kleur },
     emphasis: { disabled: true },
     ...rest,
   };
@@ -88,7 +90,7 @@ export function staven(naam, data, kleur, { stapel, negatief = false, ...rest } 
 export function gekleurd(waarde, kleur) {
   return {
     value: waarde,
-    itemStyle: { color: kleur, borderRadius: waarde < 0 ? [0, 0, 4, 4] : [4, 4, 0, 0] },
+    itemStyle: { color: kleur, borderRadius: waarde < 0 ? [0, 0, 4, 4] : [4, 4, 0, 0], shadowBlur: gloed(), shadowColor: kleur },
   };
 }
 
@@ -101,7 +103,7 @@ export function lijn(naam, data, kleur, rest = {}) {
     symbolSize: 8,
     showSymbol: false,
     connectNulls: false,
-    lineStyle: { color: kleur, width: 2 },
+    lineStyle: { color: kleur, width: 2, shadowBlur: gloed(), shadowColor: kleur },
     itemStyle: { color: kleur, borderColor: css("--oppervlak"), borderWidth: 2 },
     ...rest,
   };

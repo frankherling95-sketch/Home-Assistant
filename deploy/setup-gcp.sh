@@ -7,7 +7,7 @@
 #
 # Het script is herhaalbaar: wat al bestaat, blijft staan of wordt bijgewerkt. Instellen kan
 # met omgevingsvariabelen vóór het commando, bijvoorbeeld:
-#   EMAILS=frank@herling.nl,partner@herling.nl BOUW=1 bash deploy/setup-gcp.sh
+#   EMAILS=frank@voorbeeld.nl,partner@voorbeeld.nl BOUW=1 bash deploy/setup-gcp.sh
 #
 #   PROJECT      Google Cloud-project (standaard: het actieve project in gcloud)
 #   REGIO        standaard europe-west4 (Nederland)

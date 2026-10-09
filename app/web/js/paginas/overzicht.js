@@ -1,8 +1,8 @@
 // Overzicht: prijs nu, energiestromen, auto en lader, inzichten en de totalen.
 
 import {
-  LADER_STATUS, PLAN_REDEN, api, css, dagnaam, euro, gemiddelde, getal, goedkoopsteVenster, hoeveelheid,
-  huidigBlok, klok, niveau, plusDagen, prijs, relatief, vandaag,
+  LADER_STATUS, PLAN_REDEN, api, autoFoto, css, dagnaam, esc, euro, gemiddelde, getal, goedkoopsteVenster,
+  hoeveelheid, huidigBlok, klok, niveau, plusDagen, prijs, relatief, vandaag,
 } from "../basis.js";
 import { basis, gekleurd, grafiek, markering, regel, ruimOp, staven } from "../grafiek.js";
 import { inzichtTegel, kaart, leeg, skeletKaart, tegel, totalenTabel } from "../onderdelen.js";
@@ -83,6 +83,10 @@ function stromen(t) {
     `laden ${hoeveelheid(t.laden.hoeveelheid)} kWh`,
     `netto ${euro(kosten)}`,
   ].join(", ")}">
+    <defs><!-- gloed in donker (--stromen-gloed); over de hele viewBox, anders verdwijnen rechte lijnen -->
+      <filter id="gloed" filterUnits="userSpaceOnUse" x="0" y="0" width="400" height="300">
+        <feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter></defs>
     ${lijn("M126,142 H258", C.stroom, t.stroom.hoeveelheid)}
     ${lijn("M258,158 H126", C.terug, t.teruglevering.hoeveelheid)}
     ${lijn("M300,78 V108", C.gas, t.gas.hoeveelheid)}
@@ -156,13 +160,23 @@ function prijsGrafiek(blokken) {
 
 function autoKaart({ auto, lader, plan, instellingen }) {
   const pct = auto?.accu_pct;
-  const accu = auto
-    ? `<div class="accu" role="meter" aria-label="Accu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct ?? 0)}">
+  const doel = plan.doel_pct ?? instellingen.doel_pct;
+  const bereik = auto?.bereik_km != null ? `${getal(auto.bereik_km, 0)} km` : "";
+  const foto = autoFoto(auto?.naam);
+  const balk = (label) => `<div class="accu${(pct ?? 0) < 15 ? " laag" : ""}" role="meter" aria-label="Accu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct ?? 0)}">
         <div class="vulling" style="width:${pct ?? 0}%"></div>
-        <div class="doel" style="left:${plan.doel_pct ?? instellingen.doel_pct}%" title="Doel ${plan.doel_pct ?? instellingen.doel_pct}%"></div>
-        <span><b>${getal(pct, 0)}%</b><span class="zacht">${auto.bereik_km != null ? `${getal(auto.bereik_km, 0)} km` : ""}</span></span>
-      </div>`
-    : '<p class="leeg">Nog geen gegevens van de auto. <a href="#/koppelingen">Koppel je auto</a></p>';
+        <div class="doel" style="left:${doel}%" title="Doel ${doel}%"></div>
+        ${label}
+      </div>`;
+  // Met een foto van de auto: het percentage groot ernaast en een balk zonder tekst, zoals op de pagina Auto.
+  const accu = !auto
+    ? '<p class="leeg">Nog geen gegevens van de auto. <a href="#/koppelingen">Koppel je auto</a></p>'
+    : foto
+      ? `<div class="auto-held">
+          <div class="auto-kop"><div class="groot">${getal(pct, 0)}<small>%</small></div><div class="zacht">${bereik && `${bereik} bereik`}</div></div>
+          <div class="auto-foto"><img src="${foto}" alt="${esc(auto.naam)}" width="688" height="336"></div>
+        </div>${balk("")}`
+      : balk(`<span><b>${getal(pct, 0)}%</b><span class="zacht">${bereik}</span></span>`);
   const b = plan.blokken;
   const planTekst = b.length ? `${klok(b[0].van)}–${klok(b.at(-1).tot)}` : PLAN_REDEN[plan.reden] || plan.reden;
   return kaart({

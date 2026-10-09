@@ -29,7 +29,7 @@ def _formulier(verzoek) -> dict[str, str]:
 
 def _record(**extra):
     return {
-        "client_id": "94fc6954-0000-0000-0000-000000000000",
+        "client_id": "0a1b2c3d-0000-0000-0000-000000000000",
         "tokens": {"access_token": "A1", "refresh_token": "R1", "verloopt": time.time() + 3600},
         "vin": VIN,
         "naam": "BMW i4 eDrive40",
@@ -248,7 +248,7 @@ def test_metingen_ververst_token_en_leest_de_auto():
     assert _formulier(ververs.calls[0].request) == {
         "grant_type": "refresh_token",
         "refresh_token": "R1",
-        "client_id": "94fc6954-0000-0000-0000-000000000000",
+        "client_id": "0a1b2c3d-0000-0000-0000-000000000000",
     }
     assert lees.calls[0].request.url.params["containerId"] == "C1"
     assert lees.calls[0].request.headers["authorization"] == "Bearer A2"
@@ -429,7 +429,7 @@ def test_api_koppelen_met_code(app_met_kluis, monkeypatch):
 
     assert c.post("/api/koppelingen/bmw", json={"client_id": "x/../../y"}).status_code == 422
     assert c.post("/api/koppelingen/bmw/controleer").status_code == 409  # nog niets gestart
-    r = c.post("/api/koppelingen/bmw", json={"client_id": " 94fc6954-fc4d-4175-8168-67e2a4c5cf15 "})
+    r = c.post("/api/koppelingen/bmw", json={"client_id": " 0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d "})
     assert r.status_code == 200 and r.json() == {
         "code": {
             "code": "ABCD",
@@ -438,7 +438,7 @@ def test_api_koppelen_met_code(app_met_kluis, monkeypatch):
             "verloopt": "2026-10-08T12:05:00+00:00",
         }
     }
-    assert c.app.state.kluis.data["wachtend"]["bmw"]["client_id"] == "94fc6954-fc4d-4175-8168-67e2a4c5cf15"
+    assert c.app.state.kluis.data["wachtend"]["bmw"]["client_id"] == "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
     assert c.post("/api/koppelingen/bmw/controleer").json() == {"wacht": True, "interval": 5}
     r = c.post("/api/koppelingen/bmw/controleer").json()
     assert r["bericht"] == "Auto gevonden: BMW i4"

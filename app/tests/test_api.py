@@ -17,7 +17,7 @@ GISTEREN = nu().astimezone(TZ).date() - timedelta(days=1)
 def client(tmp_path_factory):
     mp = pytest.MonkeyPatch()
     mp.setenv("THUIS_DUCKDB_PAD", str(tmp_path_factory.mktemp("api") / "t.duckdb"))
-    mp.setenv("TOEGESTANE_EMAILS", "frank@herling.nl")
+    mp.setenv("TOEGESTANE_EMAILS", "frank@voorbeeld.nl")
     mp.delenv("THUIS_AUTH_UIT", raising=False)
     with TestClient(api_mod.app) as c:
         vul(c.app.state.opslag, rond=GISTEREN, dagen=40)  # volle dagen, los van het tijdstip van de test
@@ -25,7 +25,7 @@ def client(tmp_path_factory):
     mp.undo()
 
 
-IAP = {"x-goog-authenticated-user-email": "accounts.google.com:Frank@Herling.nl"}
+IAP = {"x-goog-authenticated-user-email": "accounts.google.com:Frank@Voorbeeld.nl"}
 
 
 def test_zonder_iap_geen_toegang(client):
@@ -115,7 +115,7 @@ def test_iap_jwt_wordt_gecontroleerd(monkeypatch, tmp_path):
     monkeypatch.setattr(api_mod, "iap_sleutels", lambda vers=False: {"k1": publiek})
     aud = "/projects/123/locations/europe-west4/services/thuis-app"
     monkeypatch.setenv("IAP_AUDIENCE", aud)
-    monkeypatch.setenv("TOEGESTANE_EMAILS", "frank@herling.nl")
+    monkeypatch.setenv("TOEGESTANE_EMAILS", "frank@voorbeeld.nl")
     monkeypatch.setenv("THUIS_DUCKDB_PAD", str(tmp_path / "j.duckdb"))
     monkeypatch.delenv("THUIS_AUTH_UIT", raising=False)
     nu_ = int(time.time())
@@ -124,7 +124,7 @@ def test_iap_jwt_wordt_gecontroleerd(monkeypatch, tmp_path):
         basis = {
             "iss": "https://cloud.google.com/iap",
             "aud": aud,
-            "email": "frank@herling.nl",
+            "email": "frank@voorbeeld.nl",
             "iat": nu_,
             "exp": nu_ + 600,
         }
@@ -135,14 +135,14 @@ def test_iap_jwt_wordt_gecontroleerd(monkeypatch, tmp_path):
         def email(t, kop=None):
             return c.get("/api/gebruiker", headers={"x-goog-iap-jwt-assertion": t, **(kop or {})})
 
-        assert email(token()).json() == {"email": "frank@herling.nl"}
+        assert email(token()).json() == {"email": "frank@voorbeeld.nl"}
         assert email(token(aud="/projects/999/x")).status_code == 401  # andere service
         assert email(token(iss="https://evil.example")).status_code == 401
         assert email(token(email="ander@x.nl")).status_code == 403
         # Alleen de header (zonder geldige JWT) is niet genoeg meer.
         assert (
             c.get(
-                "/api/gebruiker", headers={"x-goog-authenticated-user-email": "x:frank@herling.nl"}
+                "/api/gebruiker", headers={"x-goog-authenticated-user-email": "x:frank@voorbeeld.nl"}
             ).status_code
             == 401
         )
