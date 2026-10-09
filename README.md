@@ -54,7 +54,7 @@ een paar dagen klopt.
 | `app/thuis/planner.py` · `laden.py` | Laadplanning en het sturen van de lader |
 | `app/thuis/demo.py` | ±400 dagen realistische voorbeelddata met seizoenen |
 | `app/thuis/api.py` | API (`docs/api.md`) en serveert de web-app |
-| `app/web/` | Web-app zonder bouwstap (ES-modules + ECharts): zijbalk op desktop, tabbalk op mobiel, licht/donker, installeerbaar op je telefoon |
+| `app/web/` | Web-app zonder bouwstap (ES-modules + ECharts): zijbalk op desktop, tabbalk op mobiel, licht en donker (marine met neon), installeerbaar op je telefoon; foto's van auto's in `img/auto/` (zie `autoFoto` in `js/basis.js`) |
 | `deploy/` | Eenmalige inrichting van Google Cloud (Cloud Shell) en beheerscripts |
 | `docs/` | API-contract en deploy-handleiding |
 

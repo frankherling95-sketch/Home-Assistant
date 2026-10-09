@@ -61,7 +61,7 @@ function autoKaart(auto, plan) {
     klasse: "b-6 half-tablet",
     id: "k-auto",
     rechts: auto.laadt ? '<span class="pil goed"><span class="stip"></span>Laadt</span>' : "",
-    inhoud: `<div class="accu" role="meter" aria-label="Accu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}">
+    inhoud: `<div class="accu${pct < 15 ? " laag" : ""}" role="meter" aria-label="Accu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}">
         <div class="vulling" style="width:${pct}%"></div>
         <div class="doel" style="left:${plan.doel_pct}%" title="Doel ${plan.doel_pct}%"></div>
         <span><b>${getal(pct, 0)}%</b><span class="zacht">doel ${getal(plan.doel_pct, 0)}%</span></span>
