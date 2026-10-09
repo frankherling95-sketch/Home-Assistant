@@ -1,7 +1,7 @@
 // Auto: alles wat de auto doorgeeft (BMW CarData, Kia/Hyundai Connect): accu en laden, rijden,
 // onderhoud, deuren en ramen, locatie en laadhistorie. Wat de auto niet doorgeeft, blijft weg.
 
-import { api, autoFoto, css, datumKort, esc, euro, getal, isoDatum, klok, meldFout, relatief, toast } from "../basis.js";
+import { api, autoFoto, autoStand, css, datumKort, esc, euro, getal, isoDatum, klok, meldFout, relatief, toast } from "../basis.js";
 import { basis, grafiek, ruimOp, staven } from "../grafiek.js";
 import { kaart, leeg, melding, pil, skeletKaart, tegel } from "../onderdelen.js";
 
@@ -130,7 +130,7 @@ function hoofdKaart(auto, d) {
       ];
   return kaart({
     titel: auto.naam || "Auto",
-    sub: auto.bijgewerkt ? `bijgewerkt ${relatief(auto.bijgewerkt)}` : "",
+    sub: autoStand(auto),
     id: "k-auto",
     rechts: status,
     inhoud: `${fotoErbij(auto, `<div class="auto-kop">

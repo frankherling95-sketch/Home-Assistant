@@ -1,8 +1,8 @@
 // Overzicht: prijs nu, energiestromen, auto en lader, inzichten en de totalen.
 
 import {
-  LADER_STATUS, PLAN_REDEN, api, autoFoto, css, dagnaam, esc, euro, gemiddelde, getal, goedkoopsteVenster,
-  hoeveelheid, huidigBlok, klok, niveau, plusDagen, prijs, relatief, vandaag,
+  LADER_STATUS, PLAN_REDEN, api, autoFoto, autoStand, css, dagnaam, esc, euro, gemiddelde, getal, goedkoopsteVenster,
+  hoeveelheid, huidigBlok, klok, niveau, plusDagen, prijs, vandaag,
 } from "../basis.js";
 import { basis, gekleurd, grafiek, markering, regel, ruimOp, staven } from "../grafiek.js";
 import { inzichtTegel, kaart, leeg, skeletKaart, tegel, totalenTabel } from "../onderdelen.js";
@@ -191,6 +191,6 @@ function autoKaart({ auto, lader, plan, instellingen }) {
         ${tegel(b.length ? "Laadplan" : "Slim laden", planTekst)}
         ${b.length ? tegel("Kosten plan", euro(plan.kosten)) : tegel("Vertrek", `${klok(plan.vertrek)} <small>${dagnaam(plan.vertrek)}</small>`)}
       </div>`,
-    voet: `${auto?.bijgewerkt ? `Auto bijgewerkt ${relatief(auto.bijgewerkt)}. ` : ""}<a href="#/laden">Naar laden</a>`,
+    voet: `${auto?.bijgewerkt ? `Auto: ${autoStand(auto)}. ` : ""}<a href="#/laden">Naar laden</a>`,
   });
 }

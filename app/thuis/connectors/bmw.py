@@ -7,8 +7,8 @@ CarData), met "CarData API" aan.
 
 BMW staat 50 verzoeken per dag toe. De verzamelaar draait elke 15 minuten, dus de auto wordt
 niet elke ronde gevraagd: elk kwartier als hij laadt, elk half uur als de stekker erin zit en
-anders elk uur. Over elke 24 uur samen nooit meer dan 45 verzoeken; de rest blijft over voor
-koppelen en herstel.
+anders elk uur. Druk je in de app op Nu ophalen, dan meteen (zie ophalen.py). Over elke 24 uur
+samen nooit meer dan 45 verzoeken; de rest blijft over voor koppelen en herstel.
 
 Tokens: het access-token is een uur geldig, het refresh-token twee weken. Bij elke verversing
 geeft BMW een nieuw refresh-token, dus steeds het nieuwste bewaren.
@@ -349,26 +349,32 @@ class BMW:
             minuten = 60
         return timedelta(minutes=minuten)
 
-    def aan_de_beurt(self, moment: datetime) -> bool:
+    def aan_de_beurt(self, moment: datetime, gevraagd: datetime | None = None) -> bool:
+        """`gevraagd`: in de app is op Nu ophalen gedrukt; dan meteen, als dat nog niet gebeurd is."""
         wacht = self.wachttijd(moment)
         if wacht is None:
             return False
         laatst = self.record.get("laatst")
-        return not laatst or moment - datetime.fromisoformat(laatst) >= wacht - SPELING
+        if not laatst:
+            return True
+        vorige = datetime.fromisoformat(laatst)
+        return moment - vorige >= wacht - SPELING or (gevraagd is not None and vorige < gevraagd)
 
     def _ruim(self) -> bool:
         """Is er ruimte voor een extra verzoek (laadhistorie, autogegevens)?"""
         return len(self._vragen()) < ZUINIG_VANAF
 
-    def metingen(self, moment: datetime | None = None) -> list[dict[str, Any]]:
+    def metingen(
+        self, moment: datetime | None = None, gevraagd: datetime | None = None
+    ) -> list[dict[str, Any]]:
         """Eén rij voor auto_meting, of niets als de auto deze ronde niet aan de beurt is.
 
         Daarnaast staan `details` (voor auto_details) en `laadsessies` (voor auto_laadsessie)
-        klaar; die zijn leeg als er deze ronde niets nieuws is.
+        klaar; die zijn leeg als er deze ronde niets nieuws is. `gevraagd`: zie `aan_de_beurt`.
         """
         moment = moment or datetime.now(UTC)
         self.details, self.laadsessies = [], []
-        if not self.aan_de_beurt(moment):
+        if not self.aan_de_beurt(moment, gevraagd):
             return []
         self.record["laatst"] = moment.isoformat()  # ook bij een fout: niet elke ronde opnieuw
         self.gewijzigd = True

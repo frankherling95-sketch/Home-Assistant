@@ -320,6 +320,17 @@ def test_hoe_vaak_de_auto_gevraagd_wordt():
     assert not b.aan_de_beurt(nu_) and b.metingen(nu_) == []  # niet aan de beurt: geen verzoek
 
 
+def test_nu_ophalen_vraagt_de_auto_buiten_zijn_beurt():
+    nu_ = datetime.now(UTC)
+    laatst = (nu_ - timedelta(minutes=5)).isoformat()
+    b = BMW(_record(laatst=laatst))
+    assert not b.aan_de_beurt(nu_)
+    assert b.aan_de_beurt(nu_, gevraagd=nu_ - timedelta(minutes=1))  # gedrukt na het vorige verzoek
+    assert not b.aan_de_beurt(nu_, gevraagd=nu_ - timedelta(minutes=6))  # dat verzoek was er al
+    vol = BMW(_record(laatst=laatst, vragen=[nu_.timestamp() - 60] * 45))
+    assert not vol.aan_de_beurt(nu_, gevraagd=nu_ - timedelta(minutes=1))  # het dagmaximum gaat voor
+
+
 def test_naar_rij_met_terugvallers_en_mijlen():
     data = _telematisch(
         **{
@@ -393,6 +404,28 @@ def test_ronde_leest_bmw_en_bewaart_de_stand(opslag, monkeypatch):
     assert historie.calls[0].request.url.params["from"].endswith(".000Z")
 
     # Een kwartier later niet opnieuw als de vorige ronde net was: de rij komt pas de ronde erna.
+    ronde(Config(), opslag, frank=NepPrijzen(), weer=NepWeer(), kluis=kluis)
+    assert lees.call_count == 1
+
+
+@respx.mock
+def test_ronde_na_nu_ophalen_vraagt_de_auto_een_keer(opslag, monkeypatch):
+    for k in ("FRANK_EMAIL", "EASEE_GEBRUIKER", "KIA_GEBRUIKER", "GOOGLE_CHAT_WEBHOOK", "THUIS_GEHEIMEN"):
+        monkeypatch.delenv(k, raising=False)
+    lees = respx.get(f"{API}/customers/vehicles/{VIN}/telematicData").mock(
+        return_value=httpx.Response(200, json=VOL)
+    )
+    nu_ = datetime.now(UTC)
+    bmw = _record(laatst=(nu_ - timedelta(minutes=5)).isoformat(), historie_op=nu_.date().isoformat())
+    kluis = GeheugenKluis(
+        {
+            "koppelingen": {"bmw": {**bmw, "status": "ok"}},
+            "ophalen": {"gevraagd": (nu_ - timedelta(seconds=20)).isoformat()},
+        }
+    )
+    assert ronde(Config(), opslag, frank=NepPrijzen(), weer=NepWeer(), kluis=kluis)["bmw"] == "ok"
+    assert lees.call_count == 1 and opslag.lees("SELECT accu_pct FROM {auto_meting}") == [{"accu_pct": 64.0}]
+    assert kluis.data["ophalen"]  # blijft staan; de volgende ronde ziet aan "laatst" dat het gedaan is
     ronde(Config(), opslag, frank=NepPrijzen(), weer=NepWeer(), kluis=kluis)
     assert lees.call_count == 1
 

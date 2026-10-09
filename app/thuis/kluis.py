@@ -6,7 +6,8 @@ een token is ververst. Beide voegen alleen hun eigen wijzigingen samen met de ni
 zodat ze elkaars werk niet overschrijven.
 
 Vorm: {"FRANK_EMAIL": … (oude logins uit het setup-script), "koppelingen": {"frank": {…}, …},
-"wachtend": {"bmw": {…}}} (een BMW-koppeling die nog op bevestiging wacht)
+"wachtend": {"bmw": {…}} (een BMW-koppeling die nog op bevestiging wacht), "ophalen": {"gevraagd": …}
+(de knop Nu ophalen, zie ophalen.py)}
 """
 
 from __future__ import annotations
@@ -38,12 +39,16 @@ def werk_bij(
     kluis: Kluis,
     koppelingen: dict[str, dict[str, Any] | None] | None = None,
     wachtend: dict[str, dict[str, Any] | None] | None = None,
+    ophalen: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Wijzigingen per koppeling samenvoegen met de nieuwste stand en opslaan. None = verwijderen.
 
     `wachtend`: koppelingen die op een bevestiging wachten (BMW), apart van de echte.
+    `ophalen`: wanneer er in de app op Nu ophalen is gedrukt (vervangt de vorige keer).
     """
     data = kluis.lees()
+    if ophalen is not None:
+        data["ophalen"] = ophalen
     for sectie, wijzig in (("koppelingen", koppelingen), ("wachtend", wachtend)):
         if wijzig is None:
             continue

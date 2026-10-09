@@ -238,3 +238,17 @@ Standaard zonder `tabellen` (één query); `tabellen=true` voegt ze toe (een que
 - `bmw` is ook `ok` in een ronde waarin de auto niet aan de beurt was: BMW staat 50 verzoeken per
   dag toe, dus Thuis vraagt elk kwartier als de auto laadt, elk half uur met de stekker erin en
   anders elk uur (nooit meer dan 45 per 24 uur).
+
+### `POST /api/ophalen`
+Nu ophalen (de knop met de pijlen in de kop): meteen een ronde van de verzamelaar bij alle bronnen.
+De auto wordt dan ook gevraagd als hij nog niet aan de beurt is (binnen de 45 verzoeken per 24 uur
+van BMW). Wakker maken kan niet: BMW en Kia geven de laatste stand die de auto zelf heeft doorgegeven.
+```json
+{"actie": "gestart", "vanaf": "2026-10-09T16:50:00+00:00"}
+```
+- `gestart`: de job draait nu. `gepland`: de geplande ronde begint binnen 2 minuten en doet het werk.
+  `bezig`: er is de afgelopen 2 minuten al gedrukt; wacht op die ronde.
+- `{"actie": "wacht", "wacht_s": 90}`: de geplande ronde van dit kwartier loopt nog. Vraag het na
+  `wacht_s` seconden opnieuw. Twee rondes tegelijk kunnen elkaars ververste tokens ongeldig maken.
+- Klaar is de ronde zodra `GET /api/status` een `tijd` na `vanaf` geeft.
+- 409: geen job ingesteld (`THUIS_JOB`, lokaal: `python -m thuis.verzamel`). 502: de job startte niet.

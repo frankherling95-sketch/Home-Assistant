@@ -2,6 +2,7 @@
 
 import { $, $$, api, esc, icoon, legeCache, meldFout, relatief, thema, zetThema } from "./basis.js";
 import { herschaal, ruimOp } from "./grafiek.js";
+import { ophalen } from "./ophalen.js";
 import * as auto from "./paginas/auto.js";
 import * as bronnen from "./paginas/bronnen.js";
 import * as energie from "./paginas/energie.js";
@@ -109,6 +110,13 @@ async function kijkVoorNieuweRonde() {
   gezienRonde = laatste ?? gezienRonde;
 }
 
+/** Voor Nu ophalen: de laatste ronde, die daarmee ook gezien is (anders tekent de pagina twee keer). */
+async function laatsteRonde() {
+  const laatste = await gezondheid();
+  gezienRonde = laatste ?? gezienRonde;
+  return laatste;
+}
+
 // ── thema ─────────────────────────────────────────────────────────────────────
 
 const VOLGEND = { systeem: "licht", licht: "donker", donker: "systeem" };
@@ -127,6 +135,8 @@ function toonThema() {
 addEventListener("DOMContentLoaded", () => {
   for (const b of $$("#thema-keuze button")) b.addEventListener("click", () => zetThema(b.dataset.thema));
   $("#themaknop").addEventListener("click", () => zetThema(VOLGEND[thema()]));
+  $("#ophaalknop").addEventListener("click", (e) =>
+    ophalen(e.currentTarget, { laatsteRonde, ververs: () => herteken({ vers: true }) }));
   addEventListener("thema", () => {
     toonThema();
     herteken();

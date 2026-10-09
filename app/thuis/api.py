@@ -12,7 +12,7 @@ import threading
 import time
 from collections.abc import Callable, Iterator
 from contextlib import asynccontextmanager, contextmanager
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
 
@@ -22,6 +22,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, SecretStr
 
+from . import ophalen
 from .auto import auto_overzicht, zet_thuis
 from .bewaar import Bewaard, NietBewaard
 from .config import Config
@@ -358,10 +359,25 @@ def api_ontkoppel(
     return overzicht(werk_bij(k, {dienst: None}, wachtend={dienst: None}))
 
 
-def start_ronde(cfg: Config) -> None:
-    """Na het koppelen meteen een ronde, zodat de eerste gegevens er binnen een minuut zijn."""
+@app.post("/api/ophalen")
+def api_ophalen(request: Request, _: str = Depends(gebruiker), k: Kluis = Depends(kluis)) -> dict[str, Any]:
+    """Nu ophalen: meteen een ronde bij alle bronnen, ook de auto (zie ophalen.py en docs/api.md)."""
+    cfg: Config = request.app.state.cfg
     if not cfg.job:
-        return
+        raise HTTPException(409, "Nu ophalen kan alleen in Google Cloud. Lokaal: python -m thuis.verzamel")
+    moment = nu()
+    uit = ophalen.keuze(moment, ophalen.gevraagd(k.lees(), moment))
+    if uit["actie"] in ("gestart", "gepland"):
+        werk_bij(k, ophalen={"gevraagd": moment.isoformat()})  # vóór de start: de ronde leest het
+    if uit["actie"] == "gestart" and not start_ronde(cfg):
+        raise HTTPException(502, "De verzamelaar startte niet; probeer het straks nog eens.")
+    return {sleutel: w.isoformat() if isinstance(w, datetime) else w for sleutel, w in uit.items()}
+
+
+def start_ronde(cfg: Config) -> bool:
+    """Meteen een ronde (na het koppelen, of met Nu ophalen). False: niet gelukt."""
+    if not cfg.job:
+        return False
     try:
         from .kluis import _google_token
 
@@ -372,7 +388,9 @@ def start_ronde(cfg: Config) -> None:
             timeout=15,
         ).raise_for_status()
     except Exception:  # noqa: BLE001 — dan komt het binnen een kwartier vanzelf
-        _LOG.warning("Ronde na koppelen niet gestart", exc_info=True)
+        _LOG.warning("Ronde niet gestart", exc_info=True)
+        return False
+    return True
 
 
 BRONNEN = (

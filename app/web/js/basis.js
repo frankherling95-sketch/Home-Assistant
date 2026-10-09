@@ -100,6 +100,16 @@ export function relatief(iso) {
   return `${datumKort(dag)} ${klok(iso)}`;
 }
 
+/** Hoe vers de stand van de auto is. `bijgewerkt`: wanneer de auto zelf iets doorgaf; `tijd`: wanneer
+ *  Thuis het opvroeg. Een geparkeerde auto meldt niets, dan lopen die twee ver uiteen en zeggen we dat. */
+export function autoStand(auto) {
+  if (!auto?.bijgewerkt) return "";
+  const stil = auto.tijd && new Date(auto.tijd) - new Date(auto.bijgewerkt) > 30 * 60e3;
+  return stil
+    ? `stand van ${relatief(auto.bijgewerkt)}, opgehaald ${relatief(auto.tijd)}`
+    : `bijgewerkt ${relatief(auto.bijgewerkt)}`;
+}
+
 export const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
