@@ -1,7 +1,7 @@
 {
   "name": "Thuis – energie",
   "short_name": "Thuis",
-  "description": "Stroom, gas, prijzen en het laden van de auto",
+  "description": "Stroom, gas, prijzen, het laden van de auto en je slimme apparaten",
   "lang": "nl",
   "start_url": "./#/overzicht",
   "scope": "./",
@@ -16,6 +16,7 @@
   ],
   "shortcuts": [
     { "name": "Prijzen", "url": "./#/prijzen", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Laden", "url": "./#/laden", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Laden", "url": "./#/laden", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Apparaten", "url": "./#/apparaten", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

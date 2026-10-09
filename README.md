@@ -1,17 +1,19 @@
 # Thuis — eigen energieplatform
 
-Eén app voor stroom, gas, prijzen en het laden van de auto. Haalt de data zelf op bij
-**Frank Energie**, **Easee**, **Kia/Hyundai Connect** en **BMW CarData**, bewaart de historie in **BigQuery** en
-draait volledig in **Google Cloud** achter je Google Workspace-login. Geen Home Assistant nodig.
+Eén app voor stroom, gas, prijzen, het laden van de auto en je slimme apparaten. Haalt de data
+zelf op bij **Frank Energie**, **Easee**, **Kia/Hyundai Connect**, **BMW CarData** en **Tuya** (Smart Life),
+bewaart de historie in **BigQuery** en draait volledig in **Google Cloud** achter je Google
+Workspace-login. Geen Home Assistant nodig.
 
 ```
 Cloud Scheduler (elke 15 min)
-  └─▶ Cloud Run-job  thuis-verzamel ──▶ Frank Energie · Easee · Kia of BMW · Open-Meteo
+  └─▶ Cloud Run-job  thuis-verzamel ──▶ Frank Energie · Easee · Kia of BMW · Tuya · Open-Meteo
           │                         ──▶ Slim laden: lader pauzeren/hervatten (optioneel)
           ▼                         ──▶ Google Chat-meldingen (optioneel)
       BigQuery  (dataset thuis, EU)
           ▲
 Cloud Run-service thuis-app  (API + web-app)  ◀── jij, ingelogd via IAP (Workspace-account)
+          └─▶ Tuya: apparaten live bekijken en bedienen
 ```
 
 ## Wat het doet
@@ -23,6 +25,7 @@ Cloud Run-service thuis-app  (API + web-app)  ◀── jij, ingelogd via IAP (W
 | Prijzen | All-in prijzen vandaag en morgen per kwartier, goedkoopste momenten, negatieve prijzen |
 | Laden | Auto en lader live, laadplan (Slim laden), laadsessies met kosten, instellingen |
 | Auto | Alles wat de auto doorgeeft: accu en laden, kilometers per dag, onderhoud en bandenspanning, deuren en ramen, locatie, laadhistorie (ook onderweg) |
+| Apparaten | Slimme stekkers, lampen, thermostaten, rolluiken en sensoren uit Smart Life of Tuya Smart: live stand, aan en uit, helderheid, temperatuur, wat ze nu per uur kosten en wat ze vandaag verbruikten |
 | Inzichten | Besparing door slim laden, kosten deze maand, gas t.o.v. vorige week (graaddagen), … |
 | Koppelingen | Je accounts koppelen (Thuis bewaart alleen tokens, geen wachtwoorden) en de status per bron |
 
@@ -31,8 +34,9 @@ Cloud Run-service thuis-app  (API + web-app)  ◀── jij, ingelogd via IAP (W
 | ![Overzicht op desktop](docs/screenshots/desktop-licht-overzicht.png) | ![Energie op mobiel](docs/screenshots/mobiel-donker-energie.png) |
 | ![Prijzen op desktop, donker](docs/screenshots/desktop-donker-prijzen.png) | ![Overzicht op mobiel, licht](docs/screenshots/mobiel-licht-overzicht.png) |
 | ![Auto op desktop](docs/screenshots/desktop-licht-auto.png) | ![Auto op mobiel, donker](docs/screenshots/mobiel-donker-auto.png) |
+| ![Apparaten op desktop](docs/screenshots/desktop-licht-apparaten.png) | ![Apparaten op mobiel, donker](docs/screenshots/mobiel-donker-apparaten.png) |
 
-*Schermafdrukken met de voorbeelddata uit `python -m thuis.demo`.*
+*Schermafdrukken met de voorbeelddata uit `python -m thuis.demo` (apparaten: `THUIS_DEMO_APPARATEN=1`).*
 
 **Slim laden** kiest de goedkoopste prijsblokken tot je vertrektijd, op basis van het accuniveau
 van de auto. Automatisch sturen van de Easee staat standaard **uit**: zet het pas aan als het plan
@@ -42,12 +46,13 @@ een paar dagen klopt.
 
 | Pad | Wat |
 | --- | --- |
-| `app/thuis/connectors/` | Frank Energie (GraphQL), Easee (REST), Kia/Hyundai (community-bibliotheek), BMW CarData (officiële API), Open-Meteo |
+| `app/thuis/connectors/` | Frank Energie (GraphQL), Easee (REST), Kia/Hyundai (community-bibliotheek), BMW CarData (officiële API), Tuya (cloud-API, ondertekend), Open-Meteo |
 | `app/thuis/schema.py` | Alle tabellen op één plek, voor DuckDB én BigQuery |
 | `app/thuis/opslag.py` | Opslaglaag: append-only, actuele stand per sleutel, alleen gewijzigde rijen erbij |
 | `app/thuis/verzamel.py` | De verzamelaar: elke bron faalt los, uitslag per stap in de rondelog |
 | `app/thuis/inzicht.py` | Dag- en periodeoverzichten (dag/week/maand/jaar), laden uit de meterstand van de lader |
 | `app/thuis/auto.py` | De pagina Auto: kilometers per dag, thuislocatie, laadhistorie van de auto |
+| `app/thuis/apparaten.py` | De pagina Apparaten: codes van Tuya in gewone eenheden, opdrachten controleren, geschat verbruik |
 | `app/thuis/sessies.py` | Laadsessies van inpluggen tot uitpluggen, met kosten en besparing t.o.v. direct laden |
 | `app/thuis/inzichten.py` | Inzichten voor de overzichtspagina (negatieve prijzen, besparing, gas per graaddag, …) |
 | `app/thuis/meldingen.py` | Google Chat-meldingen, elk maar één keer |
@@ -99,6 +104,12 @@ laag (er moet wel een betaalaccount aan het project hangen; het script zet een b
   (My BMW → BMW CarData) een client aan met "CarData API" aan, en vul de client-ID in op de pagina
   Koppelingen. Daarna bevestig je een code op de site van BMW; je wachtwoord gaat niet via Thuis.
   De laadhistorie haalt Thuis één keer per dag op, model en bouwdatum één keer per week.
+- **Tuya** werkt via de cloud van Tuya, met een eigen (gratis) cloudproject op platform.tuya.com
+  waaraan je je Smart Life-account koppelt; de stappen staan bij het formulier op de pagina
+  Koppelingen. Het proefabonnement (IoT Core) moet je om de paar maanden verlengen en heeft een
+  maximum aantal verzoeken per maand. Daarom vraagt Thuis per ronde alle apparaten in één verzoek,
+  bewaart het de live stand 15 seconden, en ververst de pagina Apparaten alleen zolang je hem
+  gebruikt. Lokaal via de wifi bedienen kan vanuit Cloud Run niet.
 - **Kia/Hyundai** heeft geen officiële API. De community-bibliotheek volgt wijzigingen meestal
   snel; bij inlogproblemen is een update van `hyundai_kia_connect_api` vaak genoeg.
 - **Verbruik** komt van de slimme meter via Frank Energie, met ongeveer een dag vertraging.

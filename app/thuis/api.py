@@ -18,15 +18,17 @@ from typing import Any, Literal
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Path as Pad
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, SecretStr
 
 from . import ophalen
+from .apparaten import Live, historie, verbruik_vandaag
 from .auto import auto_overzicht, zet_thuis
 from .bewaar import Bewaard, NietBewaard
 from .config import Config
-from .connectors import KoppelFout
+from .connectors import KoppelFout, KoppelingVerlopen
 from .inzicht import dagen_grenzen, dagoverzicht, laatste, periodeoverzicht, vandaag
 from .inzichten import inzichten
 from .kluis import Kluis, maak_kluis, werk_bij
@@ -54,6 +56,10 @@ async def _levensloop(app: FastAPI):
     app.state.opslag = maak_opslag(app.state.cfg)
     app.state.kluis = maak_kluis(app.state.cfg)
     app.state.bewaard = Bewaard() if app.state.cfg.bewaren else NietBewaard()
+    demo = None
+    if app.state.cfg.demo_apparaten:
+        from .demo_apparaten import DemoTuya as demo
+    app.state.apparaten = Live(lambda: app.state.kluis.lees(), demo)  # de kluis van nu (tests vervangen hem)
     # BigQuery: de verzamelaar maakt de tabellen (ook direct na elke deploy); dat scheelt
     # hier tien API-aanroepen bij elke koude start.
     if app.state.cfg.opslag != "bigquery":
@@ -70,9 +76,11 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 async def _cache_regels(request: Request, call_next):
     """Web-app altijd hervalideren (ETag maakt dat goedkoop): na een deploy meteen de nieuwe versie.
     API-antwoorden niet in de browser of onderweg bewaren: daar zitten persoonlijke gegevens in.
-    Een wijziging via de API (alles behalve GET) maakt de bewaarde antwoorden van de app leeg."""
+    Een wijziging via de API (alles behalve GET) maakt de bewaarde antwoorden van de app leeg; een
+    apparaat bedienen niet, want dat verandert niets aan wat de database weet."""
     antwoord = await call_next(request)
-    if request.method != "GET" and request.url.path.startswith("/api/"):
+    pad = request.url.path
+    if request.method != "GET" and pad.startswith("/api/") and not pad.startswith("/api/apparaten"):
         request.app.state.bewaard.leeg()
     antwoord.headers.setdefault(
         "Cache-Control", "no-store" if request.url.path.startswith("/api/") else "no-cache"
@@ -275,6 +283,9 @@ class KoppelGegevens(BaseModel):
     wachtwoord: SecretStr | None = Field(default=None, max_length=200)
     webhook: SecretStr | None = Field(default=None, max_length=500)
     client_id: str | None = Field(default=None, pattern=r"^\s*[A-Za-z0-9-]{8,64}\s*$")
+    regio: str | None = Field(default=None, pattern=r"^(eu|eu-w|us|us-e|in|cn)$")
+    access_id: str | None = Field(default=None, pattern=r"^\s*[A-Za-z0-9]{10,64}\s*$")
+    access_secret: SecretStr | None = Field(default=None, max_length=100)
 
     def als_dict(self) -> dict[str, str]:
         return {k: v.get_secret_value() if isinstance(v, SecretStr) else v for k, v in self if v is not None}
@@ -322,6 +333,7 @@ def api_koppel(
     with _dienstfouten(dienst):
         stand, bericht = koppel(dienst, gegevens.als_dict())
     data = werk_bij(k, {dienst: stand})
+    request.app.state.apparaten.vergeet()
     start_ronde(request.app.state.cfg)
     return {"bericht": bericht, "koppelingen": overzicht(data)}
 
@@ -352,11 +364,92 @@ def api_koppel_controleer(
 
 @app.delete("/api/koppelingen/{dienst}")
 def api_ontkoppel(
-    dienst: str, _: str = Depends(gebruiker), k: Kluis = Depends(kluis)
+    dienst: str, request: Request, _: str = Depends(gebruiker), k: Kluis = Depends(kluis)
 ) -> list[dict[str, Any]]:
     if dienst not in DIENSTEN:
         raise HTTPException(404, "Onbekende dienst")
-    return overzicht(werk_bij(k, {dienst: None}, wachtend={dienst: None}))
+    data = werk_bij(k, {dienst: None}, wachtend={dienst: None})
+    request.app.state.apparaten.vergeet()
+    return overzicht(data)
+
+
+# ── apparaten (Tuya) ──────────────────────────────────────────────────────────
+
+APPARAAT_ID = Pad(pattern=r"^[A-Za-z0-9_-]{4,64}$")
+
+
+class Wens(BaseModel):
+    code: str = Field(pattern=r"^[a-z0-9_]{1,64}$")
+    waarde: bool | int | float | str  # JSON true blijft bool, 1 blijft int (smart union van pydantic)
+
+
+class Bediening(BaseModel):
+    opdrachten: list[Wens] = Field(min_length=1, max_length=10)
+
+
+@contextmanager
+def _tuyafouten() -> Iterator[None]:
+    """Fouten van Tuya als tekst voor de gebruiker: sleutels weg (409), Tuya zelf (502)."""
+    from .connectors.tuya import TuyaFout
+
+    try:
+        yield
+    except KoppelingVerlopen as err:
+        raise HTTPException(
+            409, f"De koppeling met Tuya werkt niet meer. {err.reden} Koppel opnieuw bij Koppelingen."
+        ) from err
+    except TuyaFout as err:
+        raise HTTPException(502, err.uitleg) from err
+    except httpx.HTTPError as err:
+        _LOG.warning("Tuya niet bereikbaar: %s", err)
+        raise HTTPException(502, "Tuya is niet bereikbaar; probeer het zo nog eens.") from err
+
+
+@app.get("/api/apparaten")
+def api_apparaten(request: Request, _: str = Depends(gebruiker)) -> dict[str, Any]:
+    """De apparaten zoals Tuya ze nu meldt (live, hooguit 15 seconden oud; zie apparaten.Live)."""
+    with _tuyafouten():
+        return request.app.state.apparaten.lijst(vers=request.headers.get("x-thuis-vers") == "1")
+
+
+@app.post("/api/apparaten/{apparaat_id}")
+def api_bedien(
+    body: Bediening, request: Request, apparaat_id: str = APPARAAT_ID, _: str = Depends(gebruiker)
+) -> dict[str, Any]:
+    """Een apparaat bedienen: {"opdrachten": [{"code": "switch_1", "waarde": true}]}."""
+    try:
+        with _tuyafouten():
+            apparaat = request.app.state.apparaten.bedien(
+                apparaat_id, [w.model_dump() for w in body.opdrachten]
+            )
+    except LookupError as err:
+        raise HTTPException(409, str(err)) from err
+    except ValueError as err:
+        raise HTTPException(422, str(err)) from err
+    return {"apparaat": apparaat}
+
+
+@app.get("/api/apparaten/vandaag")
+def api_apparaten_vandaag(
+    request: Request, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)
+) -> dict[str, Any]:
+    """Geschat verbruik en kosten per apparaat vandaag, uit de metingen van de verzamelaar."""
+    return bewaard(request, o, lambda: verbruik_vandaag(o, vandaag()))
+
+
+@app.get("/api/apparaten/{apparaat_id}/historie")
+def api_apparaat_historie(
+    request: Request,
+    apparaat_id: str = APPARAAT_ID,
+    dagen: int = Query(1, ge=1, le=7),
+    _: str = Depends(gebruiker),
+    o: Opslag = Depends(opslag),
+) -> dict[str, Any]:
+    def maak() -> dict[str, Any]:
+        tot = nu()
+        return historie(o, apparaat_id, tot - timedelta(days=dagen), tot)
+
+    return bewaard(request, o, maak)
 
 
 @app.post("/api/ophalen")
@@ -401,6 +494,7 @@ BRONNEN = (
     ("lader", "Easee"),
     ("auto", "{auto}"),
     ("bmw", "BMW CarData"),
+    ("apparaten", "Tuya"),
     ("weer", "Open-Meteo"),
     ("sturen", "Slim laden"),
     ("meldingen", "Google Chat"),

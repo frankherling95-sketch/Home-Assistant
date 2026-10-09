@@ -93,7 +93,7 @@ def test_ronde_bron_valt_los_uit(opslag, monkeypatch):
     assert len(opslag.lees("SELECT * FROM {lader_meting}")) == 1
     assert opslag.lees("SELECT temperatuur FROM {weer}") == [{"temperatuur": 11.5}]
     log = {r["stap"]: r["uitslag"] for r in opslag.lees("SELECT stap, uitslag FROM {ronde}")}
-    assert log["verbruik"] == "fout: Frank plat" and log["prijzen"] == "ok" and len(log) == 8
+    assert log["verbruik"] == "fout: Frank plat" and log["prijzen"] == "ok" and len(log) == 9
 
 
 def test_geheimen_uit_een_json(monkeypatch):

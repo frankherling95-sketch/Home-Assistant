@@ -47,6 +47,16 @@ Legenda: **1.0** = zit erin · **erbij** = na 1.0 toegevoegd · **deels** = basi
 | Knop **Nu ophalen** als de cronjob vertraagd is | erbij | Knop in de kop: start de Cloud Run-job `thuis-verzamel` (alle bronnen, de auto ook buiten zijn beurt), maar niet tegelijk met de geplande ronde. De auto wekken kan niet via CarData |
 | Export van laadsessies en kosten naar CSV/Excel | later | Voor declaraties en de administratie |
 
+## 5. Slimme apparaten
+
+| Wens | Status | Toelichting |
+| --- | --- | --- |
+| Koppeling met Tuya (Smart Life, Tuya Smart en merken als LSC, Nedis, Calex) | erbij | Pagina Apparaten: live stand, aan en uit, helderheid, temperatuur, rolluiken, timer; snelknoppen op het overzicht. Via de cloud-API van Tuya met een eigen cloudproject |
+| Verbruik en kosten per stekker met meting | erbij | Geschat uit de metingen per kwartier, tegen de stroomprijs van dat moment |
+| Apparaten automatisch schakelen op de stroomprijs (bijv. boiler aan bij negatieve prijzen) | later | Zoals Slim laden voor de auto: een regel per apparaat, standaard uit |
+| Melding als een sensor alarm geeft of een batterij bijna leeg is | later | Via Google Chat, zoals de andere meldingen |
+| Lokaal bedienen zonder de cloud van Tuya | later | Kan niet vanuit Cloud Run; zou een klein programma thuis nodig hebben |
+
 ## Ook genoteerd tijdens de bouw
 
 - **Historie inladen**: verbruik bij Frank Energie vanaf de start van het contract en temperaturen

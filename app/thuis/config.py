@@ -107,6 +107,8 @@ class Config:
 
     # Alleen lokaal: zonder IAP-header werken. Nooit in Google Cloud zetten.
     auth_uit: bool = field(default_factory=lambda: _env("THUIS_AUTH_UIT") == "1")
+    # Alleen lokaal: nagebootste Tuya-apparaten (demo.py) in plaats van de cloud van Tuya.
+    demo_apparaten: bool = field(default_factory=lambda: _env("THUIS_DEMO_APPARATEN") == "1")
 
     @property
     def frank_login(self) -> bool:

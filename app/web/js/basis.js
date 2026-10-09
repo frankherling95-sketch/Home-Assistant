@@ -18,7 +18,9 @@ let versTot = 0;
 
 export class SessieVerlopen extends Error {}
 
-export async function api(pad, { methode = "GET", body, vers = false } = {}) {
+/** `legen: false` bij een wijziging die niets aan de opgeslagen gegevens verandert (een apparaat bedienen):
+ *  dan blijft wat de app al weet bewaard en hoeft de server niets opnieuw uit de database te halen. */
+export async function api(pad, { methode = "GET", body, vers = false, legen = true } = {}) {
   if (methode === "GET" && !vers) {
     const c = cache.get(pad);
     if (c && Date.now() - c.tijd < BEWAAR_MS) return c.belofte;
@@ -50,7 +52,7 @@ export async function api(pad, { methode = "GET", body, vers = false } = {}) {
   if (methode === "GET") {
     cache.set(pad, { tijd: Date.now(), belofte });
     belofte.catch(() => cache.delete(pad));
-  } else {
+  } else if (legen) {
     legeCache();
   }
   return belofte;

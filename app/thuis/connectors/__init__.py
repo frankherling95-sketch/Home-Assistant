@@ -12,6 +12,7 @@ class KoppelingVerlopen(RuntimeError):
     def __init__(self, dienst: str, reden: str = "") -> None:
         super().__init__(f"koppeling met {dienst} verlopen{f' ({reden})' if reden else ''}: opnieuw koppelen")
         self.dienst = dienst
+        self.reden = reden
 
 
 class KoppelFout(RuntimeError):

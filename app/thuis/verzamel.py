@@ -20,6 +20,7 @@ from collections.abc import Callable
 from datetime import timedelta
 
 from . import ophalen
+from .apparaten import meting
 from .config import TZ, Config
 from .connectors import KoppelingVerlopen
 from .connectors.frank import dagen
@@ -29,11 +30,18 @@ from .koppelingen import DIENSTEN, maak_connectoren, nieuwe_stand
 from .laden import stuur
 from .meldingen import controleer
 from .opslag import Opslag, maak_opslag, nu, voeg_toe_gewijzigd
-from .schema import AUTO, AUTO_DETAILS, AUTO_LAADSESSIE, LADER, PRIJS, RONDE, VERBRUIK, WEER
+from .schema import APPARAAT, AUTO, AUTO_DETAILS, AUTO_LAADSESSIE, LADER, PRIJS, RONDE, VERBRUIK, WEER
 
 _LOG = logging.getLogger("thuis.verzamel")
 # Welke koppeling een stap gebruikt (voor de status "opnieuw koppelen").
-DIENST_VAN_STAP = {"verbruik": "frank", "lader": "easee", "sturen": "easee", "auto": "kia", "bmw": "bmw"}
+DIENST_VAN_STAP = {
+    "verbruik": "frank",
+    "lader": "easee",
+    "sturen": "easee",
+    "auto": "kia",
+    "bmw": "bmw",
+    "apparaten": "tuya",
+}
 
 
 def ronde(
@@ -45,6 +53,7 @@ def ronde(
     weer: OpenMeteo | None = None,
     bmw: object | None = None,
     chat: object | None = None,
+    tuya: object | None = None,
     kluis: Kluis | None = None,
 ) -> dict[str, str]:
     """Voert alle stappen uit; geeft per stap 'ok', 'overgeslagen' of de fout terug."""
@@ -55,6 +64,7 @@ def ronde(
     c = maak_connectoren(cfg, data)
     c.frank, c.easee, c.kia, c.chat = frank or c.frank, easee or c.easee, kia or c.kia, chat or c.chat
     c.bmw = bmw or c.bmw
+    c.tuya = tuya or c.tuya
     weer = weer or OpenMeteo(cfg.lat, cfg.lon)
     gevraagd = ophalen.gevraagd(data, begin)  # Nu ophalen in de app: de auto ook buiten zijn beurt
     verlopen: set[str] = set()
@@ -84,6 +94,12 @@ def ronde(
         opslag.voeg_toe(AUTO_DETAILS, c.bmw.details)
         voeg_toe_gewijzigd(opslag, AUTO_LAADSESSIE, c.bmw.laadsessies)  # elke dag de laatste 30 dagen
 
+    def apparaten() -> None:
+        # Eén verzoek voor alle apparaten met hun status; specificaties alleen van nieuwe apparaten.
+        lijst = c.tuya.apparaten()
+        c.tuya.zorg_voor_specs(lijst)
+        opslag.voeg_toe(APPARAAT, [meting(a, c.tuya.specs.get(a["id"]), begin) for a in lijst])
+
     def temperatuur() -> None:
         voeg_toe_gewijzigd(opslag, WEER, weer.temperaturen(terug=2, vooruit=2))
 
@@ -108,6 +124,7 @@ def ronde(
         ("lader", c.easee is not None, lader),
         ("auto", c.kia is not None, auto),
         ("bmw", c.bmw is not None, bmw_auto),
+        ("apparaten", c.tuya is not None, apparaten),
         ("weer", True, temperatuur),
         ("sturen", c.easee is not None, sturen),  # na lader en auto: rekent met verse metingen
         ("meldingen", c.chat is not None, meldingen),  # als laatste: ziet alles van deze ronde

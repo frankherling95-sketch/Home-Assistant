@@ -3,6 +3,9 @@
 python -m thuis.demo            # ±400 dagen historie t/m morgen in thuis.duckdb
 THUIS_AUTH_UIT=1 uvicorn thuis.api:app
 
+Slimme apparaten (Tuya) erbij: THUIS_DEMO_APPARATEN=1 en Tuya als koppeling in de lokale kluis
+(zie demo_apparaten.py).
+
 Er zitten seizoenen in: 's winters meer gas en duurdere avonden, 's zomers zonnepanelen,
 teruglevering en op zonnige weekenden negatieve prijzen rond het middaguur. De auto rijdt
 dagelijks en laadt een paar keer per week in de goedkoopste kwartieren, zoals Slim laden doet.
@@ -18,6 +21,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
 from .config import TZ, Config
+from .demo_apparaten import vul_apparaten
 from .inzicht import dag_grenzen, dagen_grenzen, vandaag
 from .opslag import DuckOpslag, Opslag, maak_opslag, nu, schrijf_instellingen
 from .schema import (
@@ -357,12 +361,14 @@ def vul(opslag: Opslag, rond: date | None = None, dagen: int = 400, seed: int = 
                 ("lader", "ok"),
                 ("auto", "overgeslagen"),
                 ("bmw", "ok"),
+                ("apparaten", "ok"),
                 ("weer", "ok"),
                 ("sturen", "ok"),
                 ("meldingen", "overgeslagen"),
             )
         ],
     )
+    vul_apparaten(opslag, moment)
 
 
 def _auto_extra(
