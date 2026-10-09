@@ -15,7 +15,7 @@ from typing import Any
 from .config import TZ
 from .inzicht import MAANDEN, dag_grenzen, dagcijfers, kosten_van, lokaal, prijzen
 from .laden import STANDAARD
-from .opslag import Opslag, lees_instellingen, nu
+from .opslag import Opslag, lees_instellingen, nu, tegelijk
 from .sessies import laadsessies
 
 GRAADDAG_BASIS = 18.0  # °C; graaddagen = max(0, 18 − etmaalgemiddelde)
@@ -119,14 +119,18 @@ class Gegevens:
 def gegevens(opslag: Opslag, dag: date, moment: datetime) -> Gegevens:
     maand = dag.replace(day=1)
     vorige_maand = (maand - timedelta(days=1)).replace(day=1)
-    vermogen = float(lees_instellingen(opslag, STANDAARD)["vermogen_kw"])
-    return Gegevens(
-        dag=dag,
-        moment=moment,
-        cijfers=dagcijfers(opslag, min(vorige_maand, dag - timedelta(days=14)), dag),
-        prijzen=prijzen(opslag, "stroom", dag_grenzen(maand)[0], dag_grenzen(dag + timedelta(days=1))[1]),
-        sessies=laadsessies(opslag, dag_grenzen(maand)[0], min(moment, dag_grenzen(dag)[1]), vermogen),
+
+    def sessies() -> list[dict[str, Any]]:
+        vermogen = float(lees_instellingen(opslag, STANDAARD)["vermogen_kw"])
+        return laadsessies(opslag, dag_grenzen(maand)[0], min(moment, dag_grenzen(dag)[1]), vermogen)
+
+    cijfers, stroom, deze_maand = tegelijk(
+        opslag,
+        lambda: dagcijfers(opslag, min(vorige_maand, dag - timedelta(days=14)), dag),
+        lambda: prijzen(opslag, "stroom", dag_grenzen(maand)[0], dag_grenzen(dag + timedelta(days=1))[1]),
+        sessies,
     )
+    return Gegevens(dag=dag, moment=moment, cijfers=cijfers, prijzen=stroom, sessies=deze_maand)
 
 
 # ── de inzichten ──────────────────────────────────────────────────────────────

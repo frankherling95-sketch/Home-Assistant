@@ -37,6 +37,7 @@ jobs:
       - name: Image start en kan alles importeren
         run: |
           docker run --rm thuis python -c "import thuis.api, thuis.verzamel, google.cloud.bigquery, google.auth.crypt.es256, hyundai_kia_connect_api"
+          docker run --rm thuis python -c "from google.cloud.bigquery import Client; assert hasattr(Client, 'query_and_wait')"  # opslag.py
           test "$(docker run --rm thuis id -u)" != 0  # niet als root
 
   scripts:

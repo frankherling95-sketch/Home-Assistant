@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from .inzicht import Prijslijst, lader_metingen, prijzen
-from .opslag import Opslag
+from .opslag import Opslag, tegelijk
 
 LOS = "niet_verbonden"
 ONBEKEND = {None, "offline"}  # zegt niets over de stekker: een lopende sessie loopt door
@@ -103,10 +103,14 @@ def laadsessies(
     sessies = [s for s in vind_sessies(lader_metingen(opslag, begin, eind)) if van <= s["start"] < tot]
     if not sessies:
         return []
-    lijst = Prijslijst(prijzen(opslag, "stroom", begin, eind + timedelta(days=1)))
-    acties = opslag.lees(
-        "SELECT tijd, lader_id FROM {stuuractie} WHERE tijd >= @van AND tijd < @tot", van=begin, tot=eind
+    stroom, acties = tegelijk(
+        opslag,
+        lambda: prijzen(opslag, "stroom", begin, eind + timedelta(days=1)),
+        lambda: opslag.lees(
+            "SELECT tijd, lader_id FROM {stuuractie} WHERE tijd >= @van AND tijd < @tot", van=begin, tot=eind
+        ),
     )
+    lijst = Prijslijst(stroom)
 
     uit = []
     for s in reversed(sessies):

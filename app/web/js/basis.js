@@ -10,6 +10,11 @@ export const $$ = (sel, ouder = document) => [...ouder.querySelectorAll(sel)];
 // De data verandert alleen per ronde van de verzamelaar; bij een nieuwe ronde gaat de cache leeg.
 const cache = new Map();
 const BEWAAR_MS = 5 * 60_000;
+// De server bewaart antwoorden ook tot de volgende ronde. Na een wijziging of een nieuwe ronde vraagt
+// de app een minuut lang om verse antwoorden (header x-thuis-vers), voor het geval een andere
+// instantie van de server nog een ouder antwoord heeft.
+const VERS_MS = 60_000;
+let versTot = 0;
 
 export class SessieVerlopen extends Error {}
 
@@ -24,7 +29,11 @@ export async function api(pad, { methode = "GET", body, vers = false } = {}) {
       r = await fetch(`api/${pad}`, {
         method: methode,
         // Met deze header antwoordt IAP bij een verlopen sessie met 401 i.p.v. een redirect.
-        headers: { "content-type": "application/json", "x-requested-with": "XMLHttpRequest" },
+        headers: {
+          "content-type": "application/json",
+          "x-requested-with": "XMLHttpRequest",
+          ...(methode === "GET" && (vers || Date.now() < versTot) ? { "x-thuis-vers": "1" } : {}),
+        },
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     } catch {
@@ -42,13 +51,14 @@ export async function api(pad, { methode = "GET", body, vers = false } = {}) {
     cache.set(pad, { tijd: Date.now(), belofte });
     belofte.catch(() => cache.delete(pad));
   } else {
-    cache.clear();
+    legeCache();
   }
   return belofte;
 }
 
 export function legeCache() {
   cache.clear();
+  versTot = Date.now() + VERS_MS;
 }
 
 // ── opmaak ────────────────────────────────────────────────────────────────────

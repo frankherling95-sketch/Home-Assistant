@@ -7,6 +7,13 @@ Zonder geldige header: 401; een adres buiten `TOEGESTANE_EMAILS`: 403. Validatie
 
 Dit bestand is leidend voor backend (`app/thuis`) en frontend (`app/web`).
 
+**Bewaren.** Met BigQuery bewaart de app de antwoorden van `dag`, `periode`, `nu`, `auto`,
+`laadsessies` en `inzichten` tot de volgende ronde van de verzamelaar of het volgende kwartier, wat
+het eerst komt (`app/thuis/bewaar.py`, uit te zetten met `THUIS_BEWAREN=0`). Elk verzoek dat iets
+wijzigt (alles behalve `GET`) maakt het bewaarde leeg. Met de header `x-thuis-vers: 1` maakt de app
+het antwoord opnieuw; de web-app stuurt die een minuut lang na een wijziging of een nieuwe ronde.
+Antwoorden gaan gecomprimeerd (gzip) over de lijn.
+
 ### `GET /api/gebruiker`
 `{"email": "frank@…"}`
 

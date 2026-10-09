@@ -8,7 +8,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
 from .config import TZ
-from .opslag import Opslag, nu
+from .opslag import Opslag, nu, tegelijk
 
 MAANDEN = ("jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec")
 MAANDEN_LANG = (
@@ -214,18 +214,24 @@ def _blok(p: dict[str, Any]) -> dict[str, Any]:
 def dagoverzicht(opslag: Opslag, dag: date) -> dict[str, Any]:
     start, eind = dag_grenzen(dag)
     # Eén query voor stroom en gas (BigQuery rekent per query); een uur extra voor het eerste laadinterval.
-    alle = opslag.lees(
-        "SELECT soort, van, tot, marktprijs, allin FROM {prijs} WHERE van >= @van AND van < @tot ORDER BY van",
-        van=start - timedelta(hours=1),
-        tot=eind,
+    # De vier vragen hangen niet van elkaar af: tegelijk.
+    alle, rijen, intervallen, temperatuur = tegelijk(
+        opslag,
+        lambda: opslag.lees(
+            "SELECT soort, van, tot, marktprijs, allin FROM {prijs} WHERE van >= @van AND van < @tot ORDER BY van",
+            van=start - timedelta(hours=1),
+            tot=eind,
+        ),
+        lambda: verbruik(opslag, start, eind),
+        lambda: laad_intervallen(opslag, start, eind),
+        lambda: temperaturen(opslag, start, eind),
     )
     stroom = [p for p in alle if p["soort"] == "stroom"]
     stroomprijs = [p for p in stroom if p["van"] >= start]
     gasprijs = [p for p in alle if p["soort"] == "gas" and p["van"] >= start]
-    rijen = verbruik(opslag, start, eind)
-    laden = met_prijs(laad_intervallen(opslag, start, eind), Prijslijst(stroom))
+    laden = met_prijs(intervallen, Prijslijst(stroom))
     laden_uur = laden_per_uur(laden)
-    temp = {t["van"].replace(minute=0, second=0): t["temperatuur"] for t in temperaturen(opslag, start, eind)}
+    temp = {t["van"].replace(minute=0, second=0): t["temperatuur"] for t in temperatuur}
 
     uren = [start + timedelta(hours=i) for i in range(int((eind - start).total_seconds() // 3600))]
     per_soort = {s: [r for r in rijen if r["soort"] == s] for s in SOORTEN}
@@ -320,17 +326,23 @@ def dagcijfers(opslag: Opslag, van: date, tot: date) -> dict[date, dict[str, Any
     Alleen dagen met gegevens staan erin; `verbruik` geeft aan of er meterdata is.
     """
     start, eind = dagen_grenzen(van, tot)
+    per_dag, intervallen, temperatuur = tegelijk(
+        opslag,
+        lambda: verbruik_per_dag(opslag, start, eind),
+        lambda: geladen(opslag, start, eind),
+        lambda: temperatuur_per_dag(opslag, start, eind),
+    )
     uit: dict[date, dict[str, Any]] = defaultdict(_lege_dag)
-    for r in verbruik_per_dag(opslag, start, eind):
+    for r in per_dag:
         d = uit[r["dag"]]
         d["hoeveelheid"][r["soort"]] += r["hoeveelheid"] or 0
         d["kosten"][r["soort"]] += r["kosten"] or 0
         d["verbruik"] = True
-    for i in geladen(opslag, start, eind):
+    for i in intervallen:
         d = uit[lokaal(i["tot"])]
         d["laden_kwh"] += i["kwh"]
         d["laden_kosten"] += i["kwh"] * (i["prijs"] or 0)
-    for dag, t in temperatuur_per_dag(opslag, start, eind).items():
+    for dag, t in temperatuur.items():
         uit[dag]["temperatuur"] = t
     return dict(uit)
 
@@ -352,7 +364,11 @@ def _optellen(dagen: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
 
 def periodeoverzicht(opslag: Opslag, soort: str, dag: date) -> dict[str, Any]:
     van, tot = periode_grenzen(soort, dag)
-    cijfers = dagcijfers(opslag, van, tot)
+    # De vorige periode meteen mee (tegelijk); hoeveel dagen daarvan meetellen, blijkt pas hieronder.
+    vvan, vtot = periode_grenzen(soort, van - timedelta(days=1))
+    cijfers, vorige = tegelijk(
+        opslag, lambda: dagcijfers(opslag, van, tot), lambda: dagcijfers(opslag, vvan, vtot)
+    )
     alle_dagen = [van + timedelta(days=i) for i in range((tot - van).days + 1)]
     if soort == "jaar":
         bakjes = [f"{van.year}-{m:02d}" for m in range(1, 13)]
@@ -384,7 +400,6 @@ def periodeoverzicht(opslag: Opslag, soort: str, dag: date) -> dict[str, Any]:
         temps = [d["temperatuur"] for d in dagen if d["temperatuur"] is not None]
         reeksen["temperatuur"].append(round(sum(temps) / len(temps), 1) if temps else None)
 
-    vvan, vtot = periode_grenzen(soort, van - timedelta(days=1))
     vorige_label = periode_label(soort, vvan, vtot)
     # Loopt de periode nog (of mist het eind meterdata), dan dezelfde dagen van de vorige
     # periode vergelijken: een halve week tegen een hele week zegt niets.
@@ -401,6 +416,6 @@ def periodeoverzicht(opslag: Opslag, soort: str, dag: date) -> dict[str, Any]:
         "bakje_labels": labels,
         "reeksen": reeksen,
         "totalen": _optellen(list(cijfers.values())),
-        "vorige": _optellen(list(dagcijfers(opslag, vvan, vtot).values())),
+        "vorige": _optellen([c for d, c in vorige.items() if d <= vtot]),
         "vorige_label": vorige_label,
     }
