@@ -426,7 +426,7 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
 }
 
 /* KPI-rij: vier kleine kaarten boven de grafieken (Energie) */
-.kpi-rij { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); gap: 16px; }
+.kpi-rij { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 16px; }
 .kpi {
   background: var(--oppervlak); border: 1px solid var(--lijn); border-radius: var(--radius); padding: 14px 18px;
   min-width: 0; box-shadow: var(--schaduw-kaart);
@@ -587,11 +587,6 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
 .accu .vulling { position: absolute; inset: 0 auto 0 0; background: var(--c-laden); opacity: 0.9; transition: width 0.5s;
   box-shadow: var(--gloed-laden); }
 .accu .doel { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--inkt); opacity: 0.55; }
-.accu span { position: relative; display: flex; align-items: center; justify-content: space-between; height: 100%;
-  padding: 0 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.accu span b { color: var(--op-laden); }
-/* Onder 15% past het percentage niet op de vulling: dan op een eigen pilletje. */
-.accu.laag span b { color: var(--inkt); background: var(--oppervlak); padding: 2px 8px; border-radius: 999px; }
 
 .inzichten { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
 .inzicht { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; padding: 14px; border-radius: 10px;
@@ -674,7 +669,6 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
 
 /* ── auto ──────────────────────────────────────────────────────────────── */
 
-.auto-kop { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 12px; }
 .locatie-waar { font-size: 32px; }
 .gegevens { display: grid; grid-template-columns: minmax(0, 1fr) auto; margin: 0; }
 .gegevens dt, .gegevens dd { margin: 0; padding: 9px 0; border-bottom: 1px solid var(--lijn); }
@@ -684,15 +678,11 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
 .gegevens dt:last-of-type, .gegevens dd:last-of-type { border-bottom: 0; }
 .kaart .melding + .melding, .kaart .melding + .gegevens { margin-top: 8px; }
 .tussenkop { font-size: 14px; font-weight: 500; color: var(--inkt-2); margin: 16px 0 8px; }
-.banden { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .tekst-let-op, .tegel .waarde.tekst-let-op { color: var(--let-op); }
 .tekst-goed, .tegel .waarde.tekst-goed { color: var(--goed); }
 .tabel th.links, .tabel td.links { text-align: left; white-space: normal; }
 
 /* auto met foto (vrijstaande WebP uit img/auto/, zie autoFoto() in basis.js) */
-.auto-held { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 8px 16px; align-items: center;
-  margin-bottom: 12px; }
-.auto-held .auto-kop { margin-bottom: 0; flex-direction: column; align-items: flex-start; }
 .auto-foto { position: relative; margin: -12px 0 -8px; }
 .auto-foto img { position: relative; display: block; width: 100%; height: auto; }
 :root[data-theme="donker"] .auto-foto::before {
@@ -706,7 +696,6 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
   }
 }
 @media (max-width: 599px) {
-  .auto-held { grid-template-columns: minmax(0, 1fr); }
   .auto-foto { order: -1; margin: 0; }
 }
 
@@ -717,6 +706,10 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
 .auto-stand .groot { font-size: 64px; line-height: 1.05; }
 .auto-stand .groot small { font-size: 20px; }
 .auto-stand .bereik { color: var(--inkt-2); }
+/* De drie lijsten naast elkaar zolang ze minstens 320px breed zijn; sessies en Slim laden eerder onder elkaar. */
+.lijsten-rij { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; align-items: start; }
+@media (max-width: 1279px) { .eerder-stapelen { grid-column: span 12; } }
+@media (max-width: 599px) { .lijsten-rij { gap: 12px; } }
 #k-plan .tegels { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin-bottom: 12px; }
 @media (min-width: 600px) and (max-width: 1099px) {
   .stapel.naast { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }

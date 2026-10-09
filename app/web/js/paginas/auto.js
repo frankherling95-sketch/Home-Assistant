@@ -101,13 +101,15 @@ function teken(main, data, params, ctx) {
     </div>
     ${planKaart(plan, instellingen)}
     ${sessieKaart(a.laadsessies, sessies)}
-    ${kaart({ titel: "Slim laden", klasse: "b-4", id: "k-instellingen", inhoud: formulier(instellingen, plan) })}
+    ${kaart({ titel: "Slim laden", klasse: "b-4 eerder-stapelen", id: "k-instellingen", inhoud: formulier(instellingen, plan) })}
     ${auto ? `
       ${kaart({ titel: "Accu", sub: "laatste 7 dagen, laadmomenten gemarkeerd", klasse: "b-6 half-tablet", id: "k-accu", inhoud: '<div class="grafiek" id="g-accu" role="img" aria-label="Accuniveau over de laatste zeven dagen; de banden zijn laadmomenten"></div>' })}
       ${kmKaart(a.km_per_dag)}
-      ${ladenKaart(d.laden, auto)}
-      ${rijdenKaart(d.rijden)}
-      ${onderhoudKaart(d.onderhoud)}` : ""}
+      <div class="b-12 lijsten-rij">
+        ${ladenKaart(d.laden, auto)}
+        ${rijdenKaart(d.rijden)}
+        ${onderhoudKaart(d.onderhoud)}
+      </div>` : ""}
   </div>`;
   planGrafiek(plan, prijzen);
   if (auto) {
@@ -376,7 +378,7 @@ function sessieRijen(autoSessies, easee) {
 
 function sessieKaart(autoSessies, easee) {
   const rijen = sessieRijen(autoSessies || [], easee);
-  if (!rijen.length) return kaart({ titel: "Laadsessies", sub: "laatste 30 dagen", klasse: "b-8", id: "k-sessies", inhoud: leeg("Geen laadsessies in de laatste 30 dagen.") });
+  if (!rijen.length) return kaart({ titel: "Laadsessies", sub: "laatste 30 dagen", klasse: "b-8 eerder-stapelen", id: "k-sessies", inhoud: leeg("Geen laadsessies in de laatste 30 dagen.") });
   const som = (k) => rijen.reduce((a, s) => a + (s[k] || 0), 0);
   const tijd = (s) => {
     const dag = isoDatum(new Date(s.start));
@@ -397,7 +399,7 @@ function sessieKaart(autoSessies, easee) {
   return kaart({
     titel: "Laadsessies",
     sub: `laatste 30 dagen · ${rijen.length} ${rijen.length === 1 ? "sessie" : "sessies"}, ${hoeveelheid(som("kwh"))} kWh, ${euro(som("kosten"))}`,
-    klasse: "b-8",
+    klasse: "b-8 eerder-stapelen",
     id: "k-sessies",
     inhoud: `<div class="tabel-wrap"><table class="tabel sessies">
       <thead><tr><th>Wanneer</th><th class="links">Waar</th><th>Accu</th><th>Geladen</th><th>Kosten</th><th>Bespaard</th></tr></thead>
@@ -481,7 +483,7 @@ function ladenKaart(l = {}, auto) {
       ? `<span class="${l.laatste_resultaat === "FAILED" ? "tekst-let-op" : l.laatste_einde === "CHARGING_GOAL_REACHED" ? "tekst-goed" : ""}">${esc(vertaal(EINDE, l.laatste_einde) + (l.laatste_resultaat === "FAILED" ? " (mislukt)" : ""))}</span>`
       : null],
   ]);
-  return kaart({ titel: "Laden", sub: l.bijgewerkt ? relatief(l.bijgewerkt) : "", klasse: "b-4 half-tablet", id: "k-laden", inhoud: inhoud || leeg("De auto geeft hier niets over door.") });
+  return kaart({ titel: "Laden", sub: l.bijgewerkt ? relatief(l.bijgewerkt) : "", id: "k-laden", inhoud: inhoud || leeg("De auto geeft hier niets over door.") });
 }
 
 function rijdenKaart(r = {}) {
@@ -498,7 +500,7 @@ function rijdenKaart(r = {}) {
     ["Rijstijl: optrekken", sterren(stijl.optrekken)],
     ["Rijstijl: vooruitzien", sterren(stijl.anticiperen)],
   ]);
-  return kaart({ titel: "Rijden", sub: r.bijgewerkt ? relatief(r.bijgewerkt) : "", klasse: "b-4 half-tablet", id: "k-rijden", inhoud: inhoud || leeg("De auto geeft hier niets over door.") });
+  return kaart({ titel: "Rijden", sub: r.bijgewerkt ? relatief(r.bijgewerkt) : "", id: "k-rijden", inhoud: inhoud || leeg("De auto geeft hier niets over door.") });
 }
 
 /** Service- of Check Control-melding: BMW geeft een dict (of tekst); we tonen wat er is. */
@@ -542,7 +544,6 @@ function onderhoudKaart(o = {}) {
   return kaart({
     titel: "Onderhoud en banden",
     sub: o.bijgewerkt ? relatief(o.bijgewerkt) : "",
-    klasse: "b-4",
     id: "k-onderhoud",
     rechts: meldingen.length ? pil(`${meldingen.length} ${meldingen.length === 1 ? "melding" : "meldingen"}`, "let_op") : "",
     inhoud: lijst || meldingen.length ? `${meldingen.map((m) => melding(meldingTekst(m), "let_op")).join("")}${lijst}` : leeg("De auto geeft hier niets over door."),
