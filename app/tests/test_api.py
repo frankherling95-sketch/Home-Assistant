@@ -55,6 +55,12 @@ def test_periode(client, soort, n):
     p = client.get(f"/api/periode?type={soort}&datum={GISTEREN}", headers=IAP).json()
     assert len(p["bakjes"]) == len(p["bakje_labels"]) == (n or len(p["bakjes"]))
     assert all(len(v) == len(p["bakjes"]) for v in p["reeksen"].values())
+    r = p["reeksen"]
+    assert all(
+        k is None or abs(k - (s + g)) < 0.02
+        for k, s, g in zip(r["kosten"], r["kosten_stroom"], r["kosten_gas"], strict=True)
+        if k is not None
+    )
     assert p["totalen"]["stroom"]["hoeveelheid"] > 0 and set(p["vorige"]) == set(p["totalen"])
     assert p["van"] <= GISTEREN.isoformat() <= p["tot"]
 
@@ -93,6 +99,8 @@ def test_status_uit_rondelog(client):
     assert list(bronnen) == ["prijzen", "verbruik", "lader", "auto", "bmw", "weer", "sturen", "meldingen"]
     assert bronnen["prijzen"]["uitslag"] == "fout: HTTP 502" and bronnen["prijzen"]["tijd"] == t.isoformat()
     assert (t - timedelta(minutes=15)).isoformat() <= bronnen["prijzen"]["laatst_ok"] < t.isoformat()
+    historie = [h["uitslag"] for h in bronnen["prijzen"]["historie"]]
+    assert len(historie) <= 8 and historie[-2:] == ["ok", "fout: HTTP 502"]  # oudste eerst
     assert bronnen["meldingen"]["uitslag"] == "overgeslagen" and bronnen["auto"]["naam"] == "Kia Connect"
     assert s["tabellen"]["prijs"] and s["tabellen"]["melding"] is None
 

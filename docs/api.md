@@ -25,7 +25,7 @@ Eén dag per uur (23/24/25 uren rond de zomertijdwissel). Zonder `datum`: vandaa
   "uren": ["2026-10-06T22:00:00+00:00", "..."],
   "reeksen": {
     "stroom": [0.41, ...], "teruglevering": [0, ...], "gas": [0.08, ...], "laden": [0, ...],
-    "kosten_stroom": [0.11, ...],
+    "kosten_stroom": [0.11, ...], "kosten_gas": [0.10, ...],
     "temperatuur": [11.2, null, ...]
   },
   "prijzen": {
@@ -44,7 +44,7 @@ Eén dag per uur (23/24/25 uren rond de zomertijdwissel). Zonder `datum`: vandaa
 - `laden` is een deel van `stroom` (de lader hangt achter de meter) en telt niet apart mee in totale kosten.
 - `laden` komt uit de meterstand van de lader: het verschil tussen twee metingen telt bij het uur
   van de latere meting, tegen de prijs van het blok waar het midden van dat interval in valt.
-- `kosten_stroom` per uur = stroom − |teruglevering|.
+- `kosten_stroom` per uur = stroom − |teruglevering|; `kosten_gas` per uur = gas.
 - `temperatuur`: gemiddelde °C per uur (Open-Meteo), `null` waar onbekend.
 - Prijsblokken zijn kwartieren (of uren, voor oudere data).
 
@@ -60,7 +60,7 @@ Week/maand: bakjes per dag; jaar: per maand.
   "bakje_labels": ["ma 5", "di 6", "..."],
   "reeksen": {
     "stroom": [...], "teruglevering": [...], "gas": [...], "laden": [...],
-    "kosten": [...],
+    "kosten": [...], "kosten_stroom": [...], "kosten_gas": [...],
     "temperatuur": [...]
   },
   "totalen": { "...": "zelfde vorm als /api/dag totalen" },
@@ -72,7 +72,7 @@ Week/maand: bakjes per dag; jaar: per maand.
   dezelfde dagen van de vorige periode; `vorige_label` zegt welke.
 - Maand: `bakje_labels` = `["1", "2", ...]`, `label` = `"oktober 2026"`.
 - Jaar: `bakjes` = `["2026-01", ...]`, `bakje_labels` = `["jan", ...]`, `label` = `"2026"`.
-- `kosten` per bakje = stroom + gas − |teruglevering|.
+- `kosten` per bakje = stroom + gas − |teruglevering| = `kosten_stroom` + `kosten_gas`.
 - `null` in `stroom`/`teruglevering`/`gas`/`kosten`: geen meterdata voor dat bakje (nog niet binnen,
   of in de toekomst). `laden` is `0` voor verleden bakjes zonder laden en `null` voor de toekomst.
 - `temperatuur` = gemiddelde °C per bakje of `null`.
@@ -85,7 +85,7 @@ Week/maand: bakjes per dag; jaar: per maand.
             "bijgewerkt": "...", "tijd": "...", "km_stand": 35188, "laadvermogen_kw": 0, "laadtijd_min": null,
             "kwh_tot_vol": 31.5, "doel_pct": 80, "capaciteit_kwh": 77.4} | null,
   "lader": {"naam": "Oprit", "status": "wacht_op_start", "vermogen_kw": 0, "sessie_kwh": 32.4, "totaal_kwh": 4242.4, "tijd": "..."} | null,
-  "plan": {"nu_laden": false, "reden": "wachten", "nodig_kwh": 17.8, "kosten": 3.2, "volledig": true,
+  "plan": {"nu_laden": false, "reden": "wachten", "nodig_kwh": 17.8, "kosten": 3.2, "kosten_direct": 4.1, "volledig": true,
            "vertrek": "...", "prijs_nu": 0.283, "accu_pct": 59.3, "doel_pct": 80, "capaciteit_kwh": 77.4,
            "doel_van_auto": false, "capaciteit_van_auto": true,
            "blokken": [{"van": "...", "tot": "...", "prijs": 0.18}]},
@@ -100,6 +100,8 @@ Plan-redenen: `gepland, onder_drempel, wachten, doel_bereikt, geen_prijzen, uitg
   anders `null`.
 - Het plan rekent met de accu-inhoud van de auto als die die doorgeeft (anders de instelling), en
   nooit verder dan het laaddoel in de auto: `doel_pct` = de laagste van beide.
+- `kosten_direct`: wat dezelfde `nodig_kwh` kosten als de auto vanaf nu op vol vermogen laadt;
+  het verschil met `kosten` is wat het plan bespaart.
 
 ### `GET /api/auto`
 Alles over de auto voor de pagina Auto. Vier queries: metingen (31 dagen), de nieuwste details,
@@ -214,12 +216,13 @@ de site van BMW.
   "container" met de gegevens die het leest (accu, bereik, stekker, laadstatus).
 
 ### `GET /api/status?tabellen=true|false`
-Gezondheid per bron uit de rondelog van de verzamelaar, voor de statusstip en de pagina "Bronnen".
+Gezondheid per bron uit de rondelog van de verzamelaar, voor de statusstip en de pagina "Koppelingen".
 Standaard zonder `tabellen` (één query); `tabellen=true` voegt ze toe (een query per tabel).
 ```json
 {
   "bronnen": [
-    {"stap": "prijzen",  "naam": "Frank Energie · prijzen",  "uitslag": "ok", "tijd": "...", "laatst_ok": "..."},
+    {"stap": "prijzen",  "naam": "Frank Energie · prijzen",  "uitslag": "ok", "tijd": "...", "laatst_ok": "...",
+     "historie": [{"tijd": "...", "uitslag": "ok"}, "..."]},
     {"stap": "verbruik", "naam": "Frank Energie · verbruik", "uitslag": "fout: ...", "tijd": "...", "laatst_ok": "..."},
     {"stap": "lader",    "naam": "Easee",                    "uitslag": "overgeslagen", "tijd": "...", "laatst_ok": null},
     {"stap": "auto",     "naam": "Kia Connect",              "...": "..."},
@@ -233,6 +236,7 @@ Standaard zonder `tabellen` (één query); `tabellen=true` voegt ze toe (een que
 ```
 - `uitslag`: `ok` | `overgeslagen` | `fout: <tekst>`, of `null` als de stap de laatste 30 dagen niet draaide.
 - `tijd` = laatste ronde; `laatst_ok` = laatste ronde met `ok` (binnen 30 dagen).
+- `historie` = de laatste 8 uitslagen van die stap, oudste eerst (uit dezelfde query).
 - `tabellen` = wanneer elke tabel voor het laatst een rij kreeg (`null` = nog leeg).
 - De naam van `auto` volgt `KIA_MERK`: Kia Connect, Hyundai Bluelink of Genesis Connected.
 - `bmw` is ook `ok` in een ronde waarin de auto niet aan de beurt was: BMW staat 50 verzoeken per

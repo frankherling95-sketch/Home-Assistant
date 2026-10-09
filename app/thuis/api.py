@@ -393,6 +393,8 @@ def start_ronde(cfg: Config) -> bool:
     return True
 
 
+HISTORIE = 8  # zoveel rondes per bron op de pagina Koppelingen
+
 BRONNEN = (
     ("prijzen", "Frank Energie · prijzen"),
     ("verbruik", "Frank Energie · verbruik"),
@@ -414,17 +416,21 @@ def api_status(
     De web-app vraagt dit elke paar minuten op. BigQuery rekent minimaal 10 MB per tabel per
     query, dus standaard één query op één tabel; de tabellen (9 queries) alleen op verzoek.
     """
-    rondes = {
-        r["stap"]: r
-        for r in o.lees(
-            "SELECT stap, uitslag, tijd, laatst_ok FROM ("
-            "SELECT stap, uitslag, tijd, "
-            "MAX(CASE WHEN uitslag = 'ok' THEN tijd END) OVER (PARTITION BY stap) AS laatst_ok, "
-            "ROW_NUMBER() OVER (PARTITION BY stap ORDER BY tijd DESC) AS nr "
-            "FROM {ronde} WHERE tijd >= @sinds) WHERE nr = 1",
-            sinds=nu() - timedelta(days=30),
-        )
-    }
+    # De laatste HISTORIE uitslagen per stap in dezelfde query (zelfde tabel, dus geen extra kosten).
+    per_stap: dict[str, list[dict[str, Any]]] = {}
+    for r in o.lees(
+        "SELECT stap, uitslag, tijd, laatst_ok, nr FROM ("
+        "SELECT stap, uitslag, tijd, "
+        "MAX(CASE WHEN uitslag = 'ok' THEN tijd END) OVER (PARTITION BY stap) AS laatst_ok, "
+        "ROW_NUMBER() OVER (PARTITION BY stap ORDER BY tijd DESC) AS nr "
+        "FROM {ronde} WHERE tijd >= @sinds) WHERE nr <= @n",
+        sinds=nu() - timedelta(days=30),
+        n=HISTORIE,
+    ):
+        per_stap.setdefault(r["stap"], []).append(r)
+    for rijen in per_stap.values():
+        rijen.sort(key=lambda r: r["nr"])
+    rondes = {stap: rijen[0] for stap, rijen in per_stap.items()}
     merk = request.app.state.cfg.kia_merk.lower()
     auto = {"hyundai": "Hyundai Bluelink", "genesis": "Genesis Connected"}.get(merk, "Kia Connect")
     bronnen = []
@@ -437,6 +443,11 @@ def api_status(
                 "uitslag": r.get("uitslag"),
                 "tijd": _iso(r.get("tijd")),
                 "laatst_ok": _iso(r.get("laatst_ok")),
+                # oudste eerst
+                "historie": [
+                    {"tijd": _iso(h["tijd"]), "uitslag": h["uitslag"]}
+                    for h in reversed(per_stap.get(stap, []))
+                ],
             }
         )
     # Wat de app al weet over de laatste ronde: bewaarde antwoorden van een oudere ronde vervallen.

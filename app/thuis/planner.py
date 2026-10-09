@@ -40,6 +40,7 @@ class Plan:
     needed_kwh: float  # uit het net, inclusief laadverlies
     slots: list[PriceSlot] = field(default_factory=list)  # gekozen, op tijd gesorteerd
     estimated_cost: float = 0.0
+    direct_cost: float = 0.0  # dezelfde kWh als de auto vanaf nu op vol vermogen laadt
     complete: bool = True  # False: bekende prijzen dekken de behoefte niet
     charge_now: bool = False
     reason: str = "geen_behoefte"
@@ -125,6 +126,18 @@ def needed_energy(soc: float | None, target_soc: float, capacity_kwh: float, eff
     return gap / max(efficiency, 0.01)
 
 
+def _fill(slots: list[PriceSlot], needed: float, power_kw: float) -> float:
+    """Kosten als de blokken in deze volgorde vol worden geladen tot `needed` kWh."""
+    remaining, cost = needed, 0.0
+    for s in slots:
+        if remaining <= 1e-6:
+            break
+        energy = min(s.hours * power_kw, remaining)
+        cost += energy * s.price
+        remaining -= energy
+    return cost
+
+
 def make_plan(inp: PlanInput) -> Plan:
     needed = needed_energy(inp.soc, inp.target_soc, inp.capacity_kwh, inp.efficiency)
 
@@ -145,6 +158,7 @@ def make_plan(inp: PlanInput) -> Plan:
     remaining = needed
     cost = 0.0
     if needed > 0 and inp.power_kw > 0:
+        plan.direct_cost = round(_fill(window, needed, inp.power_kw), 2)
         # Goedkoopste eerst; bij gelijke prijs het vroegste blok (eerder vol is beter).
         for s in sorted(window, key=lambda s: (s.price, s.start)):
             if remaining <= 1e-6:

@@ -74,3 +74,68 @@ export const inzichtTegel = (i) =>
     <span class="waarde">${esc(i.waarde)}</span>
     <span class="toelichting">${esc(i.toelichting)}</span>
   </article>`;
+
+/** Dunne accubalk: vulling tot `pct`, gearceerd tot het doel, met een streepje bij het doel.
+ * `labels`: [{ pct, tekst }] onder de balk, gecentreerd op hun plek (bijv. "nu", "doel 80%"). */
+export function accuBalk(pct, doel, labels = []) {
+  const p = Math.max(0, Math.min(100, pct ?? 0));
+  const d = doel == null ? null : Math.max(0, Math.min(100, doel));
+  const gepland = d != null && d > p ? `<div class="gepland" style="left:${p}%;width:${d - p}%"></div>` : "";
+  const plek = (x) => (x > 88 ? "eind" : x < 12 ? "begin" : "");
+  return `<div class="accu dun" role="meter" aria-label="Accu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p)}">
+      <div class="vulling" style="width:${p}%"></div>${gepland}
+      ${d != null ? `<div class="doel" style="left:${d}%" title="Doel ${Math.round(d)}%"></div>` : ""}
+    </div>
+    ${labels.length ? `<div class="accu-labels">${labels.map((l) => `<span class="${plek(l.pct)}" style="left:${l.pct}%">${esc(l.tekst)}</span>`).join("")}</div>` : ""}`;
+}
+
+/** Link met een pijl erachter, voor "Alle prijzen →" en dergelijke. */
+export const pijl = (tekst, href) => `<a class="pijl" href="${href}">${esc(tekst)} →</a>`;
+
+/** Energiestromen: net, huis, gas en auto met de energie van een dag of periode (zoals Home Assistant).
+ * `t` zijn de totalen uit /api/dag of /api/periode. */
+export function stromen(t) {
+  const beweeg = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const lijn = (d, kleur, waarde) => {
+    const aan = waarde > 0.005;
+    const duur = Math.max(1.4, 4.5 - Math.log10(1 + waarde) * 1.8); // meer energie, snellere stippen
+    const stippen = aan && beweeg
+      ? [0, 0.5].map((f) => `<circle r="4" style="fill:${kleur}"><animateMotion dur="${duur.toFixed(2)}s" begin="${(-f * duur).toFixed(2)}s" repeatCount="indefinite" path="${d}"/></circle>`).join("")
+      : "";
+    return `<path class="lijn${aan ? "" : " uit"}" d="${d}" style="stroke:${kleur}"/>${stippen}`;
+  };
+  const knoop = (x, y, r, kleur, ic, regels) => `
+    <circle class="knoop" cx="${x}" cy="${y}" r="${r}" style="stroke:${kleur}"/>
+    <use href="#i-${ic}" x="${x - 11}" y="${y - r + 8}" width="22" height="22" class="ico" style="stroke:${kleur}"/>
+    ${regels.map((tekst, i) => `<text class="waarde${i ? " zacht" : ""}" x="${x}" y="${y + 8 + i * 16}">${tekst}</text>`).join("")}`;
+  const naam = (x, y, tekst, anker = "middle") => `<text class="naam" x="${x}" y="${y}" style="text-anchor:${anker}">${tekst}</text>`;
+  const kosten = t.stroom.kosten + t.gas.kosten + t.teruglevering.kosten;
+  const C = { stroom: "var(--c-stroom)", terug: "var(--c-terug)", gas: "var(--c-gas)", laden: "var(--c-laden)", huis: "var(--inkt-3)" };
+  return `<svg class="stromen" viewBox="0 0 400 300" role="img" aria-label="${[
+    `Afgenomen ${hoeveelheid(t.stroom.hoeveelheid)} kWh`,
+    `teruggeleverd ${hoeveelheid(t.teruglevering.hoeveelheid)} kWh`,
+    `gas ${hoeveelheid(t.gas.hoeveelheid)} m³`,
+    `laden ${hoeveelheid(t.laden.hoeveelheid)} kWh`,
+    `netto ${euro(kosten)}`,
+  ].join(", ")}">
+    <defs><!-- gloed in donker (--stromen-gloed); over de hele viewBox, anders verdwijnen rechte lijnen -->
+      <filter id="gloed" filterUnits="userSpaceOnUse" x="0" y="0" width="400" height="300">
+        <feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter></defs>
+    ${lijn("M126,142 H258", C.stroom, t.stroom.hoeveelheid)}
+    ${lijn("M258,158 H126", C.terug, t.teruglevering.hoeveelheid)}
+    ${lijn("M300,78 V108", C.gas, t.gas.hoeveelheid)}
+    ${lijn("M300,192 V222", C.laden, t.laden.hoeveelheid)}
+    ${knoop(84, 150, 42, C.stroom, "net", [
+      `<tspan style="fill:${C.stroom}">↓</tspan> ${hoeveelheid(t.stroom.hoeveelheid)} kWh`,
+      `<tspan style="fill:${C.terug}">↑</tspan> ${hoeveelheid(t.teruglevering.hoeveelheid)} kWh`,
+    ])}
+    ${naam(84, 212, "Net")}
+    ${knoop(300, 150, 42, C.huis, "huis", [euro(kosten), "netto"])}
+    ${naam(352, 154, "Huis", "start")}
+    ${knoop(300, 44, 34, C.gas, "vlam", [`${hoeveelheid(t.gas.hoeveelheid)} m³`])}
+    ${naam(344, 48, "Gas", "start")}
+    ${knoop(300, 256, 34, C.laden, "auto", [`${hoeveelheid(t.laden.hoeveelheid)} kWh`])}
+    ${naam(344, 260, "Auto", "start")}
+  </svg>`;
+}

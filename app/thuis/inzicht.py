@@ -249,6 +249,7 @@ def dagoverzicht(opslag: Opslag, dag: date) -> dict[str, Any]:
             "kosten_stroom": [
                 round(kosten["stroom"].get(u, 0) - abs(kosten["teruglevering"].get(u, 0)), 3) for u in uren
             ],
+            "kosten_gas": [round(kosten["gas"].get(u, 0), 3) for u in uren],
             "temperatuur": [temp.get(u) for u in uren],
         },
         "prijzen": {"stroom": [_blok(p) for p in stroomprijs], "gas": [_blok(p) for p in gasprijs]},
@@ -388,13 +389,23 @@ def periodeoverzicht(opslag: Opslag, soort: str, dag: date) -> dict[str, Any]:
         per_bakje[bakje(d)].append(d)
     morgen = vandaag() + timedelta(days=1)
 
-    reeksen: dict[str, list[Any]] = {k: [] for k in (*SOORTEN, "laden", "kosten", "temperatuur")}
+    reeksen: dict[str, list[Any]] = {
+        k: [] for k in (*SOORTEN, "laden", "kosten", "kosten_stroom", "kosten_gas", "temperatuur")
+    }
     for b in bakjes:
         dagen = [cijfers.get(d) or _lege_dag() for d in per_bakje[b]]
         met_meter = [d for d in dagen if d["verbruik"]]
         for s in SOORTEN:
             reeksen[s].append(round(sum(d["hoeveelheid"][s] for d in met_meter), 3) if met_meter else None)
         reeksen["kosten"].append(round(sum(kosten_van(d) for d in met_meter), 2) if met_meter else None)
+        reeksen["kosten_stroom"].append(
+            round(sum(d["kosten"]["stroom"] - abs(d["kosten"]["teruglevering"]) for d in met_meter), 2)
+            if met_meter
+            else None
+        )
+        reeksen["kosten_gas"].append(
+            round(sum(d["kosten"]["gas"] for d in met_meter), 2) if met_meter else None
+        )
         toekomst = per_bakje[b][0] >= morgen
         reeksen["laden"].append(None if toekomst else round(sum(d["laden_kwh"] for d in dagen), 3))
         temps = [d["temperatuur"] for d in dagen if d["temperatuur"] is not None]

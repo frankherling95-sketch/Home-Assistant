@@ -61,24 +61,28 @@
       <li><a href="#/overzicht" data-pagina="overzicht"><svg class="ic"><use href="#i-overzicht"/></svg>Overzicht</a></li>
       <li><a href="#/energie" data-pagina="energie"><svg class="ic"><use href="#i-energie"/></svg>Energie</a></li>
       <li><a href="#/prijzen" data-pagina="prijzen"><svg class="ic"><use href="#i-prijzen"/></svg>Prijzen</a></li>
-      <li><a href="#/laden" data-pagina="laden"><svg class="ic"><use href="#i-laden"/></svg>Laden</a></li>
-      <li><a href="#/auto" data-pagina="auto"><svg class="ic"><use href="#i-auto"/></svg>Auto</a></li>
+      <li><a href="#/auto" data-pagina="auto"><svg class="ic"><use href="#i-auto"/></svg>Auto &amp; laden</a></li>
       <li><a href="#/inzichten" data-pagina="inzichten"><svg class="ic"><use href="#i-inzichten"/></svg>Inzichten</a></li>
-      <li><a href="#/koppelingen" data-pagina="koppelingen"><svg class="ic"><use href="#i-bronnen"/></svg>Koppelingen<span class="status-stip" data-gezondheid></span></a></li>
     </ul>
     <div class="zijbalk-voet">
-      <div class="segment vol" role="group" aria-label="Weergave" id="thema-keuze">
-        <button type="button" data-thema="systeem" aria-pressed="true">Systeem</button>
-        <button type="button" data-thema="licht" aria-pressed="false">Licht</button>
-        <button type="button" data-thema="donker" aria-pressed="false">Donker</button>
-      </div>
+      <a class="zijbalk-koppelingen" href="#/koppelingen" data-pagina="koppelingen">
+        <svg class="ic" aria-hidden="true"><use href="#i-bronnen"/></svg>
+        <span class="tekst"><span class="titel">Koppelingen</span><span class="sub" id="koppel-sub"></span></span>
+        <span class="status-stip" data-gezondheid></span>
+      </a>
       <div class="gebruiker" id="gebruiker"></div>
+      <div class="segment vol thema-iconen" role="group" aria-label="Weergave" id="thema-keuze">
+        <button type="button" data-thema="systeem" aria-pressed="true" aria-label="Weergave volgt het systeem" title="Systeem"><svg class="ic" aria-hidden="true"><use href="#i-thema-systeem"/></svg></button>
+        <button type="button" data-thema="licht" aria-pressed="false" aria-label="Lichte weergave" title="Licht"><svg class="ic" aria-hidden="true"><use href="#i-thema-licht"/></svg></button>
+        <button type="button" data-thema="donker" aria-pressed="false" aria-label="Donkere weergave" title="Donker"><svg class="ic" aria-hidden="true"><use href="#i-thema-donker"/></svg></button>
+      </div>
     </div>
   </nav>
 
   <div class="hoofd">
     <header class="kop">
       <h1 id="paginatitel">Overzicht</h1>
+      <span class="kop-sub" id="paginasub"></span>
       <div class="rechts">
         <button class="icoonknop ophaalknop" type="button" id="ophaalknop" aria-label="Nu ophalen bij alle bronnen" title="Nu ophalen">
           <svg class="ic" aria-hidden="true"><use href="#i-vernieuw"/></svg>
@@ -98,7 +102,6 @@
     <a href="#/overzicht" data-pagina="overzicht"><svg class="ic"><use href="#i-overzicht"/></svg>Overzicht</a>
     <a href="#/energie" data-pagina="energie"><svg class="ic"><use href="#i-energie"/></svg>Energie</a>
     <a href="#/prijzen" data-pagina="prijzen"><svg class="ic"><use href="#i-prijzen"/></svg>Prijzen</a>
-    <a href="#/laden" data-pagina="laden"><svg class="ic"><use href="#i-laden"/></svg>Laden</a>
     <a href="#/auto" data-pagina="auto"><svg class="ic"><use href="#i-auto"/></svg>Auto</a>
     <a href="#/inzichten" data-pagina="inzichten"><svg class="ic"><use href="#i-inzichten"/></svg>Inzichten</a>
   </nav>
