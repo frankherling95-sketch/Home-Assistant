@@ -408,6 +408,7 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
 .datumnav .icoonknop:disabled { opacity: 0.35; cursor: default; background: none; }
 .werkbalk .rechts { margin-left: auto; display: flex; gap: 8px; }
 .werkbalk-uitleg { margin: 0 0 0 auto; font-size: 13px; color: var(--inkt-3); }
+.werkbalk-sub { font-size: 14px; color: var(--inkt-3); }
 .knop {
   display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--lijn-sterk); background: var(--oppervlak);
   border-radius: 10px; padding: 7px 14px; font-weight: 500; color: var(--inkt); text-decoration: none;
@@ -442,10 +443,29 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
   .kpi-waarde { font-size: 22px; }
 }
 
+/* Prijzen: drie kaarten onder de grafiek */
+.prijzen-rij { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.prijzen-rij > .kaart { display: flex; flex-direction: column; }
+.prijs-nu { font-size: 44px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.prijs-nu small, .venster-tijd small { font-size: 15px; color: var(--inkt-3); }
+.venster-tijd { font-size: 32px; line-height: 1.15; font-variant-numeric: tabular-nums; margin-bottom: 6px; }
+#k-nu .tussenkop { margin-top: auto; padding-top: 16px; }
+.prijsregels { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-variant-numeric: tabular-nums; }
+.prijsregels li { display: grid; grid-template-columns: 52px 10px auto; align-items: center; gap: 10px; }
+.prijsregels .tijd { color: var(--inkt-3); }
+.prijsregels i { width: 8px; height: 8px; border-radius: 50%; }
+.tegels.twee { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tekst-negatief, .tegel .waarde.tekst-negatief { color: var(--p-negatief); }
+@media (max-width: 599px) { .prijzen-rij { gap: 12px; } .prijs-nu { font-size: 38px; } }
+
 /* legenda in de kop van een kaart, met een lijnsoort en een regel eronder */
 .legenda.kop-legenda { margin: 0; justify-content: flex-end; }
 .legenda i.lijn { height: 2px; width: 14px; border-radius: 0; }
 .legenda .onder { flex-basis: 100%; justify-content: flex-end; color: var(--inkt-3); font-size: 12px; margin-top: -4px; }
+@media (max-width: 599px) {
+  .kaart-kop .rechts:has(> .kop-legenda) { margin-left: 0; width: 100%; }
+  .legenda.kop-legenda, .legenda .onder { justify-content: flex-start; }
+}
 
 .formulier { display: grid; gap: 4px; }
 .veld { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0;
