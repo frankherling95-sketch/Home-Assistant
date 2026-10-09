@@ -1,4 +1,4 @@
-"""Koppelingen: de accounts van Frank Energie, Easee, Kia/Hyundai, BMW en Google Chat.
+"""Koppelingen: de accounts van Frank Energie, Easee, Kia/Hyundai, BMW, Tuya en Google Chat.
 
 Koppelen gebeurt in de app: één keer inloggen, daarna bewaart Thuis alleen de tokens die de
 dienst teruggeeft (nooit het wachtwoord) in de kluis. De verzamelaar bouwt zijn connectoren
@@ -7,6 +7,9 @@ status "opnieuw" en vraagt de app om opnieuw te koppelen.
 
 BMW koppelt anders: met een code die je op de site van BMW bevestigt (methode "code"). Tot die
 bevestiging staat wat Thuis daarvoor nodig heeft onder "wachtend" in de kluis.
+
+Tuya koppelt met de sleutels van een eigen cloudproject (Access ID en Access Secret), niet met het
+wachtwoord van Smart Life: die sleutels ondertekenen elk verzoek en blijven dus in de kluis.
 
 Oude installaties met logins uit het setup-script (FRANK_EMAIL, …) blijven gewoon werken.
 """
@@ -56,6 +59,28 @@ DIENSTEN: dict[str, dict[str, Any]] = {
         "velden": [{"naam": "client_id", "label": "Client-ID uit BMW CarData", "type": "text"}],
         "oud": (),
     },
+    "tuya": {
+        "naam": "Tuya / Smart Life",
+        "uitleg": "Voor je slimme stekkers, lampen, thermostaten en sensoren uit Smart Life of Tuya Smart: zien wat ze doen en ze bedienen.",
+        "velden": [
+            {
+                "naam": "regio",
+                "label": "Datacenter van je project",
+                "type": "keuze",
+                "keuzes": [
+                    {"waarde": "eu", "label": "Centraal-Europa (Nederland en België)"},
+                    {"waarde": "eu-w", "label": "West-Europa"},
+                    {"waarde": "us", "label": "Amerika (west)"},
+                    {"waarde": "us-e", "label": "Amerika (oost)"},
+                    {"waarde": "in", "label": "India"},
+                    {"waarde": "cn", "label": "China"},
+                ],
+            },
+            {"naam": "access_id", "label": "Access ID", "type": "text"},
+            {"naam": "access_secret", "label": "Access Secret", "type": "password"},
+        ],
+        "oud": (),
+    },
     "google_chat": {
         "naam": "Google Chat",
         "uitleg": "Meldingen in een Chat-ruimte: negatieve prijzen, laden klaar, storingen.",
@@ -98,6 +123,11 @@ def koppel(dienst: str, gegevens: dict[str, str]) -> tuple[dict[str, Any], str]:
         except Exception as err:
             raise KoppelFout("Google Chat nam het testbericht niet aan; kopieer de webhook opnieuw.") from err
         r = {"webhook": webhook, "account": "Chat-ruimte", "bericht": "Testbericht verstuurd"}
+    elif dienst == "tuya":
+        from .connectors.tuya import Tuya
+
+        access_id, access_secret = _verplicht(gegevens, "access_id", "access_secret")
+        r = Tuya.koppel(gegevens.get("regio") or "eu", access_id, access_secret)
     else:
         raise KoppelFout(f"Onbekende dienst: {dienst}")
     return _gekoppeld(r)
@@ -171,6 +201,7 @@ class Connectoren:
     easee: Any = None
     kia: Any = None
     bmw: Any = None
+    tuya: Any = None
     chat: Any = None
     koppelingen: dict[str, dict[str, Any]] = field(default_factory=dict)
 
@@ -203,6 +234,10 @@ def maak_connectoren(cfg: Config, data: dict[str, Any]) -> Connectoren:
         from .connectors.bmw import BMW
 
         c.bmw = BMW(k["bmw"])
+    if "tuya" in k:
+        from .connectors.tuya import Tuya
+
+        c.tuya = Tuya(k["tuya"])
     webhook = (k.get("google_chat") or {}).get("webhook") or cfg.chat_webhook
     if webhook:
         from .meldingen import GoogleChat
@@ -214,8 +249,8 @@ def maak_connectoren(cfg: Config, data: dict[str, Any]) -> Connectoren:
 def nieuwe_stand(c: Connectoren, verlopen: set[str], gelukt: set[str]) -> dict[str, dict[str, Any]]:
     """Wat er na een ronde in de kluis moet: verse tokens, en de status per koppeling.
 
-    BMW houdt meer bij dan tokens (de telling van verzoeken, de laatste toestand): daar gaat het
-    hele record terug.
+    BMW en Tuya houden meer bij dan tokens (de telling van verzoeken, de laatste toestand, de
+    specificaties van de apparaten): daar gaat het hele record terug.
     """
     wijzig: dict[str, dict[str, Any]] = {}
     for dienst, conn, sleutel in (
@@ -223,6 +258,7 @@ def nieuwe_stand(c: Connectoren, verlopen: set[str], gelukt: set[str]) -> dict[s
         ("easee", c.easee, "tokens"),
         ("kia", c.kia, "token"),
         ("bmw", c.bmw, None),
+        ("tuya", c.tuya, None),
     ):
         k = c.koppelingen.get(dienst)
         if k is None or conn is None:

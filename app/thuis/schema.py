@@ -146,6 +146,25 @@ MELDING = Tabel(
     "tijd",
 )  # verstuurde meldingen; de sleutel voorkomt dat dezelfde melding twee keer gaat
 
+APPARAAT = Tabel(
+    "apparaat_meting",
+    (
+        ("tijd", "TIMESTAMP"),
+        ("apparaat_id", "STRING"),
+        ("naam", "STRING"),
+        ("soort", "STRING"),
+        ("online", "BOOL"),
+        ("aan", "BOOL"),
+        ("vermogen_w", "FLOAT64"),
+        ("temperatuur", "FLOAT64"),
+        ("vochtigheid", "FLOAT64"),
+        ("status", "STRING"),
+        OPGEHAALD,
+    ),
+    ("apparaat_id", "tijd"),
+    "tijd",
+)  # slimme apparaten (Tuya), per ronde; status = alle codes met hun ruwe waarde als JSON
+
 RONDE = Tabel(
     "ronde",
     (("tijd", "TIMESTAMP"), ("stap", "STRING"), ("uitslag", "STRING"), ("duur_s", "FLOAT64"), OPGEHAALD),
@@ -164,6 +183,7 @@ TABELLEN = (
     STUURACTIE,
     WEER,
     MELDING,
+    APPARAAT,
     RONDE,
 )
 

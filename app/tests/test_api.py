@@ -96,7 +96,17 @@ def test_status_uit_rondelog(client):
     assert "tabellen" not in client.get("/api/status", headers=IAP).json()  # standaard één query
     s = client.get("/api/status?tabellen=true", headers=IAP).json()
     bronnen = {b["stap"]: b for b in s["bronnen"]}
-    assert list(bronnen) == ["prijzen", "verbruik", "lader", "auto", "bmw", "weer", "sturen", "meldingen"]
+    assert list(bronnen) == [
+        "prijzen",
+        "verbruik",
+        "lader",
+        "auto",
+        "bmw",
+        "apparaten",
+        "weer",
+        "sturen",
+        "meldingen",
+    ]
     assert bronnen["prijzen"]["uitslag"] == "fout: HTTP 502" and bronnen["prijzen"]["tijd"] == t.isoformat()
     assert (t - timedelta(minutes=15)).isoformat() <= bronnen["prijzen"]["laatst_ok"] < t.isoformat()
     historie = [h["uitslag"] for h in bronnen["prijzen"]["historie"]]
