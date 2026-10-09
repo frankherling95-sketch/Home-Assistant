@@ -188,6 +188,9 @@ Wat je op elke pagina vindt:
    niet nodig.
 4. Optioneel: **Google Chat**, voor meldingen op je telefoon. Hoe je het webhook-adres maakt,
    staat bij het formulier.
+5. Optioneel: **Tuya / Smart Life**, voor je slimme stekkers, lampen en sensoren. Daarvoor maak je
+   eerst een gratis project op platform.tuya.com en koppel je daar je Smart Life-account. De vier
+   stappen staan bij het formulier; reken op ±10 minuten.
 
 Thuis logt één keer in en bewaart daarna alleen een sleutel van de dienst, niet je wachtwoord.
 Binnen een paar minuten staan de eerste gegevens in de app. Je verbruik komt via Frank Energie

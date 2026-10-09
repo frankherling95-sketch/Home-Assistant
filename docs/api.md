@@ -8,9 +8,10 @@ Zonder geldige header: 401; een adres buiten `TOEGESTANE_EMAILS`: 403. Validatie
 Dit bestand is leidend voor backend (`app/thuis`) en frontend (`app/web`).
 
 **Bewaren.** Met BigQuery bewaart de app de antwoorden van `dag`, `periode`, `nu`, `auto`,
-`laadsessies` en `inzichten` tot de volgende ronde van de verzamelaar of het volgende kwartier, wat
-het eerst komt (`app/thuis/bewaar.py`, uit te zetten met `THUIS_BEWAREN=0`). Elk verzoek dat iets
-wijzigt (alles behalve `GET`) maakt het bewaarde leeg. Met de header `x-thuis-vers: 1` maakt de app
+`laadsessies`, `inzichten`, `apparaten/vandaag` en `apparaten/{id}/historie` tot de volgende ronde
+van de verzamelaar of het volgende kwartier, wat het eerst komt (`app/thuis/bewaar.py`, uit te
+zetten met `THUIS_BEWAREN=0`). Elk verzoek dat iets wijzigt (alles behalve `GET`) maakt het
+bewaarde leeg, behalve een apparaat bedienen: dat verandert niets aan de database. Met de header `x-thuis-vers: 1` maakt de app
 het antwoord opnieuw; de web-app stuurt die een minuut lang na een wijziging of een nieuwe ronde.
 Antwoorden gaan gecomprimeerd (gzip) over de lijn.
 
@@ -183,12 +184,17 @@ Per dienst de status, voor de pagina "Koppelingen". Nooit tokens of wachtwoorden
    "methode": "inloggen", "status": "ok", "account": "fr…@voorbeeld.nl", "sinds": "2026-10-08T14:00:00+00:00"}
 ]
 ```
-- `dienst`: `frank` | `easee` | `kia` | `bmw` | `google_chat`
+- `dienst`: `frank` | `easee` | `kia` | `bmw` | `tuya` | `google_chat`
 - `methode`: `inloggen` (de velden versturen is genoeg) | `code` (BMW: daarna een code bevestigen
   op de site van BMW, zie hieronder)
 - `status`: `ok` | `opnieuw` (bewaarde tokens werken niet meer) | `script` (oude login uit het
   setup-script) | `niet`
-- `velden[].type`: `text` | `email` | `password` | `url` | `keuze` (met `keuzes`)
+- `velden[].type`: `text` | `email` | `password` | `url` | `keuze` (met `keuzes`: teksten, of
+  `{"waarde", "label"}` zoals de datacenters van Tuya)
+- Tuya koppelt met de sleutels van een eigen cloudproject op platform.tuya.com:
+  `{"regio": "eu", "access_id": "…", "access_secret": "…"}` (`regio`: `eu` | `eu-w` | `us` | `us-e` |
+  `in` | `cn`). Die sleutels ondertekenen elk verzoek en blijven dus in de kluis; het wachtwoord van
+  Smart Life is niet nodig. Antwoord: `{"bericht": "11 apparaten gevonden: Achterdeur, …"}`.
 
 ### `POST /api/koppelingen/{dienst}` · `DELETE /api/koppelingen/{dienst}`
 POST-body = de velden van die dienst, bijv. `{"gebruiker": "…", "wachtwoord": "…"}`. Thuis logt één
@@ -227,6 +233,7 @@ Standaard zonder `tabellen` (één query); `tabellen=true` voegt ze toe (een que
     {"stap": "lader",    "naam": "Easee",                    "uitslag": "overgeslagen", "tijd": "...", "laatst_ok": null},
     {"stap": "auto",     "naam": "Kia Connect",              "...": "..."},
     {"stap": "bmw",      "naam": "BMW CarData",              "...": "..."},
+    {"stap": "apparaten","naam": "Tuya",                     "...": "..."},
     {"stap": "weer",     "naam": "Open-Meteo",               "...": "..."},
     {"stap": "sturen",   "naam": "Slim laden",               "...": "..."},
     {"stap": "meldingen","naam": "Google Chat",              "...": "..."}
@@ -256,3 +263,66 @@ van BMW). Wakker maken kan niet: BMW en Kia geven de laatste stand die de auto z
   `wacht_s` seconden opnieuw. Twee rondes tegelijk kunnen elkaars ververste tokens ongeldig maken.
 - Klaar is de ronde zodra `GET /api/status` een `tijd` na `vanaf` geeft.
 - 409: geen job ingesteld (`THUIS_JOB`, lokaal: `python -m thuis.verzamel`). 502: de job startte niet.
+
+## Apparaten (Tuya)
+
+Slimme stekkers, lampen, thermostaten, rolluiken en sensoren uit Smart Life of Tuya Smart, via de
+cloud-API van Tuya (`app/thuis/connectors/tuya.py`). De stand is live; de verzamelaar bewaart elk
+kwartier een meting per apparaat (tabel `apparaat_meting`) voor de historie en het verbruik.
+
+### `GET /api/apparaten`
+Zoals Tuya de apparaten nu meldt, hooguit 15 seconden oud (met `x-thuis-vers: 1` hooguit 3): het
+proefabonnement van Tuya telt elk verzoek. Niet gekoppeld: `{"gekoppeld": false, "apparaten": [], "bijgewerkt": null}`.
+```json
+{
+  "gekoppeld": true,
+  "bijgewerkt": "2026-10-09T20:16:02+00:00",
+  "apparaten": [
+    {"id": "bf12…", "naam": "Wasmachine", "product": "Slimme stekker met meting", "categorie": "cz",
+     "soort": "stekker", "online": true, "aan": true, "schakelaars": ["switch_1"],
+     "metingen": {"vermogen_w": 486.2, "spanning_v": 231.4, "stroom_a": 2.19, "energie_kwh": 0.128},
+     "toestand": null,
+     "bediening": [
+       {"code": "switch_1", "type": "Boolean", "waarde": true},
+       {"code": "countdown_1", "type": "Integer", "waarde": 0, "min": 0, "max": 86400, "stap": 1, "eenheid": "s"},
+       {"code": "relay_status", "type": "Enum", "waarde": "last", "keuzes": ["power_off", "power_on", "last"]}
+     ],
+     "status": [{"code": "add_ele", "waarde": 0.128, "eenheid": "kWh"}]}
+  ]
+}
+```
+- `soort`: `stekker` | `schakelaar` | `lamp` | `klimaat` | `gordijn` | `sensor` | `overig` (uit de
+  categorie van Tuya); de lijst staat in die volgorde, daarbinnen op naam.
+- `aan`: de stand van `schakelaars` (bij een stekkerdoos: aan als één stopcontact aan is), `null`
+  als het apparaat geen schakelaar heeft.
+- `metingen`: wat bekend is van `vermogen_w`, `spanning_v`, `stroom_a`, `energie_kwh` (teller van het
+  apparaat), `temperatuur` (°C), `vochtigheid` (%), `accu_pct`.
+- `toestand` (sensoren): `open` | `dicht` | `beweging` | `rust` | `alarm` | `normaal`, anders `null`.
+- `bediening`: wat je kunt bedienen, met bereik en waarde in gewone eenheden (Tuya rekent met hele
+  getallen en een `scale`; Thuis rekent om). Leeg als Tuya de specificatie (nog) niet gaf.
+- `status`: wat het apparaat verder meldt, ook in gewone eenheden; JSON-waarden (kleuren, scènes) niet.
+- Na een opdracht toont dit 10 seconden de gevraagde stand, ook als Tuya nog de oude meldt.
+- 409: de sleutels werken niet meer (opnieuw koppelen); 502: Tuya gaf een fout of is niet bereikbaar
+  (`detail` in gewone taal, bijv. een verlopen proefabonnement).
+
+### `POST /api/apparaten/{id}`
+Een apparaat bedienen: `{"opdrachten": [{"code": "switch_1", "waarde": false}]}` (1 tot 10
+opdrachten, waarden in de eenheden van `bediening`). Antwoord: `{"apparaat": { …zoals hierboven… }}`.
+- Thuis controleert elke opdracht tegen de specificatie: alleen codes uit `bediening`, `Boolean`
+  aan of uit, `Enum` een van de `keuzes`, `Integer` afgerond op `stap` en binnen `min`–`max`.
+- 409: Tuya niet gekoppeld, apparaat onbekend of offline; 422: de opdracht past niet (`detail`
+  zegt waarom); 502: zoals hierboven.
+
+### `GET /api/apparaten/vandaag`
+Geschat verbruik vandaag per apparaat dat zijn vermogen meet, uit de metingen van elk kwartier:
+tussen twee metingen het gemiddelde vermogen, tegen de stroomprijs van dat moment. Een gat van meer
+dan 35 minuten telt niet mee.
+```json
+{"datum": "2026-10-09", "kwh": 1.82, "kosten": 0.40, "tot": "2026-10-09T20:15:40+00:00",
+ "apparaten": {"bf12…": {"kwh": 0.7357, "kosten": 0.1612}}}
+```
+- `kosten` is `null` als er voor een deel van de dag nog geen prijzen zijn; `tot` = de laatste meting.
+
+### `GET /api/apparaten/{id}/historie?dagen=1..7`
+De metingen van de verzamelaar, oudste eerst: `{"tijden": [...], "online": [...], "aan": [...],
+"vermogen_w": [...], "temperatuur": [...], "vochtigheid": [...]}` (`null` waar het apparaat niets meldt).
