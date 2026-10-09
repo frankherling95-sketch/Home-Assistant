@@ -1,17 +1,23 @@
-// Overzicht: prijs nu, energiestromen, auto en lader, inzichten en de totalen.
+// Overzicht: van wat je nu kunt doen naar terugblikken. Bovenaan de stroomprijs met vandaag en
+// morgen, dan de auto en het verbruik van de laatste dag met meterdata, onderaan de inzichten.
+// Het stromendiagram en de totalentabel staan op Energie.
 
 import {
   LADER_STATUS, PLAN_REDEN, api, autoFoto, css, dagnaam, esc, euro, gemiddelde, getal, goedkoopsteVenster,
-  hoeveelheid, huidigBlok, klok, niveau, plusDagen, prijs, relatief, vandaag,
+  hoeveelheid, huidigBlok, klok, niveau, plusDagen, prijs, vandaag,
 } from "../basis.js";
-import { basis, gekleurd, grafiek, markering, regel, ruimOp, staven } from "../grafiek.js";
-import { inzichtTegel, kaart, leeg, skeletKaart, tegel, totalenTabel } from "../onderdelen.js";
+import { basis, doorzichtig, gekleurd, grafiek, nuLijn, regel, ruimOp, scheiding, staven } from "../grafiek.js";
+import { accuBalk, inzichtTegel, kaart, leeg, melding, pijl, skeletKaart, tegel } from "../onderdelen.js";
+
+const WEEKDAG = new Intl.DateTimeFormat("nl-NL", { weekday: "long", timeZone: "UTC" });
+const DATUM = new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+const middag = (iso) => new Date(`${iso}T12:00:00Z`);
 
 export async function toon(main, _params, ctx) {
   if (ctx.nieuw) {
     main.innerHTML = `<div class="overzicht">
-      <div class="kolom">${skeletKaart("o-stromen", { titel: "Energiestromen", regels: 6 })}${skeletKaart("o-totalen", { titel: "Totalen" })}</div>
-      <div class="kolom">${skeletKaart("o-prijs", { titel: "Stroomprijs nu", grafiek: true })}${skeletKaart("o-auto", { titel: "Auto en lader" })}</div>
+      ${skeletKaart("", { titel: "Stroomprijs nu", grafiek: true })}
+      <div class="overzicht-rij">${skeletKaart("", { titel: "Auto en lader", regels: 5 })}${skeletKaart("", { titel: "Verbruik", regels: 5 })}</div>
     </div>`;
   }
   const v = vandaag();
@@ -21,91 +27,48 @@ export async function toon(main, _params, ctx) {
     api(`dag?datum=${plusDagen(v, 1)}`),
     api(`inzichten?datum=${v}`).catch(() => []),
   ]);
-  // De slimme meter komt via Frank met een dag vertraging: dan gisteren tonen.
+  // De slimme meter komt via Frank met een dag vertraging: dan gisteren tonen, vergeleken met de dag ervoor.
   const meterdag = dag.compleet.verbruik ? dag : await api(`dag?datum=${plusDagen(v, -1)}`);
+  const ervoor = meterdag.compleet.verbruik ? await api(`dag?datum=${plusDagen(meterdag.datum, -1)}`).catch(() => null) : null;
   if (!ctx.actueel()) return;
 
-  const welkeDag = meterdag === dag ? "vandaag" : "gisteren";
   ruimOp();
   main.innerHTML = `<div class="overzicht">
-    <div class="kolom">
-      ${kaart({
-        titel: "Energiestromen",
-        sub: welkeDag === "gisteren" ? "gisteren · meterdata van vandaag volgt morgen" : "vandaag",
-        klasse: "o-stromen",
-        id: "k-stromen",
-        inhoud: meterdag.compleet.verbruik || meterdag.totalen.laden.hoeveelheid ? stromen(meterdag.totalen) : '<p class="leeg">Nog geen meterdata. <a href="#/koppelingen">Koppel Frank Energie</a> voor je verbruik.</p>',
-      })}
-      ${kaart({ titel: `Totalen ${welkeDag}`, klasse: "o-totalen", id: "k-totalen", inhoud: totalenTabel(meterdag.totalen) })}
-    </div>
-    <div class="kolom">
-      ${prijsKaart(dag, morgen)}
+    ${prijsKaart(dag, morgen)}
+    <div class="overzicht-rij">
       ${autoKaart(nu)}
+      ${verbruikKaart(meterdag, ervoor, meterdag === dag)}
     </div>
-    ${
-      inzichten.length
-        ? kaart({
-            titel: "Inzichten",
-            klasse: "vol o-inzichten",
-            id: "k-inzichten",
-            inhoud: `<div class="inzichten">${inzichten.slice(0, 4).map(inzichtTegel).join("")}</div>`,
-            voet: inzichten.length > 4 ? `<a href="#/inzichten">Alle ${inzichten.length} inzichten</a>` : "",
-          })
-        : ""
-    }
+    ${inzichten.length
+      ? kaart({
+          titel: "Inzichten",
+          id: "k-inzichten",
+          rechts: inzichten.length > 3 ? pijl(`Alle ${inzichten.length} inzichten`, "#/inzichten") : "",
+          inhoud: `<div class="inzichten breed">${inzichten.slice(0, 3).map(inzichtTegel).join("")}</div>`,
+        })
+      : ""}
   </div>`;
-  prijsGrafiek(dag.prijzen.stroom);
+  prijsGrafiek(dag.prijzen.stroom, morgen.prijzen.stroom, nu.plan);
 }
 
-// ── energiestromen (zoals de energieverdeling in Home Assistant) ──────────────
+// ── stroomprijs ───────────────────────────────────────────────────────────────
 
-function stromen(t) {
-  const beweeg = !matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const lijn = (d, kleur, waarde) => {
-    const aan = waarde > 0.005;
-    const duur = Math.max(1.4, 4.5 - Math.log10(1 + waarde) * 1.8); // meer energie, snellere stippen
-    const stippen = aan && beweeg
-      ? [0, 0.5].map((f) => `<circle r="4" style="fill:${kleur}"><animateMotion dur="${duur.toFixed(2)}s" begin="${(-f * duur).toFixed(2)}s" repeatCount="indefinite" path="${d}"/></circle>`).join("")
-      : "";
-    return `<path class="lijn${aan ? "" : " uit"}" d="${d}" style="stroke:${kleur}"/>${stippen}`;
-  };
-  const knoop = (x, y, r, kleur, ic, regels) => `
-    <circle class="knoop" cx="${x}" cy="${y}" r="${r}" style="stroke:${kleur}"/>
-    <use href="#i-${ic}" x="${x - 11}" y="${y - r + 8}" width="22" height="22" class="ico" style="stroke:${kleur}"/>
-    ${regels.map((tekst, i) => `<text class="waarde${i ? " zacht" : ""}" x="${x}" y="${y + 8 + i * 16}">${tekst}</text>`).join("")}`;
-  const naam = (x, y, tekst, anker = "middle") => `<text class="naam" x="${x}" y="${y}" style="text-anchor:${anker}">${tekst}</text>`;
-  const kosten = t.stroom.kosten + t.gas.kosten + t.teruglevering.kosten;
-  const C = { stroom: "var(--c-stroom)", terug: "var(--c-terug)", gas: "var(--c-gas)", laden: "var(--c-laden)", huis: "var(--inkt-3)" };
-  return `<svg class="stromen" viewBox="0 0 400 300" role="img" aria-label="${[
-    `Afgenomen ${hoeveelheid(t.stroom.hoeveelheid)} kWh`,
-    `teruggeleverd ${hoeveelheid(t.teruglevering.hoeveelheid)} kWh`,
-    `gas ${hoeveelheid(t.gas.hoeveelheid)} m³`,
-    `laden ${hoeveelheid(t.laden.hoeveelheid)} kWh`,
-    `netto ${euro(kosten)}`,
-  ].join(", ")}">
-    <defs><!-- gloed in donker (--stromen-gloed); over de hele viewBox, anders verdwijnen rechte lijnen -->
-      <filter id="gloed" filterUnits="userSpaceOnUse" x="0" y="0" width="400" height="300">
-        <feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-      </filter></defs>
-    ${lijn("M126,142 H258", C.stroom, t.stroom.hoeveelheid)}
-    ${lijn("M258,158 H126", C.terug, t.teruglevering.hoeveelheid)}
-    ${lijn("M300,78 V108", C.gas, t.gas.hoeveelheid)}
-    ${lijn("M300,192 V222", C.laden, t.laden.hoeveelheid)}
-    ${knoop(84, 150, 42, C.stroom, "net", [
-      `<tspan style="fill:${C.stroom}">↓</tspan> ${hoeveelheid(t.stroom.hoeveelheid)} kWh`,
-      `<tspan style="fill:${C.terug}">↑</tspan> ${hoeveelheid(t.teruglevering.hoeveelheid)} kWh`,
-    ])}
-    ${naam(84, 212, "Net")}
-    ${knoop(300, 150, 42, C.huis, "huis", [euro(kosten), "netto"])}
-    ${naam(352, 154, "Huis", "start")}
-    ${knoop(300, 44, 34, C.gas, "vlam", [`${hoeveelheid(t.gas.hoeveelheid)} m³`])}
-    ${naam(344, 48, "Gas", "start")}
-    ${knoop(300, 256, 34, C.laden, "auto", [`${hoeveelheid(t.laden.hoeveelheid)} kWh`])}
-    ${naam(344, 260, "Auto", "start")}
-  </svg>`;
+/** Eerste aaneengesloten stuk met een negatieve prijs in de komende 36 uur, of null. */
+function negatiefVenster(blokken) {
+  const nu = Date.now();
+  const komend = blokken.filter((b) => new Date(b.tot) > nu && new Date(b.van) < nu + 36 * 3600e3);
+  const i = komend.findIndex((b) => b.prijs < 0);
+  if (i < 0) return null;
+  let j = i;
+  while (j + 1 < komend.length && komend[j + 1].prijs < 0 && komend[j + 1].van === komend[j].tot) j++;
+  const stuk = komend.slice(i, j + 1);
+  return { van: stuk[0].van, tot: stuk.at(-1).tot, laagste: Math.min(...stuk.map((b) => b.prijs)) };
 }
 
-// ── prijs ─────────────────────────────────────────────────────────────────────
+const LEGENDA = [
+  ["--p-negatief", "Negatief"], ["--p-zeer-goedkoop", "Zeer goedkoop"], ["--p-goedkoop", "Goedkoop"],
+  ["--p-normaal", "Normaal"], ["--p-duur", "Duur"], ["--p-zeer-duur", "Zeer duur"],
+];
 
 function prijsKaart(dag, morgen) {
   const blokken = dag.prijzen.stroom;
@@ -113,84 +76,243 @@ function prijsKaart(dag, morgen) {
   const gem = gemiddelde(blokken);
   const nu = huidigBlok(blokken);
   const niv = nu ? niveau(nu.prijs, gem) : null;
-  const venster = goedkoopsteVenster([...blokken, ...morgen.prijzen.stroom], 1);
-  return kaart({
-    titel: "Stroomprijs nu",
-    klasse: "o-prijs",
-    id: "k-prijs",
-    rechts: niv ? `<span class="pil"><span class="stip" style="background:var(${niv.kleur})"></span>${niv.naam}</span>` : "",
-    inhoud: `
-      <div class="groot">${prijs(nu?.prijs)}<small>per kWh, all-in</small></div>
-      <p class="zacht klein">${nu ? `tot ${klok(nu.tot)}, ` : ""}daggemiddelde ${prijs(gem)}</p>
-      <div class="grafiek laag" id="g-prijs" role="img" aria-label="Stroomprijs vandaag per kwartier"></div>`,
-    voet: `${venster ? `Goedkoopste uur: <b>${dagnaam(venster.van)} ${klok(venster.van)}–${klok(venster.tot)}</b>, gemiddeld ${prijs(venster.prijs)}. ` : ""}<a href="#/prijzen">Alle prijzen</a>`,
-  });
+  const metMorgen = morgen.prijzen.stroom.length > 0;
+  const alle = [...blokken, ...morgen.prijzen.stroom];
+  const neg = negatiefVenster(alle);
+  const venster = neg ? null : goedkoopsteVenster(alle, 1);
+  const feit = neg
+    ? `<span class="feit-label">Negatieve prijs</span>
+       <span class="feit-waarde" style="color:var(--p-negatief)">${dagnaam(neg.van)} ${klok(neg.van)}–${klok(neg.tot)}</span>
+       <span class="feit-uitleg">laagste ${prijs(neg.laagste)} per kWh</span>`
+    : venster
+      ? `<span class="feit-label">Goedkoopste uur</span>
+         <span class="feit-waarde">${dagnaam(venster.van)} ${klok(venster.van)}–${klok(venster.tot)}</span>
+         <span class="feit-uitleg">gemiddeld ${prijs(venster.prijs)}</span>`
+      : "";
+  return `<section class="kaart o-prijs" id="k-prijs" aria-labelledby="k-prijs-titel">
+    <div class="held-prijs">
+      <div class="prijs-blok">
+        <header class="kaart-kop"><h2 id="k-prijs-titel">Stroomprijs nu</h2>
+          ${niv ? `<div class="rechts"><span class="pil"><span class="stip" style="background:var(${niv.kleur})"></span>${niv.naam}</span></div>` : ""}</header>
+        <div class="prijs-groot">${prijs(nu?.prijs)}</div>
+        <p class="zacht">per kWh all-in${nu ? ` · tot ${klok(nu.tot)}` : ""}</p>
+        <p class="zacht">daggemiddelde ${prijs(gem)}</p>
+        ${feit ? `<div class="feit">${feit}</div>` : ""}
+        <p class="prijs-link">${pijl("Alle prijzen", "#/prijzen")}</p>
+      </div>
+      <div class="prijs-grafiek">
+        <div class="grafiek-kop"><span class="titel">Vandaag${metMorgen ? " en morgen" : ""}</span>
+          <div class="legenda">${LEGENDA.map(([k, n]) => `<span><i style="background:var(${k})"></i>${n}</span>`).join("")}<span><i class="omlijnd"></i>Laadplan</span></div>
+        </div>
+        <div class="grafiek-scroll"><div class="grafiek" id="g-prijs" style="height:210px" role="img" aria-label="Stroomprijs per kwartier, vandaag${metMorgen ? " en morgen" : ""}"></div></div>
+        ${metMorgen ? "" : '<p class="kaart-voet">De prijzen voor morgen komen rond 13:00.</p>'}
+      </div>
+    </div>
+  </section>`;
 }
 
-function prijsGrafiek(blokken) {
+function prijsGrafiek(vandaagB, morgenB, plan) {
   const el = document.getElementById("g-prijs");
-  if (!el || !blokken.length) return;
-  const gem = gemiddelde(blokken);
-  const nu = huidigBlok(blokken);
-  const labels = blokken.map((b) => klok(b.van));
+  if (!el || !vandaagB.length) return;
+  const blokken = [...vandaagB, ...morgenB];
+  const gemV = gemiddelde(vandaagB);
+  const gemM = morgenB.length ? gemiddelde(morgenB) : null;
+  const vanMorgen = new Set(morgenB);
+  const nu = Date.now();
+  const huidig = huidigBlok(blokken);
+  const morgenStart = morgenB[0]?.van;
+  const vandaagStart = vandaagB[0].van;
+  const gloed = Number(css("--gloed-grafiek")) || 0;
+  const niv = (b) => niveau(b.prijs, vanMorgen.has(b) ? gemM : gemV);
+  const data = blokken.map((b) => {
+    const k = css(niv(b).kleur);
+    const item = gekleurd(b.prijs, k);
+    item.itemStyle = { ...item.itemStyle, shadowBlur: gloed, shadowColor: k, opacity: new Date(b.tot) <= nu ? 0.3 : 1 };
+    return item;
+  });
+
+  // Het laadplan als omlijnde vlakken. Slim laden kiest losse kwartieren; kwartieren met
+  // hooguit een half uur ertussen worden één vlak. Eén label boven het eerste vlak.
+  const index = new Map(blokken.map((b, i) => [new Date(b.van).getTime(), i]));
+  const groepen = [];
+  for (const p of plan.blokken) {
+    const i = index.get(new Date(p.van).getTime());
+    if (i == null) continue;
+    const laatst = groepen.at(-1);
+    if (laatst && i - laatst.tot <= 2) laatst.tot = i;
+    else groepen.push({ van: i, tot: i });
+  }
+  const laden = css("--c-laden");
+  // Bij staven lijnt ECharts een vlak uit op de ticks; met een (onzichtbare) tick per kwartier
+  // (axisTick.interval 0 hieronder) beslaat het vlak precies de kwartieren van van t/m tot.
+  const vlakken = groepen.map((g, n) => [
+    { xAxis: g.van, name: n ? "" : `Laadplan ${klok(plan.blokken[0].van)}–${klok(plan.blokken.at(-1).tot)}` },
+    { xAxis: g.tot },
+  ]);
+
+  const asTekst = (iso) => {
+    const t = klok(iso);
+    if (iso === morgenStart) return "{morgen|morgen 00:00}";
+    if (iso === vandaagStart) return "vandaag 00:00";
+    return t;
+  };
+  const lijnen = [];
+  if (huidig) lijnen.push(nuLijn(huidig.van));
+  if (morgenStart) lijnen.push(scheiding(morgenStart));
+
   grafiek(el).setOption(
     basis({
-      grid: { top: 18 },
-      xAxis: { data: labels, axisLabel: { interval: (i, w) => w.endsWith(":00") && Number(w.slice(0, 2)) % 6 === 0 } },
-      yAxis: { axisLabel: { formatter: (w) => `€ ${getal(w, 2)}` } },
+      grid: { top: 46, left: 4, right: 8, bottom: 0 },
+      xAxis: {
+        data: blokken.map((b) => b.van),
+        axisTick: { interval: 0 },
+        axisLabel: {
+          interval: (i, iso) => ["00:00", "12:00"].includes(klok(iso)),
+          formatter: asTekst,
+          rich: { morgen: { fontWeight: 500, color: css("--inkt-2"), fontSize: 12 } },
+        },
+      },
+      yAxis: {
+        min: Math.floor(Math.min(0, ...blokken.map((b) => b.prijs)) * 10) / 10,
+        interval: 0.1,
+        axisLabel: { formatter: (w) => (w === 0 ? "€ 0" : `€ ${getal(w, 2)}`) },
+      },
       tooltip: {
         formatter: ([p]) => {
           const b = blokken[p.dataIndex];
-          const n = niveau(b.prijs, gem);
-          return `${klok(b.van)}–${klok(b.tot)}${regel(css(n.kleur), n.naam, prijs(b.prijs))}`;
+          const n = niv(b);
+          return `${dagnaam(b.van)} ${klok(b.van)}–${klok(b.tot)}${regel(css(n.kleur), n.naam, prijs(b.prijs))}`;
         },
       },
       series: [
-        staven("Prijs", blokken.map((b) => gekleurd(b.prijs, css(niveau(b.prijs, gem).kleur))), null, {
-          barMaxWidth: 8,
+        staven("Prijs", data, null, {
+          barMaxWidth: 6,
           barCategoryGap: "20%",
-          markLine: nu ? markering(klok(nu.van), "nu") : undefined,
+          markLine: { symbol: "none", silent: true, animation: false, data: lijnen },
+          markArea: {
+            silent: true,
+            itemStyle: { color: doorzichtig(laden, 0.12), borderColor: laden, borderWidth: 2 },
+            label: { show: true, position: "top", distance: 24, color: laden, fontSize: 12, fontWeight: 500 },
+            data: vlakken,
+          },
         }),
       ],
     }),
   );
+  // Op een smal scherm scrollt de grafiek; begin bij "nu".
+  const scroll = el.parentElement;
+  if (huidig && scroll.scrollWidth > scroll.clientWidth) {
+    scroll.scrollLeft = Math.max(0, (blokken.indexOf(huidig) / blokken.length) * scroll.scrollWidth - 40);
+  }
 }
 
 // ── auto en lader ─────────────────────────────────────────────────────────────
 
-function autoKaart({ auto, lader, plan, instellingen }) {
-  const pct = auto?.accu_pct;
-  const doel = plan.doel_pct ?? instellingen.doel_pct;
-  const bereik = auto?.bereik_km != null ? `${getal(auto.bereik_km, 0)} km` : "";
-  const foto = autoFoto(auto?.naam);
-  const balk = (label) => `<div class="accu${(pct ?? 0) < 15 ? " laag" : ""}" role="meter" aria-label="Accu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct ?? 0)}">
-        <div class="vulling" style="width:${pct ?? 0}%"></div>
-        <div class="doel" style="left:${doel}%" title="Doel ${doel}%"></div>
-        ${label}
-      </div>`;
-  // Met een foto van de auto: het percentage groot ernaast en een balk zonder tekst, zoals op de pagina Auto.
-  const accu = !auto
-    ? '<p class="leeg">Nog geen gegevens van de auto. <a href="#/koppelingen">Koppel je auto</a></p>'
-    : foto
-      ? `<div class="auto-held">
-          <div class="auto-kop"><div class="groot">${getal(pct, 0)}<small>%</small></div><div class="zacht">${bereik && `${bereik} bereik`}</div></div>
-          <div class="auto-foto"><img src="${foto}" alt="${esc(auto.naam)}" width="688" height="336"></div>
-        </div>${balk("")}`
-      : balk(`<span><b>${getal(pct, 0)}%</b><span class="zacht">${bereik}</span></span>`);
+/** "vannacht" voor een tijdstip tussen middernacht en 6:00 dat binnen 18 uur valt, anders vandaag/morgen/datum. */
+function wanneer(iso) {
+  const uur = Number(klok(iso).slice(0, 2));
+  const over = new Date(iso) - Date.now();
+  return uur < 6 && over > 0 && over < 18 * 3600e3 ? "vannacht" : dagnaam(iso);
+}
+
+function autoKaart({ auto, lader, plan }) {
+  if (!auto) {
+    return kaart({ titel: "Auto en lader", klasse: "o-auto", inhoud: '<p class="leeg">Nog geen gegevens van de auto. <a href="#/koppelingen">Koppel je auto</a></p>' });
+  }
+  const pct = auto.accu_pct;
   const b = plan.blokken;
-  const planTekst = b.length ? `${klok(b[0].van)}–${klok(b.at(-1).tot)}` : PLAN_REDEN[plan.reden] || plan.reden;
+  const stekkerLos = !auto.ingeplugd;
+  const status = plan.nu_laden
+    ? '<span class="pil goed"><span class="stip"></span>Laadt nu</span>'
+    : stekkerLos
+      ? `<span class="pil ${b.length ? "let_op" : ""}"><span class="stip"></span>Stekker los</span>`
+      : '<span class="pil"><span class="stip"></span>Ingeplugd</span>';
+  const bijgewerkt = auto.bijgewerkt
+    ? dagnaam(auto.bijgewerkt) === "vandaag" ? klok(auto.bijgewerkt) : `${dagnaam(auto.bijgewerkt)} ${klok(auto.bijgewerkt)}`
+    : null;
+  const foto = autoFoto(auto.naam);
+  const doel = plan.doel_pct;
+  const stand = `<div class="auto-stand">
+      <div class="stand-kop"><div class="groot">${getal(pct, 0)}<small>%</small></div>
+        ${auto.bereik_km != null ? `<span class="bereik">${getal(auto.bereik_km, 0)} km bereik</span>` : ""}</div>
+      ${accuBalk(pct, doel, doel != null ? [{ pct: doel, tekst: `doel ${getal(doel, 0)}%` }] : [])}
+    </div>`;
+  const laderStatus = lader ? LADER_STATUS[lader.status] || lader.status : "–";
+  const tegels = b.length
+    ? [
+        tegel("Laadplan", `${klok(b[0].van)}–${klok(b.at(-1).tot)}`),
+        tegel("Kosten plan", euro(plan.kosten)),
+        tegel("Klaar vóór", klok(plan.vertrek)),
+        tegel("Lader", laderStatus),
+      ]
+    : [
+        tegel("Slim laden", PLAN_REDEN[plan.reden] || plan.reden),
+        tegel("Vertrek", `${klok(plan.vertrek)} <small>${dagnaam(plan.vertrek)}</small>`),
+        tegel("Lader", laderStatus),
+      ];
   return kaart({
     titel: "Auto en lader",
+    sub: [auto.naam, bijgewerkt && `bijgewerkt ${bijgewerkt}`].filter(Boolean).join(" · "),
     klasse: "o-auto",
     id: "k-auto",
-    rechts: plan.nu_laden ? '<span class="pil goed"><span class="stip"></span>Laadt nu</span>' : "",
-    inhoud: `${accu}
-      <div class="tegels" style="margin-top:12px">
-        ${tegel("Stekker", auto ? (auto.ingeplugd ? "Ingeplugd" : "Los") : "–")}
-        ${tegel("Lader", lader ? LADER_STATUS[lader.status] || lader.status : "–")}
-        ${tegel(b.length ? "Laadplan" : "Slim laden", planTekst)}
-        ${b.length ? tegel("Kosten plan", euro(plan.kosten)) : tegel("Vertrek", `${klok(plan.vertrek)} <small>${dagnaam(plan.vertrek)}</small>`)}
+    rechts: status,
+    inhoud: `${foto
+      ? `<div class="held-auto"><div class="auto-foto"><img src="${foto}" alt="${esc(auto.naam)}" width="688" height="336"></div>${stand}</div>`
+      : stand}
+      ${stekkerLos && b.length ? melding(`Het laadplan start ${wanneer(b[0].van)} om ${klok(b[0].van)}. Steek de stekker erin, anders laadt de auto niet.`, "let_op") : ""}
+      <div class="tegels vier">${tegels.join("")}</div>`,
+    voet: pijl("Naar auto & laden", "#/auto"),
+  });
+}
+
+// ── verbruik van de laatste dag met meterdata ─────────────────────────────────
+
+function verbruikKaart(dag, ervoor, isVandaag) {
+  if (!dag.compleet.verbruik) {
+    return kaart({
+      titel: "Verbruik",
+      klasse: "o-verbruik",
+      id: "k-verbruik",
+      inhoud: `<div class="leeg-blok">
+        <span class="rond"><svg class="ic" aria-hidden="true"><use href="#i-net"/></svg></span>
+        <p class="titel">Nog geen meterdata</p>
+        <p class="zacht">Koppel Frank Energie om je stroom, gas en kosten per dag te zien. De slimme meter loopt een dag achter.</p>
+        <a class="knop primair" href="#/koppelingen">Koppel Frank Energie</a>
       </div>`,
-    voet: `${auto?.bijgewerkt ? `Auto bijgewerkt ${relatief(auto.bijgewerkt)}. ` : ""}<a href="#/laden">Naar laden</a>`,
+    });
+  }
+  const t = dag.totalen;
+  const stroomKosten = t.stroom.kosten + t.teruglevering.kosten;
+  const netto = stroomKosten + t.gas.kosten;
+  let verschil = "";
+  if (ervoor?.compleet.verbruik) {
+    const e = ervoor.totalen;
+    const vorig = e.stroom.kosten + e.teruglevering.kosten + e.gas.kosten;
+    if (vorig > 0) {
+      const r = netto / vorig - 1;
+      const kleur = r < 0 ? "var(--goed)" : r >= 0.1 ? "var(--let-op)" : "var(--inkt-3)";
+      const teken = r > 0.005 ? "+" : r < -0.005 ? "−" : "";
+      verschil = `<span class="verschil" style="color:${kleur}">${teken}${getal(Math.abs(r) * 100, 0)}% t.o.v. ${WEEKDAG.format(middag(ervoor.datum))}</span>`;
+    }
+  }
+  const regels = [
+    ["--c-stroom", "Stroom afgenomen", `${hoeveelheid(t.stroom.hoeveelheid)} kWh`, euro(t.stroom.kosten), ""],
+    ["--c-terug", "Teruggeleverd", `${hoeveelheid(t.teruglevering.hoeveelheid)} kWh`, euro(t.teruglevering.kosten), ""],
+    ["--c-gas", "Gas", `${hoeveelheid(t.gas.hoeveelheid)} m³`, euro(t.gas.kosten), ""],
+    ["--c-laden", "waarvan laden", `${hoeveelheid(t.laden.hoeveelheid)} kWh`, euro(t.laden.kosten), " deel"],
+  ];
+  return kaart({
+    titel: `Verbruik ${isVandaag ? "vandaag" : "gisteren"}`,
+    sub: DATUM.format(middag(dag.datum)),
+    klasse: "o-verbruik",
+    id: "k-verbruik",
+    inhoud: `<div class="netto"><div class="groot">${euro(netto)}<small>netto</small></div>${verschil}</div>
+      <div class="verdeel" role="img" aria-label="Stroom ${euro(stroomKosten)}, gas ${euro(t.gas.kosten)}">
+        <i style="flex:${Math.max(stroomKosten, 0)};background:var(--c-stroom)"></i><i style="flex:${Math.max(t.gas.kosten, 0)};background:var(--c-gas)"></i>
+      </div>
+      <div class="regels">${regels
+        .map(([k, naam, hoeveel, kosten, extra]) => `<div class="regel${extra}"><i style="background:var(${k})"></i><span>${naam}</span><span class="hoeveel">${hoeveel}</span><span class="kosten">${kosten}</span></div>`)
+        .join("")}</div>`,
+    voet: pijl("Energiestromen en details", "#/energie"),
   });
 }

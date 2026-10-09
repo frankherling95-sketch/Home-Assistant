@@ -126,3 +126,38 @@ export const regel = (kleur, label, waarde) =>
   `<div style="display:flex;align-items:center;gap:8px;min-width:150px">` +
   `<span style="width:10px;height:10px;border-radius:3px;background:${kleur}"></span>` +
   `<span>${label}</span><b style="margin-left:auto;font-weight:500">${waarde}</b></div>`;
+
+/** Kleur uit een token (#rrggbb, #rgb of rgb(...)) met doorzichtigheid, voor vlakken in ECharts. */
+export function doorzichtig(kleur, alfa) {
+  let k = kleur.trim();
+  if (k.startsWith("#")) {
+    if (k.length === 4) k = `#${[...k.slice(1)].map((c) => c + c).join("")}`;
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(k.slice(i, i + 2), 16));
+    return `rgba(${r}, ${g}, ${b}, ${alfa})`;
+  }
+  const m = k.match(/[\d.]+/g);
+  return m ? `rgba(${m[0]}, ${m[1]}, ${m[2]}, ${alfa})` : k;
+}
+
+/** markLine-punt "nu": een doorgetrokken lijn met een label als badge. */
+export function nuLijn(categorie, tekst = "nu") {
+  return {
+    xAxis: categorie,
+    lineStyle: { color: css("--inkt"), type: "solid", width: 1.5, opacity: 0.9 },
+    label: {
+      formatter: tekst, position: "end", distance: 4, color: css("--oppervlak"), backgroundColor: css("--inkt"),
+      padding: [2, 6], borderRadius: 4, fontSize: 12, fontWeight: 600,
+    },
+  };
+}
+
+/** markLine-punt: een dunne doorgetrokken scheiding zonder label (bijv. morgen 00:00). */
+export const scheiding = (categorie) => ({
+  xAxis: categorie, lineStyle: { color: css("--lijn-sterk"), type: "solid", width: 1 }, label: { show: false },
+});
+
+/** markLine-punt: een gestippelde lijn met een klein label (bijv. "vertrek 07:30"). */
+export const stippel = (categorie, tekst) => ({
+  xAxis: categorie, lineStyle: { color: css("--inkt-3"), type: "dashed", width: 1 },
+  label: { formatter: tekst, position: "end", color: css("--inkt-2"), fontSize: 11, distance: 2 },
+});

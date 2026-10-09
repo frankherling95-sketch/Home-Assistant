@@ -446,20 +446,84 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
 
 /* ── overzicht ─────────────────────────────────────────────────────────── */
 
-.overzicht { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; align-items: start; }
-.overzicht .kolom { display: grid; gap: 16px; align-content: start; min-width: 0; }
-.overzicht .vol { grid-column: 1 / -1; }
-@media (max-width: 1099px) {
-  /* Mobiel: één kolom in volgorde van wat je het eerst wilt weten. */
-  .overzicht { grid-template-columns: minmax(0, 1fr); }
-  .overzicht .kolom { display: contents; }
-  .o-prijs { order: 1; }
-  .o-stromen { order: 2; }
-  .o-auto { order: 3; }
-  .o-inzichten { order: 4; }
-  .o-totalen { order: 5; }
+/* Van wat je nu kunt doen naar terugblikken: prijs (volle breedte), auto en verbruik, inzichten.
+   Op mobiel staat alles vanzelf in die volgorde onder elkaar. */
+.overzicht { display: flex; flex-direction: column; gap: 16px; }
+.overzicht-rij { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px; align-items: stretch; }
+.overzicht-rij > .kaart { display: flex; flex-direction: column; }
+.overzicht-rij > .kaart > .kaart-voet:last-child { margin-top: auto; padding-top: 12px; }
+@media (max-width: 599px) { .overzicht, .overzicht-rij { gap: 12px; } }
+
+/* prijskaart: prijsblok links, grafiek van vandaag en morgen rechts */
+.held-prijs { display: flex; flex-wrap: wrap; gap: 24px 32px; }
+.prijs-blok { flex: 0 1 260px; min-width: 240px; display: flex; flex-direction: column; }
+.prijs-blok .kaart-kop { margin-bottom: 8px; }
+.prijs-groot { font-size: 52px; line-height: 1.05; font-weight: 400; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.prijs-blok .zacht { font-size: 14px; margin-top: 4px; }
+.feit { display: grid; gap: 2px; margin: 14px 0 0; padding-top: 10px; border-top: 1px solid var(--lijn); }
+.feit-label { font-size: 13px; color: var(--inkt-3); }
+.feit-waarde { font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.feit-uitleg { font-size: 14px; color: var(--inkt-3); }
+.prijs-link { margin-top: auto; padding-top: 14px; }
+.prijs-grafiek { flex: 1 1 560px; min-width: 0; }
+.grafiek-kop { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+.grafiek-kop .titel { font-weight: 500; }
+.grafiek-kop .legenda { margin: 0 0 0 auto; }
+.legenda i.omlijnd { background: none; border: 2px solid var(--c-laden); }
+.grafiek-scroll { overflow-x: auto; }
+@media (max-width: 599px) {
+  .grafiek-scroll .grafiek { width: 760px; }
+  .grafiek-kop .legenda { margin: 4px 0 0; }
 }
-@media (max-width: 599px) { .overzicht { gap: 12px; } }
+.pijl { font-weight: 500; text-decoration: none; white-space: nowrap; }
+
+/* auto en lader: foto, accu en tegels */
+.held-auto { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 8px 24px; align-items: center; margin-bottom: 12px; }
+.held-auto .auto-foto { margin: -8px 0; }
+.auto-stand { display: grid; gap: 10px; min-width: 0; margin-bottom: 12px; }
+.held-auto .auto-stand { margin-bottom: 0; }
+.stand-kop { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
+.stand-kop .groot { font-size: 52px; line-height: 1.05; }
+.stand-kop .groot small { font-size: 18px; }
+.stand-kop .bereik { margin-left: auto; color: var(--inkt-2); white-space: nowrap; }
+.accu.dun { height: 14px; border-radius: 999px; overflow: visible; }
+.accu.dun .vulling { border-radius: 999px; }
+.accu.dun .gepland {
+  position: absolute; top: 0; bottom: 0; border-radius: 0 999px 999px 0;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c-laden) 35%, transparent) 0 4px, transparent 4px 8px);
+}
+.accu.dun .doel { opacity: 0.6; top: -3px; bottom: -3px; }
+.accu-labels { position: relative; height: 18px; font-size: 12px; color: var(--inkt-3); }
+.accu-labels span { position: absolute; top: 2px; transform: translateX(-50%); white-space: nowrap; }
+.accu-labels span.eind { transform: translateX(-100%); }
+.accu-labels span.begin { transform: none; }
+.tegels.vier { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); margin-top: 12px; }
+.kaart .melding { margin-top: 4px; }
+@media (max-width: 599px) {
+  .held-auto { grid-template-columns: minmax(0, 1fr); }
+  .stand-kop .groot { font-size: 44px; }
+}
+
+/* verbruik van de laatste dag met meterdata */
+.netto { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
+.netto .verschil { margin-left: auto; font-size: 13px; }
+.verdeel { display: flex; gap: 2px; height: 10px; margin: 14px 0 6px; }
+.verdeel i { border-radius: 999px; min-width: 0; }
+.regels { display: grid; }
+.regel { display: grid; grid-template-columns: auto minmax(0, 1fr) auto 70px; align-items: center; gap: 12px;
+  padding: 9px 0; border-bottom: 1px solid var(--lijn); font-variant-numeric: tabular-nums; }
+.regel i { width: 10px; height: 10px; border-radius: 50%; }
+.regel .hoeveel { color: var(--inkt-2); }
+.regel .kosten { text-align: right; }
+.regel.deel { color: var(--inkt-3); }
+.regel.deel .hoeveel { color: var(--inkt-3); }
+.leeg-blok { display: grid; justify-items: start; gap: 8px; padding: 8px 0; }
+.leeg-blok .rond { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--oppervlak-2); color: var(--c-stroom); }
+.leeg-blok .titel { font-size: 17px; font-weight: 500; }
+.leeg-blok .knop { margin-top: 6px; }
+
+/* inzichten: hooguit drie op een rij */
+.inzichten.breed { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 
 /* energiestromen */
 
