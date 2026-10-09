@@ -25,7 +25,7 @@ Eén dag per uur (23/24/25 uren rond de zomertijdwissel). Zonder `datum`: vandaa
   "uren": ["2026-10-06T22:00:00+00:00", "..."],
   "reeksen": {
     "stroom": [0.41, ...], "teruglevering": [0, ...], "gas": [0.08, ...], "laden": [0, ...],
-    "kosten_stroom": [0.11, ...],
+    "kosten_stroom": [0.11, ...], "kosten_gas": [0.10, ...],
     "temperatuur": [11.2, null, ...]
   },
   "prijzen": {
@@ -44,7 +44,7 @@ Eén dag per uur (23/24/25 uren rond de zomertijdwissel). Zonder `datum`: vandaa
 - `laden` is een deel van `stroom` (de lader hangt achter de meter) en telt niet apart mee in totale kosten.
 - `laden` komt uit de meterstand van de lader: het verschil tussen twee metingen telt bij het uur
   van de latere meting, tegen de prijs van het blok waar het midden van dat interval in valt.
-- `kosten_stroom` per uur = stroom − |teruglevering|.
+- `kosten_stroom` per uur = stroom − |teruglevering|; `kosten_gas` per uur = gas.
 - `temperatuur`: gemiddelde °C per uur (Open-Meteo), `null` waar onbekend.
 - Prijsblokken zijn kwartieren (of uren, voor oudere data).
 
@@ -60,7 +60,7 @@ Week/maand: bakjes per dag; jaar: per maand.
   "bakje_labels": ["ma 5", "di 6", "..."],
   "reeksen": {
     "stroom": [...], "teruglevering": [...], "gas": [...], "laden": [...],
-    "kosten": [...],
+    "kosten": [...], "kosten_stroom": [...], "kosten_gas": [...],
     "temperatuur": [...]
   },
   "totalen": { "...": "zelfde vorm als /api/dag totalen" },
@@ -72,7 +72,7 @@ Week/maand: bakjes per dag; jaar: per maand.
   dezelfde dagen van de vorige periode; `vorige_label` zegt welke.
 - Maand: `bakje_labels` = `["1", "2", ...]`, `label` = `"oktober 2026"`.
 - Jaar: `bakjes` = `["2026-01", ...]`, `bakje_labels` = `["jan", ...]`, `label` = `"2026"`.
-- `kosten` per bakje = stroom + gas − |teruglevering|.
+- `kosten` per bakje = stroom + gas − |teruglevering| = `kosten_stroom` + `kosten_gas`.
 - `null` in `stroom`/`teruglevering`/`gas`/`kosten`: geen meterdata voor dat bakje (nog niet binnen,
   of in de toekomst). `laden` is `0` voor verleden bakjes zonder laden en `null` voor de toekomst.
 - `temperatuur` = gemiddelde °C per bakje of `null`.

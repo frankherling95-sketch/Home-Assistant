@@ -115,6 +115,7 @@ def test_dagoverzicht_totalen(opslag):
     assert d["totalen"]["stroom"] == {"hoeveelheid": 2.0, "kosten": 0.6, "eenheid": "kWh"}
     assert d["totalen"]["teruglevering"]["kosten"] == -0.3
     assert d["reeksen"]["kosten_stroom"][12] == -0.3
+    assert d["reeksen"]["kosten_gas"][:2] == [0, 0]
     assert d["totalen"]["laden"]["hoeveelheid"] == 11.0
     assert d["totalen"]["laden"]["kosten"] == 3.3
     assert d["reeksen"]["temperatuur"][:3] == [9.5, 9.5, None]
