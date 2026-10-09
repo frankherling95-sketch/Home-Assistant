@@ -259,6 +259,10 @@ svg.ic.vol { fill: currentColor; stroke: none; }
 .status-stip[data-status="let_op"] { background: var(--let-op); box-shadow: 0 0 var(--gloed-stip) var(--let-op); }
 .status-stip[data-status="fout"] { background: var(--fout); box-shadow: 0 0 var(--gloed-stip) var(--fout); }
 .kop .themaknop { display: none; }
+/* Nu ophalen: het icoon draait zolang de ronde loopt */
+.ophaalknop.bezig { color: var(--accent); cursor: progress; }
+.ophaalknop.bezig svg { animation: draai 1s linear infinite; }
+@keyframes draai { to { transform: rotate(360deg); } }
 
 main { padding: 0 24px 32px; width: 100%; max-width: 1360px; outline: none; }
 
@@ -602,7 +606,7 @@ main { padding: 0 24px 32px; width: 100%; max-width: 1360px; outline: none; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .skelet, .toast { animation: none; }
+  .skelet, .toast, .ophaalknop.bezig svg { animation: none; }
   .accu .vulling, .schakelaar span, .schakelaar span::after { transition: none; }
   .merk .bliksem .kern { animation: none; filter: drop-shadow(0 0 4px var(--accent)); }
   .merk .bliksem .vonk { animation: none; }
