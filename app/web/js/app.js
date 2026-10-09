@@ -3,6 +3,7 @@
 import { $, $$, api, datumLang, esc, icoon, klok, legeCache, meldFout, relatief, thema, vandaag, zetThema } from "./basis.js";
 import { herschaal, ruimOp } from "./grafiek.js";
 import { ophalen } from "./ophalen.js";
+import * as apparaten from "./paginas/apparaten.js";
 import * as auto from "./paginas/auto.js";
 import * as bronnen from "./paginas/bronnen.js";
 import * as energie from "./paginas/energie.js";
@@ -16,6 +17,7 @@ const PAGINAS = {
   energie: { titel: "Energie", module: energie, sub: "stroom, gas en laden per periode" },
   prijzen: { titel: "Prijzen", module: prijzen, sub: "all-in per kwartier, vandaag en morgen" },
   auto: { titel: "Auto & laden", module: auto, sub: "" },
+  apparaten: { titel: "Apparaten", module: apparaten, sub: "" },
   inzichten: { titel: "Inzichten", module: inzichten, sub: "uitgerekend uit je eigen meter-, laad- en prijsdata" },
   koppelingen: { titel: "Koppelingen", module: bronnen, sub: "je accounts en de verzamelaar" },
   laden: { als: "auto" }, // oude links

@@ -1,13 +1,14 @@
 // Overzicht: van wat je nu kunt doen naar terugblikken. Bovenaan de stroomprijs met vandaag en
-// morgen, dan de auto en het verbruik van de laatste dag met meterdata, onderaan de inzichten.
-// Het stromendiagram en de totalentabel staan op Energie.
+// morgen, dan de auto en het verbruik van de laatste dag met meterdata, je slimme apparaten (als
+// Tuya gekoppeld is) en onderaan de inzichten. Het stromendiagram en de totalentabel staan op Energie.
 
 import {
-  LADER_STATUS, PLAN_REDEN, api, autoFoto, autoStand, css, dagnaam, esc, euro, gemiddelde, getal, goedkoopsteVenster,
-  hoeveelheid, huidigBlok, klok, niveau, plusDagen, prijs, vandaag,
+  $, LADER_STATUS, PLAN_REDEN, api, autoFoto, autoStand, css, dagnaam, esc, euro, gemiddelde, getal, goedkoopsteVenster,
+  hoeveelheid, huidigBlok, icoon, klok, meldFout, niveau, plusDagen, prijs, vandaag,
 } from "../basis.js";
 import { basis, doorzichtig, gekleurd, grafiek, nuLijn, regel, ruimOp, scheiding, staven } from "../grafiek.js";
 import { accuBalk, inzichtTegel, kaart, leeg, melding, pijl, skeletKaart, tegel } from "../onderdelen.js";
+import { hoofd, icoonVan, stand as apparaatStand } from "./apparaten.js";
 
 const WEEKDAG = new Intl.DateTimeFormat("nl-NL", { weekday: "long", timeZone: "UTC" });
 const DATUM = new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
@@ -21,11 +22,12 @@ export async function toon(main, _params, ctx) {
     </div>`;
   }
   const v = vandaag();
-  const [nu, dag, morgen, inzichten] = await Promise.all([
+  const [nu, dag, morgen, inzichten, apparaten] = await Promise.all([
     api("nu"),
     api(`dag?datum=${v}`),
     api(`dag?datum=${plusDagen(v, 1)}`),
     api(`inzichten?datum=${v}`).catch(() => []),
+    api("apparaten").catch(() => null), // Tuya onbereikbaar: het overzicht gewoon zonder apparaten
   ]);
   // De slimme meter komt via Frank met een dag vertraging: dan gisteren tonen, vergeleken met de dag ervoor.
   const meterdag = dag.compleet.verbruik ? dag : await api(`dag?datum=${plusDagen(v, -1)}`);
@@ -39,6 +41,7 @@ export async function toon(main, _params, ctx) {
       ${autoKaart(nu)}
       ${verbruikKaart(meterdag, ervoor, meterdag === dag)}
     </div>
+    ${apparaten?.gekoppeld && apparaten.apparaten.length ? apparatenKaart(apparaten.apparaten) : ""}
     ${inzichten.length
       ? kaart({
           titel: "Inzichten",
@@ -49,6 +52,7 @@ export async function toon(main, _params, ctx) {
       : ""}
   </div>`;
   prijsGrafiek(dag.prijzen.stroom, morgen.prijzen.stroom, nu.plan);
+  koppelSnelknoppen(main, apparaten?.apparaten || []);
 }
 
 // ── stroomprijs ───────────────────────────────────────────────────────────────
@@ -259,6 +263,66 @@ function autoKaart({ auto, lader, plan }) {
       ${stekkerLos && b.length ? melding(`Het laadplan start ${wanneer(b[0].van)} om ${klok(b[0].van)}. Steek de stekker erin, anders laadt de auto niet.`, "let_op") : ""}
       <div class="tegels vier">${tegels.join("")}</div>`,
     voet: pijl("Naar auto & laden", "#/auto"),
+  });
+}
+
+// ── slimme apparaten: aan- en uitzetten zonder de pagina Apparaten te openen ───
+
+const SNEL = 6;
+
+function apparatenSub(lijst) {
+  const aan = lijst.filter((a) => a.aan).length;
+  const meters = lijst.filter((a) => a.online && a.metingen.vermogen_w != null && a.aan !== false);
+  const vermogen = meters.reduce((s, a) => s + a.metingen.vermogen_w, 0);
+  return `${aan} van ${lijst.length} aan${meters.length ? ` · ${getal(vermogen, 0)} W` : ""}`;
+}
+
+function apparatenKaart(lijst) {
+  // Wat je kunt schakelen; wat aan staat eerst (de volgorde blijft staan tot de pagina opnieuw laadt).
+  const knoppen = lijst.filter((a) => hoofd(a).length && a.aan != null).sort((x, y) => Number(y.aan) - Number(x.aan)).slice(0, SNEL);
+  return kaart({
+    titel: "Apparaten",
+    sub: apparatenSub(lijst),
+    id: "k-apparaten",
+    rechts: pijl("Alle apparaten", "#/apparaten"),
+    inhoud: knoppen.length
+      ? `<div class="snelknoppen">${knoppen.map(snelknop).join("")}</div>`
+      : leeg("Geen apparaten die je aan en uit kunt zetten."),
+  });
+}
+
+const snelknop = (a) =>
+  `<button type="button" class="snelknop" data-snel="${esc(a.id)}" aria-pressed="${Boolean(a.aan)}" ${a.online ? "" : "disabled"}
+    aria-label="${esc(a.naam)}: ${esc(apparaatStand(a))}. ${a.aan ? "Uitzetten" : "Aanzetten"}">
+    <span class="icoon">${icoon(icoonVan(a))}</span>
+    <span class="tekst"><span class="naam">${esc(a.naam)}</span><span class="stand">${esc(apparaatStand(a))}</span></span>
+  </button>`;
+
+function koppelSnelknoppen(main, lijst) {
+  const vak = $(".snelknoppen", main);
+  if (!vak) return;
+  vak.addEventListener("click", async (e) => {
+    const knop = e.target.closest("[data-snel]");
+    if (!knop || knop.getAttribute("aria-busy")) return;
+    const a = lijst.find((x) => x.id === knop.dataset.snel);
+    const aan = !a.aan;
+    knop.setAttribute("aria-pressed", String(aan));
+    knop.setAttribute("aria-busy", "true");
+    try {
+      const r = await api(`apparaten/${encodeURIComponent(a.id)}`, {
+        methode: "POST",
+        body: { opdrachten: hoofd(a).map((code) => ({ code, waarde: aan })) },
+        legen: false,
+      });
+      Object.assign(a, r.apparaat);
+      knop.outerHTML = snelknop(a);
+      $("#k-apparaten .kaart-kop .sub", main).textContent = apparatenSub(lijst);
+      $(`[data-snel="${CSS.escape(a.id)}"]`, vak)?.focus();
+    } catch (err) {
+      knop.setAttribute("aria-pressed", String(a.aan));
+      knop.removeAttribute("aria-busy");
+      meldFout(err);
+    }
   });
 }
 

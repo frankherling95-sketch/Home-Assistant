@@ -15,6 +15,7 @@ const TABELNAMEN = {
   stuuractie: "Stuuracties",
   weer: "Weer",
   melding: "Meldingen",
+  apparaat_meting: "Metingen apparaten",
   ronde: "Rondelog",
 };
 
@@ -28,6 +29,19 @@ const STATUS = {
 const HULP = {
   google_chat: "Maak in Google Chat een ruimte, kies Apps en integraties → Webhooks → Webhook toevoegen, en kopieer het adres.",
   bmw: "Log in op de BMW-site, ga naar BMW CarData en maak een client aan met 'CarData API' aan. Kopieer de Client-ID. Daarna geeft Thuis je een code om bij BMW te bevestigen.",
+};
+
+// Koppelen in stappen (eigen tekst, dus HTML met links mag).
+const STAPPEN_HULP = {
+  tuya: {
+    stappen: [
+      'Maak een gratis account op <a href="https://platform.tuya.com" target="_blank" rel="noopener noreferrer">platform.tuya.com</a>. Dat is een ander account dan dat van Smart Life.',
+      "Ga naar Cloud → Development → Create Cloud Project. Kies bij Development Method <i>Smart Home</i> en bij Data Center het datacenter van je Smart Life-account (in Nederland: Central Europe).",
+      "Open in het project Devices → Link App Account → Add App Account en scan de QR-code met Smart Life of Tuya Smart (Ik → scanknop rechtsboven).",
+      "Kopieer bij Overview de Access ID en de Access Secret naar dit formulier.",
+    ],
+    voet: "Je Smart Life-wachtwoord heeft Thuis niet nodig. De Access ID en Access Secret van je project bewaart Thuis in de kluis: daarmee ondertekent het elk verzoek aan Tuya. Het gratis proefabonnement (IoT Core) verleng je om de paar maanden op platform.tuya.com; verloopt het, dan zie je dat hieronder bij de verzamelaar.",
+  },
 };
 
 export async function toon(main, _params, ctx) {
@@ -50,7 +64,7 @@ export async function toon(main, _params, ctx) {
   main.innerHTML = `<div class="raster">
     ${kaart({
       titel: "Accounts",
-      sub: "je accounts bij Frank Energie, Easee en je auto",
+      sub: "je accounts bij Frank Energie, Easee, je auto en je apparaten",
       klasse: "b-12",
       id: "k-koppelingen",
       inhoud: `${melding("Thuis bewaart je wachtwoord niet. Je logt één keer in; daarna gebruikt Thuis alleen de sleutel (token) die de dienst teruggeeft.", "", "vink")}
@@ -109,40 +123,55 @@ function koppelingItem(k) {
 function veld(v, dienst) {
   const id = `v-${dienst}-${v.naam}`;
   if (v.type === "keuze") {
+    const naam = (k) => (typeof k === "object" ? k.label : k === "kia" ? "Kia" : k === "hyundai" ? "Hyundai" : k);
+    const waarde = (k) => (typeof k === "object" ? k.waarde : k);
     return `<label class="koppel-veld" for="${id}"><span>${esc(v.label)}</span>
-      <select id="${id}" name="${v.naam}">${v.keuzes.map((k) => `<option value="${k}">${k === "kia" ? "Kia" : k === "hyundai" ? "Hyundai" : esc(k)}</option>`).join("")}</select></label>`;
+      <select id="${id}" name="${v.naam}">${v.keuzes.map((k) => `<option value="${esc(waarde(k))}">${esc(naam(k))}</option>`).join("")}</select></label>`;
   }
-  const auto = v.type === "password" ? "current-password" : v.type === "email" || v.naam === "gebruiker" ? "username" : "off";
+  // Een Access Secret is geen wachtwoord van jou: de browser hoeft hem niet te bewaren.
+  const auto = v.naam === "access_secret" ? "off" : v.type === "password" ? "current-password" : v.type === "email" || v.naam === "gebruiker" ? "username" : "off";
   return `<label class="koppel-veld" for="${id}"><span>${esc(v.label)}</span>
     <input id="${id}" name="${v.naam}" type="${v.type === "email" ? "email" : v.type === "password" ? "password" : v.type === "url" ? "url" : "text"}"
       autocomplete="${auto}" required spellcheck="false"></label>`;
 }
 
+/** Het vak met het formulier dicht; een brede kaart (met stappen) wordt weer gewoon. */
+function sluit(vak) {
+  vak.hidden = true;
+  vak.closest(".koppel-kaart")?.classList.remove("breed");
+}
+
 function openFormulier(li, k) {
   const vak = $(".koppel-vak", li);
-  if (!vak.hidden) {
-    vak.hidden = true;
-    return;
-  }
-  for (const ander of $$(".koppel-vak")) ander.hidden = true;
+  if (!vak.hidden) return sluit(vak);
+  for (const ander of $$(".koppel-vak")) sluit(ander);
   const verstuur = k.methode === "code" ? "Code aanvragen" : "Koppelen";
-  vak.innerHTML = `<form class="koppel-form">
-    ${k.velden.map((v) => veld(v, k.dienst)).join("")}
+  const bezig = k.methode === "code" ? "Code aanvragen…" : k.dienst === "tuya" ? "Apparaten zoeken…" : "Bezig met inloggen…";
+  const stappen = STAPPEN_HULP[k.dienst];
+  const velden = `${k.velden.map((v) => veld(v, k.dienst)).join("")}
     ${HULP[k.dienst] ? `<p class="zacht klein">${esc(HULP[k.dienst])}</p>` : ""}
     <div class="formulier-acties">
       <button class="knop primair" type="submit">${verstuur}</button>
       <button class="knop" type="button" data-annuleer>Annuleren</button>
-    </div>
-  </form>`;
+    </div>`;
+  // Met stappen (Tuya): de kaart over de volle breedte, de stappen naast de velden.
+  vak.innerHTML = stappen
+    ? `<form class="koppel-form met-stappen">
+        <div class="koppel-uitleg"><ol class="stappen">${stappen.stappen.map((st) => `<li>${st}</li>`).join("")}</ol>
+          <p class="zacht klein">${esc(stappen.voet)}</p></div>
+        <div class="koppel-velden">${velden}</div>
+      </form>`
+    : `<form class="koppel-form">${velden}</form>`;
+  li.classList.toggle("breed", Boolean(stappen));
   vak.hidden = false;
   const form = $("form", vak);
-  form.querySelector("input, select")?.focus();
-  $("[data-annuleer]", form).onclick = () => (vak.hidden = true);
+  form.querySelector("input, select")?.focus({ preventScroll: Boolean(stappen) }); // de stappen blijven in beeld
+  $("[data-annuleer]", form).onclick = () => sluit(vak);
   form.onsubmit = async (e) => {
     e.preventDefault();
     const knop = $("button[type=submit]", form);
     knop.disabled = true;
-    knop.textContent = k.methode === "code" ? "Code aanvragen…" : "Bezig met inloggen…";
+    knop.textContent = bezig;
     const gegevens = Object.fromEntries(new FormData(form).entries());
     try {
       const r = await api(`koppelingen/${k.dienst}`, { methode: "POST", body: gegevens });
@@ -178,7 +207,7 @@ function toonCode(vak, k, code) {
   let gestopt = false;
   $("[data-annuleer]", vak).onclick = () => {
     gestopt = true;
-    vak.hidden = true;
+    sluit(vak);
   };
   const vraag = async (seconden) => {
     await new Promise((klaar) => setTimeout(klaar, seconden * 1000));
@@ -211,7 +240,7 @@ async function ontkoppel(k) {
 // ── verzamelaar ───────────────────────────────────────────────────────────────
 
 // Korte namen per stap; de bron (Frank Energie, Easee, …) staat erachter.
-const STAPPEN = { prijzen: "Prijzen", verbruik: "Verbruik", lader: "Lader", auto: "Auto", bmw: "BMW", weer: "Weer", sturen: "Sturen", meldingen: "Meldingen" };
+const STAPPEN = { prijzen: "Prijzen", verbruik: "Verbruik", lader: "Lader", auto: "Auto", bmw: "BMW", apparaten: "Apparaten", weer: "Weer", sturen: "Sturen", meldingen: "Meldingen" };
 const HISTORIE = 8;
 
 /** De laatste rondes als staafjes: hoog bij gelukt of mislukt, laag bij overgeslagen of niet gedraaid. */
