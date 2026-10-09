@@ -59,7 +59,7 @@
 
   --radius: 12px;
   --radius-klein: 8px;
-  --kop-hoogte: 56px;
+  --kop-hoogte: 72px;
   --tab-hoogte: 64px;
   --font: Roboto, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   color-scheme: light;
@@ -201,7 +201,7 @@ svg.ic.vol { fill: currentColor; stroke: none; }
 
 /* ── schil: zijbalk (desktop) en tabbalk (mobiel) ──────────────────────── */
 
-.schil { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100dvh; }
+.schil { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100dvh; }
 
 .zijbalk {
   position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column;
@@ -241,14 +241,29 @@ svg.ic.vol { fill: currentColor; stroke: none; }
 .menu .status-stip { margin-left: auto; }
 .zijbalk-voet { margin-top: auto; display: grid; gap: 12px; padding: 0 4px; }
 .gebruiker { color: var(--inkt-3); font-size: 13px; overflow-wrap: anywhere; }
+/* Koppelingen als blok onderaan de zijbalk: aantal accounts, laatste ronde en de gezondheidsstip */
+.zijbalk-koppelingen {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--lijn); border-radius: 10px; color: var(--inkt); text-decoration: none;
+}
+.zijbalk-koppelingen:hover { background: var(--oppervlak-2); }
+.zijbalk-koppelingen[aria-current="page"] { background: var(--accent-zacht); border-color: transparent; box-shadow: var(--gloed-accent); }
+.zijbalk-koppelingen svg { width: 22px; height: 22px; color: var(--inkt-2); }
+.zijbalk-koppelingen .tekst { display: grid; min-width: 0; }
+.zijbalk-koppelingen .titel { font-weight: 500; }
+.zijbalk-koppelingen .sub { font-size: 12px; color: var(--inkt-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.segment.thema-iconen button { display: grid; place-items: center; padding: 6px 0; }
+.segment.thema-iconen svg { width: 20px; height: 20px; }
 
 .hoofd { min-width: 0; display: flex; flex-direction: column; }
 .kop {
-  position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 12px;
-  height: var(--kop-hoogte); padding: 0 24px; background: var(--kop-achtergrond); backdrop-filter: var(--vervaging);
+  position: sticky; top: 0; z-index: 10; display: flex; align-items: baseline; gap: 14px;
+  min-height: var(--kop-hoogte); padding: 22px 28px 14px; background: var(--kop-achtergrond); backdrop-filter: var(--vervaging);
 }
-.kop h1 { font-size: 22px; font-weight: 400; }
-.kop .rechts { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.kop h1 { font-size: 24px; font-weight: 400; }
+.kop-sub { font-size: 14px; color: var(--inkt-3); }
+.kop .rechts { margin-left: auto; align-self: center; display: flex; align-items: center; gap: 4px; }
+.kop .gezondheid { display: none; } /* op desktop staat de stip in de zijbalk */
 .icoonknop {
   display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
   border: 0; background: none; color: var(--inkt-2); text-decoration: none;
@@ -260,24 +275,27 @@ svg.ic.vol { fill: currentColor; stroke: none; }
 .status-stip[data-status="fout"] { background: var(--fout); box-shadow: 0 0 var(--gloed-stip) var(--fout); }
 .kop .themaknop { display: none; }
 
-main { padding: 0 24px 32px; width: 100%; max-width: 1360px; outline: none; }
+main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
 
 .tabbalk { display: none; }
 
 @media (max-width: 899px) {
+  :root { --kop-hoogte: 56px; }
   .schil { grid-template-columns: minmax(0, 1fr); }
   .zijbalk { display: none; }
-  .kop { padding: 0 8px 0 16px; }
-  .kop .themaknop { display: inline-grid; }
+  .kop { padding: 0 8px 0 16px; align-items: center; gap: 10px; }
+  .kop h1 { font-size: 22px; }
+  .kop-sub { display: none; }
+  .kop .themaknop, .kop .gezondheid { display: inline-grid; }
   main { padding: 0 12px calc(var(--tab-hoogte) + 24px + env(safe-area-inset-bottom)); }
   .tabbalk {
-    display: grid; grid-template-columns: repeat(6, 1fr); position: fixed; inset: auto 0 0 0; z-index: 20;
+    display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; inset: auto 0 0 0; z-index: 20;
     background: var(--balk-achtergrond); backdrop-filter: var(--vervaging); border-top: 1px solid var(--lijn);
     padding-bottom: env(safe-area-inset-bottom);
   }
   .tabbalk a {
     display: grid; justify-items: center; align-content: center; gap: 2px; height: var(--tab-hoogte);
-    color: var(--inkt-3); text-decoration: none; font-size: 11px; font-weight: 500; min-width: 0;
+    color: var(--inkt-3); text-decoration: none; font-size: 12px; font-weight: 500; min-width: 0;
   }
   .tabbalk a svg { width: 26px; height: 26px; padding: 2px 12px; box-sizing: content-box; border-radius: 16px; }
   .tabbalk a[aria-current="page"] { color: var(--accent); }
@@ -305,7 +323,7 @@ main { padding: 0 24px 32px; width: 100%; max-width: 1360px; outline: none; }
 
 .kaart {
   background: var(--oppervlak); border: 1px solid var(--lijn); border-radius: var(--radius);
-  padding: 16px; min-width: 0; box-shadow: var(--schaduw-kaart);
+  padding: 20px 24px; min-width: 0; box-shadow: var(--schaduw-kaart);
 }
 .kaart-kop { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .kaart-kop h2 { font-size: 18px; font-weight: 500; }

@@ -158,6 +158,7 @@ function openFormulier(li, k) {
 
 function gekoppeld(k, r) {
   toast(`${k.naam} gekoppeld. ${r.bericht}. De eerste gegevens komen binnen een paar minuten.`);
+  dispatchEvent(new Event("koppelingen")); // het blok Koppelingen in de zijbalk telt opnieuw
   toonKoppelingen(r.koppelingen);
 }
 
@@ -200,6 +201,7 @@ async function ontkoppel(k) {
   try {
     toonKoppelingen(await api(`koppelingen/${k.dienst}`, { methode: "DELETE" }));
     toast(`${k.naam} ontkoppeld`);
+    dispatchEvent(new Event("koppelingen"));
   } catch (err) {
     meldFout(err);
   }

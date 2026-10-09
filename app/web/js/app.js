@@ -1,6 +1,6 @@
 // Thuis — web-app. Leest alles uit de eigen API (/api/...); inloggen regelt IAP vóór Cloud Run.
 
-import { $, $$, api, esc, icoon, legeCache, meldFout, relatief, thema, zetThema } from "./basis.js";
+import { $, $$, api, datumLang, esc, icoon, klok, legeCache, meldFout, relatief, thema, vandaag, zetThema } from "./basis.js";
 import { herschaal, ruimOp } from "./grafiek.js";
 import * as auto from "./paginas/auto.js";
 import * as bronnen from "./paginas/bronnen.js";
@@ -10,14 +10,15 @@ import * as laden from "./paginas/laden.js";
 import * as overzicht from "./paginas/overzicht.js";
 import * as prijzen from "./paginas/prijzen.js";
 
+// `sub`: de contextregel naast de titel. Een functie wordt elke halve minuut opnieuw uitgerekend.
 const PAGINAS = {
-  overzicht: { titel: "Overzicht", module: overzicht },
-  energie: { titel: "Energie", module: energie },
-  prijzen: { titel: "Prijzen", module: prijzen },
-  laden: { titel: "Laden", module: laden },
-  auto: { titel: "Auto", module: auto },
-  inzichten: { titel: "Inzichten", module: inzichten },
-  koppelingen: { titel: "Koppelingen", module: bronnen },
+  overzicht: { titel: "Overzicht", module: overzicht, sub: () => `${datumLang(vandaag())} · ${klok(Date.now())}` },
+  energie: { titel: "Energie", module: energie, sub: "stroom, gas en laden per periode" },
+  prijzen: { titel: "Prijzen", module: prijzen, sub: "all-in per kwartier, vandaag en morgen" },
+  laden: { titel: "Laden", module: laden, sub: "" },
+  auto: { titel: "Auto & laden", module: auto, sub: "" },
+  inzichten: { titel: "Inzichten", module: inzichten, sub: "uitgerekend uit je eigen meter-, laad- en prijsdata" },
+  koppelingen: { titel: "Koppelingen", module: bronnen, sub: "je accounts en de verzamelaar" },
   bronnen: { titel: "Koppelingen", module: bronnen, als: "koppelingen" }, // oude links
 };
 
@@ -36,6 +37,16 @@ export function navigeer(naam, params = {}) {
   location.hash = `#/${naam}${q ? `?${q}` : ""}`;
 }
 
+/** De contextregel naast de paginatitel; pagina's kunnen hem zelf zetten (bijv. de naam van de auto). */
+function zetSub(tekst) {
+  $("#paginasub").textContent = tekst || "";
+}
+
+function toonSub() {
+  const sub = PAGINAS[huidige]?.sub;
+  if (typeof sub === "function") zetSub(sub());
+}
+
 async function toon({ ververs = false } = {}) {
   const { naam, params } = leesRoute();
   const pagina = PAGINAS[naam];
@@ -48,6 +59,7 @@ async function toon({ ververs = false } = {}) {
     main.dataset.pagina = naam;
     document.title = `${pagina.titel} – Thuis`;
     $("#paginatitel").textContent = pagina.titel;
+    zetSub(typeof pagina.sub === "function" ? pagina.sub() : pagina.sub);
     for (const a of $$("[data-pagina]")) {
       if (a.dataset.pagina === naam) a.setAttribute("aria-current", "page");
       else a.removeAttribute("aria-current");
@@ -56,7 +68,7 @@ async function toon({ ververs = false } = {}) {
   }
   huidige = naam;
   try {
-    await pagina.module.toon(main, params, { nieuw, ververs, actueel: () => mijn === teller, navigeer });
+    await pagina.module.toon(main, params, { nieuw, ververs, actueel: () => mijn === teller, navigeer, sub: zetSub });
   } catch (err) {
     if (mijn !== teller) return;
     console.error(err);
@@ -73,7 +85,24 @@ function herteken({ vers = false } = {}) {
   return toon({ ververs: true });
 }
 
-// ── gezondheid van de bronnen (stip in de kop en het menu) ────────────────────
+// ── gezondheid van de bronnen (stip in de kop en het blok Koppelingen) ─────────
+
+let actief = null; // aantal gekoppelde accounts
+let laatsteRonde = null;
+
+function toonKoppelingen() {
+  const delen = [actief != null ? `${actief} actief` : null, laatsteRonde ? `ronde ${klok(laatsteRonde)}` : null];
+  $("#koppel-sub").textContent = delen.filter(Boolean).join(" · ");
+}
+
+/** Hoeveel accounts er gekoppeld zijn (één keer bij het openen, en na koppelen of ontkoppelen). */
+async function telKoppelingen() {
+  try {
+    const lijst = await api("koppelingen");
+    actief = lijst.filter((k) => k.status === "ok" || k.status === "script").length;
+  } catch { /* zonder aantal */ }
+  toonKoppelingen();
+}
 
 /** Werkt de statusstip bij; geeft het tijdstip van de laatste ronde terug. */
 async function gezondheid() {
@@ -96,6 +125,9 @@ async function gezondheid() {
   for (const el of $$("[data-gezondheid]")) el.dataset.status = status;
   $("#gezondheid").setAttribute("aria-label", `Koppelingen: ${tekst}`);
   $("#gezondheid").title = tekst;
+  $(".zijbalk-koppelingen").title = tekst;
+  laatsteRonde = laatste;
+  toonKoppelingen();
   return laatste;
 }
 
@@ -138,19 +170,22 @@ addEventListener("DOMContentLoaded", () => {
     }
   });
   addEventListener("hashchange", () => toon());
+  addEventListener("koppelingen", telKoppelingen); // na koppelen of ontkoppelen (paginas/bronnen.js)
   let wacht;
   addEventListener("resize", () => {
     clearTimeout(wacht);
     wacht = setTimeout(herschaal, 120);
   });
   setInterval(kijkVoorNieuweRonde, 5 * 60e3);
+  setInterval(toonSub, 30e3); // de klok op het overzicht
   document.addEventListener("visibilitychange", kijkVoorNieuweRonde); // terug in de app
 
   toonThema();
   toon();
   kijkVoorNieuweRonde();
+  telKoppelingen();
   api("gebruiker")
-    .then((g) => ($("#gebruiker").textContent = `Ingelogd als ${g.email}`))
+    .then((g) => ($("#gebruiker").textContent = g.email))
     .catch(() => {});
 
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
