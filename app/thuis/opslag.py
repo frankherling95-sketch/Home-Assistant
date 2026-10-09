@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, date, datetime
 from typing import Any, Protocol
 
@@ -28,6 +30,18 @@ class Opslag(Protocol):
     def voeg_toe(self, tabel: Tabel, rijen: list[dict[str, Any]]) -> int: ...
     def lees(self, sql: str, **params: Any) -> list[dict[str, Any]]: ...
     def lokale_dag(self, kolom: str) -> str: ...  # SQL: lokale datum (Europe/Amsterdam) van een tijdstip
+
+
+def tegelijk(opslag: Opslag, *taken: Callable[[], Any]) -> list[Any]:
+    """Losse leestaken tegelijk uitvoeren; de uitkomsten in dezelfde volgorde terug.
+
+    Een BigQuery-vraag is klein maar wacht een halve tot anderhalve seconde op Google: vier tegelijk
+    duren dan net zo lang als één. DuckDB (lokaal en in tests) is snel en niet thread-safe: na elkaar.
+    """
+    if not getattr(opslag, "parallel_lezen", False) or len(taken) < 2:
+        return [taak() for taak in taken]
+    with ThreadPoolExecutor(max_workers=len(taken)) as pool:
+        return [f.result() for f in [pool.submit(taak) for taak in taken]]
 
 
 def _vul_aan(tabel: Tabel, rijen: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -95,6 +109,8 @@ class DuckOpslag:
 
 
 class BigQueryOpslag:
+    parallel_lezen = True  # de client is thread-safe; zie tegelijk()
+
     def __init__(self, project: str, dataset: str, locatie: str = "EU") -> None:
         from google.cloud import bigquery
 
@@ -154,7 +170,9 @@ class BigQueryOpslag:
         config = self.bq.QueryJobConfig(
             query_parameters=[self.bq.ScalarQueryParameter(k, _bq_type(v), v) for k, v in params.items()]
         )
-        rows = self.client.query(_vul_tabellen(sql, self._ref), job_config=config).result()
+        # query_and_wait: één verzoek dat meteen de rijen teruggeeft, in plaats van een job starten en
+        # daarna op het resultaat wachten. Scheelt bij kleine queries een paar honderd milliseconden.
+        rows = self.client.query_and_wait(_vul_tabellen(sql, self._ref), job_config=config)
         return [_naar_utc(dict(r.items())) for r in rows]
 
     def lokale_dag(self, kolom: str) -> str:

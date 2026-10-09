@@ -12,7 +12,7 @@ from math import asin, cos, radians, sin, sqrt
 from typing import Any
 
 from .inzicht import lokaal
-from .opslag import Opslag, lees_instellingen, nu, schrijf_instellingen
+from .opslag import Opslag, lees_instellingen, nu, schrijf_instellingen, tegelijk
 
 THUIS_STRAAL_KM = 0.3  # binnen deze afstand van "thuis" staat de auto thuis
 
@@ -53,15 +53,25 @@ def auto_overzicht(opslag: Opslag, moment: datetime | None = None) -> dict[str, 
     auto = rijen[-1]
     rijen = [r for r in rijen if r["auto_id"] == auto["auto_id"]]  # bij twee auto's: de laatste
 
-    d = opslag.lees(
-        "SELECT tijd, gegevens FROM {auto_details} WHERE tijd >= @van AND tijd <= @tot AND auto_id = @id "
-        "ORDER BY tijd DESC LIMIT 1",
-        van=moment - timedelta(days=30),
-        tot=moment,
-        id=auto["auto_id"],
+    # Details, thuislocatie en laadhistorie hangen niet van elkaar af: tegelijk.
+    d, instellingen, laadhistorie = tegelijk(
+        opslag,
+        lambda: opslag.lees(
+            "SELECT tijd, gegevens FROM {auto_details} WHERE tijd >= @van AND tijd <= @tot AND auto_id = @id "
+            "ORDER BY tijd DESC LIMIT 1",
+            van=moment - timedelta(days=30),
+            tot=moment,
+            id=auto["auto_id"],
+        ),
+        lambda: lees_instellingen(opslag, {"auto_thuis": None}),
+        lambda: opslag.lees(
+            "SELECT * FROM {auto_laadsessie} WHERE start >= @van AND auto_id = @id ORDER BY start DESC",
+            van=moment - timedelta(days=90),
+            id=auto["auto_id"],
+        ),
     )
     details = json.loads(d[0]["gegevens"]) if d else None
-    thuis = lees_instellingen(opslag, {"auto_thuis": None})["auto_thuis"]
+    thuis = instellingen["auto_thuis"]
 
     locatie = (details or {}).get("locatie")
     if locatie and thuis:
@@ -69,11 +79,7 @@ def auto_overzicht(opslag: Opslag, moment: datetime | None = None) -> dict[str, 
         locatie["thuis"] = locatie["afstand_km"] <= THUIS_STRAAL_KM
 
     sessies = []
-    for s in opslag.lees(
-        "SELECT * FROM {auto_laadsessie} WHERE start >= @van AND auto_id = @id ORDER BY start DESC",
-        van=moment - timedelta(days=90),
-        id=auto["auto_id"],
-    ):
+    for s in laadhistorie:
         s = {k: _iso(v) for k, v in s.items() if k not in ("opgehaald", "auto_id")}
         if thuis and s.get("lat") is not None and s.get("lon") is not None:
             s["thuis"] = afstand_km(s, thuis) <= THUIS_STRAAL_KM

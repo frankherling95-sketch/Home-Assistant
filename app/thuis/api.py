@@ -10,7 +10,7 @@ import mimetypes
 import os
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from datetime import date, timedelta
 from pathlib import Path
@@ -18,10 +18,12 @@ from typing import Any, Literal
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, SecretStr
 
 from .auto import auto_overzicht, zet_thuis
+from .bewaar import Bewaard, NietBewaard
 from .config import Config
 from .connectors import KoppelFout
 from .inzicht import dagen_grenzen, dagoverzicht, laatste, periodeoverzicht, vandaag
@@ -29,7 +31,7 @@ from .inzichten import inzichten
 from .kluis import Kluis, maak_kluis, werk_bij
 from .koppelingen import DIENSTEN, controleer_code, koppel, overzicht, start_code
 from .laden import STANDAARD, maak_plan
-from .opslag import Opslag, lees_instellingen, maak_opslag, nu, schrijf_instellingen
+from .opslag import Opslag, lees_instellingen, maak_opslag, nu, schrijf_instellingen, tegelijk
 from .schema import TABELLEN
 from .sessies import laadsessies
 
@@ -50,6 +52,7 @@ async def _levensloop(app: FastAPI):
     app.state.cfg = Config()
     app.state.opslag = maak_opslag(app.state.cfg)
     app.state.kluis = maak_kluis(app.state.cfg)
+    app.state.bewaard = Bewaard() if app.state.cfg.bewaren else NietBewaard()
     # BigQuery: de verzamelaar maakt de tabellen (ook direct na elke deploy); dat scheelt
     # hier tien API-aanroepen bij elke koude start.
     if app.state.cfg.opslag != "bigquery":
@@ -58,13 +61,18 @@ async def _levensloop(app: FastAPI):
 
 
 app = FastAPI(title="Thuis", lifespan=_levensloop, docs_url=None, redoc_url=None)
+# Gecomprimeerd versturen: JSON en de web-app worden zo een paar keer kleiner (scheelt op mobiel).
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 @app.middleware("http")
 async def _cache_regels(request: Request, call_next):
     """Web-app altijd hervalideren (ETag maakt dat goedkoop): na een deploy meteen de nieuwe versie.
-    API-antwoorden nooit bewaren: daar zitten persoonlijke gegevens in."""
+    API-antwoorden niet in de browser of onderweg bewaren: daar zitten persoonlijke gegevens in.
+    Een wijziging via de API (alles behalve GET) maakt de bewaarde antwoorden van de app leeg."""
     antwoord = await call_next(request)
+    if request.method != "GET" and request.url.path.startswith("/api/"):
+        request.app.state.bewaard.leeg()
     antwoord.headers.setdefault(
         "Cache-Control", "no-store" if request.url.path.startswith("/api/") else "no-cache"
     )
@@ -138,6 +146,12 @@ def kluis(request: Request) -> Kluis:
     return request.app.state.kluis
 
 
+def bewaard(request: Request, o: Opslag, maak: Callable[[], Any]) -> Any:
+    """Het antwoord op dit verzoek, bewaard tot de volgende ronde (zie bewaar.py)."""
+    vers = request.headers.get("x-thuis-vers") == "1"
+    return request.app.state.bewaard.haal((request.url.path, request.url.query), o, maak, vers=vers)
+
+
 class Instellingen(BaseModel):
     doel_pct: float = Field(ge=10, le=100)
     vertrek: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
@@ -155,57 +169,73 @@ def api_gebruiker(email: str = Depends(gebruiker)) -> dict[str, str]:
 
 @app.get("/api/dag")
 def api_dag(
-    datum: date | None = None, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)
+    request: Request, datum: date | None = None, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)
 ) -> dict[str, Any]:
-    return dagoverzicht(o, datum or vandaag())
+    return bewaard(request, o, lambda: dagoverzicht(o, datum or vandaag()))
 
 
 @app.get("/api/periode")
 def api_periode(
+    request: Request,
     soort: Literal["week", "maand", "jaar"] = Query(alias="type"),
     datum: date | None = None,
     _: str = Depends(gebruiker),
     o: Opslag = Depends(opslag),
 ) -> dict[str, Any]:
-    return periodeoverzicht(o, soort, datum or vandaag())
+    return bewaard(request, o, lambda: periodeoverzicht(o, soort, datum or vandaag()))
 
 
 @app.get("/api/laadsessies")
 def api_laadsessies(
-    van: date | None = None, tot: date | None = None, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)
+    request: Request,
+    van: date | None = None,
+    tot: date | None = None,
+    _: str = Depends(gebruiker),
+    o: Opslag = Depends(opslag),
 ) -> list[dict[str, Any]]:
     tot = tot or vandaag()
     van = van or tot - timedelta(days=30)
     if van > tot:
         raise HTTPException(422, "van ligt na tot")
-    vermogen = float(lees_instellingen(o, STANDAARD)["vermogen_kw"])
-    return [_json(s) for s in laadsessies(o, *dagen_grenzen(van, tot), vermogen)]
+
+    def maak() -> list[dict[str, Any]]:
+        vermogen = float(lees_instellingen(o, STANDAARD)["vermogen_kw"])
+        return [_json(s) for s in laadsessies(o, *dagen_grenzen(van, tot), vermogen)]
+
+    return bewaard(request, o, maak)
 
 
 @app.get("/api/inzichten")
 def api_inzichten(
-    datum: date | None = None, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)
+    request: Request, datum: date | None = None, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)
 ) -> list[dict[str, str]]:
-    return inzichten(o, datum or vandaag())
+    return bewaard(request, o, lambda: inzichten(o, datum or vandaag()))
 
 
 @app.get("/api/nu")
-def api_nu(_: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str, Any]:
-    instellingen = lees_instellingen(o, STANDAARD)
-    auto, lader = laatste(o, "auto_meting"), laatste(o, "lader_meting")
-    return {
-        "tijd": nu().isoformat(),
-        "auto": _json(auto),
-        "lader": _json(lader),
-        "plan": maak_plan(o, instellingen, auto=auto),
-        "instellingen": instellingen,
-    }
+def api_nu(request: Request, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str, Any]:
+    def maak() -> dict[str, Any]:
+        instellingen, auto, lader = tegelijk(
+            o,
+            lambda: lees_instellingen(o, STANDAARD),
+            lambda: laatste(o, "auto_meting"),
+            lambda: laatste(o, "lader_meting"),
+        )
+        return {
+            "tijd": nu().isoformat(),
+            "auto": _json(auto),
+            "lader": _json(lader),
+            "plan": maak_plan(o, instellingen, auto=auto),
+            "instellingen": instellingen,
+        }
+
+    return {**bewaard(request, o, maak), "tijd": nu().isoformat()}  # de tijd altijd van nu
 
 
 @app.get("/api/auto")
-def api_auto(_: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str, Any]:
+def api_auto(request: Request, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str, Any]:
     """Alles over de auto voor de pagina Auto (zie docs/api.md)."""
-    return auto_overzicht(o)
+    return bewaard(request, o, lambda: auto_overzicht(o))
 
 
 @app.put("/api/auto/thuis")
@@ -391,12 +421,17 @@ def api_status(
                 "laatst_ok": _iso(r.get("laatst_ok")),
             }
         )
+    # Wat de app al weet over de laatste ronde: bewaarde antwoorden van een oudere ronde vervallen.
+    tijden = [r["tijd"] for r in rondes.values() if r.get("tijd") is not None]
+    request.app.state.bewaard.zet_ronde(max(tijden).isoformat() if tijden else None)
     uit: dict[str, Any] = {"bronnen": bronnen}
     if tabellen:
-        uit["tabellen"] = {}
-        for t in TABELLEN:
-            rij = o.lees(f"SELECT MAX(opgehaald) AS laatst FROM {{{t.naam}}}")
-            uit["tabellen"][t.naam] = _iso(rij[0]["laatst"]) if rij else None
+        laatst = tegelijk(
+            o, *[lambda t=t: o.lees(f"SELECT MAX(opgehaald) AS laatst FROM {{{t.naam}}}") for t in TABELLEN]
+        )
+        uit["tabellen"] = {
+            t.naam: _iso(rij[0]["laatst"]) if rij else None for t, rij in zip(TABELLEN, laatst, strict=True)
+        }
     return uit
 
 
