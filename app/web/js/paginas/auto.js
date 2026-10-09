@@ -2,7 +2,7 @@
 // Slim laden, laadsessies en de instellingen op één pagina. Wat de auto niet doorgeeft, blijft weg.
 
 import {
-  $, LADER_STATUS, PLAN_REDEN, TZ, api, autoFoto, css, dagnaam, datumKort, esc, euro, getal, hoeveelheid, huidigBlok,
+  $, LADER_STATUS, PLAN_REDEN, TZ, api, autoFoto, autoStand, css, dagnaam, datumKort, esc, euro, getal, hoeveelheid, huidigBlok,
   isoDatum, klok, meldFout, plusDagen, prijs, relatief, toast, vandaag,
 } from "../basis.js";
 import { basis, gekleurd, grafiek, nuLijn, regel, ruimOp, staven, stippel } from "../grafiek.js";
@@ -193,7 +193,7 @@ function heldKaart(auto, d, plan) {
 
   return kaart({
     titel: auto.naam || "Auto",
-    sub: auto.bijgewerkt ? `bijgewerkt ${relatief(auto.bijgewerkt)}` : "",
+    sub: autoStand(auto),
     klasse: "b-8",
     id: "k-auto",
     inhoud: `${pillen}

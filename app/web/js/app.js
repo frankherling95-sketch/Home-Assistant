@@ -2,6 +2,7 @@
 
 import { $, $$, api, datumLang, esc, icoon, klok, legeCache, meldFout, relatief, thema, vandaag, zetThema } from "./basis.js";
 import { herschaal, ruimOp } from "./grafiek.js";
+import { ophalen } from "./ophalen.js";
 import * as auto from "./paginas/auto.js";
 import * as bronnen from "./paginas/bronnen.js";
 import * as energie from "./paginas/energie.js";
@@ -87,10 +88,10 @@ function herteken({ vers = false } = {}) {
 // ── gezondheid van de bronnen (stip in de kop en het blok Koppelingen) ─────────
 
 let actief = null; // aantal gekoppelde accounts
-let laatsteRonde = null;
+let rondeTijd = null; // tijdstip van de laatste ronde
 
 function toonKoppelingen() {
-  const delen = [actief != null ? `${actief} actief` : null, laatsteRonde ? `ronde ${klok(laatsteRonde)}` : null];
+  const delen = [actief != null ? `${actief} actief` : null, rondeTijd ? `ronde ${klok(rondeTijd)}` : null];
   $("#koppel-sub").textContent = delen.filter(Boolean).join(" · ");
 }
 
@@ -125,7 +126,7 @@ async function gezondheid() {
   $("#gezondheid").setAttribute("aria-label", `Koppelingen: ${tekst}`);
   $("#gezondheid").title = tekst;
   $(".zijbalk-koppelingen").title = tekst;
-  laatsteRonde = laatste;
+  rondeTijd = laatste;
   toonKoppelingen();
   return laatste;
 }
@@ -138,6 +139,13 @@ async function kijkVoorNieuweRonde() {
   const laatste = await gezondheid();
   if (laatste && gezienRonde && laatste !== gezienRonde) herteken({ vers: true });
   gezienRonde = laatste ?? gezienRonde;
+}
+
+/** Voor Nu ophalen: de laatste ronde, die daarmee ook gezien is (anders tekent de pagina twee keer). */
+async function laatsteRonde() {
+  const laatste = await gezondheid();
+  gezienRonde = laatste ?? gezienRonde;
+  return laatste;
 }
 
 // ── thema ─────────────────────────────────────────────────────────────────────
@@ -158,6 +166,8 @@ function toonThema() {
 addEventListener("DOMContentLoaded", () => {
   for (const b of $$("#thema-keuze button")) b.addEventListener("click", () => zetThema(b.dataset.thema));
   $("#themaknop").addEventListener("click", () => zetThema(VOLGEND[thema()]));
+  $("#ophaalknop").addEventListener("click", (e) =>
+    ophalen(e.currentTarget, { laatsteRonde, ververs: () => herteken({ vers: true }) }));
   addEventListener("thema", () => {
     toonThema();
     herteken();

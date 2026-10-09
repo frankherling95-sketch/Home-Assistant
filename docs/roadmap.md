@@ -3,7 +3,7 @@
 Wensen voor na de eerste versie. Per punt staat wat versie 1.0 al doet, zodat duidelijk is
 wat er nog bij moet.
 
-Legenda: **1.0** = zit erin · **deels** = basis zit erin, de rest volgt · **later** = na 1.0
+Legenda: **1.0** = zit erin · **erbij** = na 1.0 toegevoegd · **deels** = basis zit erin, de rest volgt · **later** = na 1.0
 
 ## 1. Dashboard (stijl Home Assistant)
 
@@ -44,7 +44,7 @@ Legenda: **1.0** = zit erin · **deels** = basis zit erin, de rest volgt · **la
 | Wens | Status | Toelichting |
 | --- | --- | --- |
 | Statuspaneel per bron (Frank, Easee, Kia) | deels | Pagina Bronnen: laatste ronde, laatst gelukt, foutmelding. Of een token nog geldig is, volgt |
-| Knop **Nu ophalen** als de cronjob vertraagd is | later | Start de Cloud Run-job `thuis-verzamel` vanuit de app (extra recht voor het service-account) |
+| Knop **Nu ophalen** als de cronjob vertraagd is | erbij | Knop in de kop: start de Cloud Run-job `thuis-verzamel` (alle bronnen, de auto ook buiten zijn beurt), maar niet tegelijk met de geplande ronde. De auto wekken kan niet via CarData |
 | Export van laadsessies en kosten naar CSV/Excel | later | Voor declaraties en de administratie |
 
 ## Ook genoteerd tijdens de bouw

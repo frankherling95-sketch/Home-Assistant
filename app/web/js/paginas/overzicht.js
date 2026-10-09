@@ -3,7 +3,7 @@
 // Het stromendiagram en de totalentabel staan op Energie.
 
 import {
-  LADER_STATUS, PLAN_REDEN, api, autoFoto, css, dagnaam, esc, euro, gemiddelde, getal, goedkoopsteVenster,
+  LADER_STATUS, PLAN_REDEN, api, autoFoto, autoStand, css, dagnaam, esc, euro, gemiddelde, getal, goedkoopsteVenster,
   hoeveelheid, huidigBlok, klok, niveau, plusDagen, prijs, vandaag,
 } from "../basis.js";
 import { basis, doorzichtig, gekleurd, grafiek, nuLijn, regel, ruimOp, scheiding, staven } from "../grafiek.js";
@@ -227,9 +227,6 @@ function autoKaart({ auto, lader, plan }) {
     : stekkerLos
       ? `<span class="pil ${b.length ? "let_op" : ""}"><span class="stip"></span>Stekker los</span>`
       : '<span class="pil"><span class="stip"></span>Ingeplugd</span>';
-  const bijgewerkt = auto.bijgewerkt
-    ? dagnaam(auto.bijgewerkt) === "vandaag" ? klok(auto.bijgewerkt) : `${dagnaam(auto.bijgewerkt)} ${klok(auto.bijgewerkt)}`
-    : null;
   const foto = autoFoto(auto.naam);
   const doel = plan.doel_pct;
   const stand = `<div class="auto-stand">
@@ -252,7 +249,7 @@ function autoKaart({ auto, lader, plan }) {
       ];
   return kaart({
     titel: "Auto en lader",
-    sub: [auto.naam, bijgewerkt && `bijgewerkt ${bijgewerkt}`].filter(Boolean).join(" · "),
+    sub: [auto.naam, autoStand(auto)].filter(Boolean).join(" · "),
     klasse: "o-auto",
     id: "k-auto",
     rechts: status,

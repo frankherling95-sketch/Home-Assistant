@@ -13,6 +13,7 @@ const SCHIL = [
   "js/basis.js",
   "js/grafiek.js",
   "js/onderdelen.js",
+  "js/ophalen.js",
   "js/paginas/overzicht.js",
   "js/paginas/energie.js",
   "js/paginas/prijzen.js",

@@ -1,7 +1,7 @@
 """Verzamelaar: één ronde ophalen bij alle ingestelde bronnen en opslaan.
 
-Draait in Google Cloud elke 15 minuten als Cloud Run-job (Cloud Scheduler start hem).
-Lokaal: `python -m thuis.verzamel`.
+Draait in Google Cloud elke 15 minuten als Cloud Run-job (Cloud Scheduler start hem), en
+tussendoor als je in de app op Nu ophalen drukt (zie ophalen.py). Lokaal: `python -m thuis.verzamel`.
 
 Elke bron staat los: valt de auto uit, dan komen Frank en Easee gewoon binnen. De uitslag per
 stap komt in de rondelog (tabel `ronde`, pagina "Koppelingen"). De job eindigt met exit-code 1
@@ -19,6 +19,7 @@ import time
 from collections.abc import Callable
 from datetime import timedelta
 
+from . import ophalen
 from .config import TZ, Config
 from .connectors import KoppelingVerlopen
 from .connectors.frank import dagen
@@ -55,6 +56,7 @@ def ronde(
     c.frank, c.easee, c.kia, c.chat = frank or c.frank, easee or c.easee, kia or c.kia, chat or c.chat
     c.bmw = bmw or c.bmw
     weer = weer or OpenMeteo(cfg.lat, cfg.lon)
+    gevraagd = ophalen.gevraagd(data, begin)  # Nu ophalen in de app: de auto ook buiten zijn beurt
     verlopen: set[str] = set()
 
     def prijzen() -> None:
@@ -78,7 +80,7 @@ def ronde(
 
     def bmw_auto() -> None:
         # Niet elke ronde: BMW staat 50 verzoeken per dag toe (zie connectors/bmw.py).
-        opslag.voeg_toe(AUTO, c.bmw.metingen(begin))
+        opslag.voeg_toe(AUTO, c.bmw.metingen(begin, gevraagd))
         opslag.voeg_toe(AUTO_DETAILS, c.bmw.details)
         voeg_toe_gewijzigd(opslag, AUTO_LAADSESSIE, c.bmw.laadsessies)  # elke dag de laatste 30 dagen
 
