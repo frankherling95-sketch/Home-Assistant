@@ -604,6 +604,17 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
 .inzicht .waarde { font-size: 20px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .inzicht .toelichting { color: var(--inkt-3); font-size: 13px; }
 .kaart > .inzichten .inzicht { background: var(--oppervlak-2); }
+/* Inzichten-pagina: elk inzicht als eigen kaart */
+.inzichten.kaarten { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.inzichten.kaarten .inzicht {
+  background: var(--oppervlak); border: 1px solid var(--lijn); border-radius: var(--radius); padding: 18px;
+  box-shadow: var(--schaduw-kaart);
+}
+.inzichten.kaarten .icoon { width: 44px; height: 44px; background: var(--oppervlak-2); }
+.inzichten.kaarten .inzicht.goed .icoon { background: var(--goed-zacht); }
+.inzichten.kaarten .inzicht.let_op .icoon { background: var(--let-op-zacht); }
+.inzichten.kaarten .waarde { font-size: 24px; }
+@media (max-width: 599px) { .inzichten.kaarten { gap: 12px; } }
 
 /* ── bronnen ───────────────────────────────────────────────────────────── */
 
