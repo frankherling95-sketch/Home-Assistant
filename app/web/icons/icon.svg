@@ -1,1 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="5.3" fill="#0288d1"/><path transform="translate(2.64 2.64) scale(.78)" fill="#fff" d="M13.2 2.5 5 13.6h6l-.6 7.9 8.6-11.3h-6z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs>
+<radialGradient id="vlak" cx=".28" cy=".12" r="1.05"><stop offset="0" stop-color="#1b2c54"/><stop offset=".62" stop-color="#0b1120"/></radialGradient>
+<radialGradient id="schijn" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ff5a2a" stop-opacity=".22"/><stop offset="1" stop-color="#ff5a2a" stop-opacity="0"/></radialGradient>
+<linearGradient id="buis" x1="25" y1="0" x2="6.5" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ff9a52"/><stop offset=".5" stop-color="#ff4d26"/><stop offset="1" stop-color="#c81f1b"/></linearGradient>
+<filter id="wijd" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2.2"/></filter>
+<filter id="dicht" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation=".7"/></filter>
+</defs>
+<rect width="512" height="512" rx="113" fill="url(#vlak)"/>
+<circle cx="256" cy="256" r="174" fill="url(#schijn)"/>
+<g transform="translate(73.30 70.40) scale(11.6)">
+<path d="M25 .5 10.3 17.8l6.3-1.3L6.5 31.5l15.9-18.3-6.2 1.3z" fill="#ff3b2f" opacity=".75" filter="url(#wijd)"/>
+<path d="M25 .5 10.3 17.8l6.3-1.3L6.5 31.5l15.9-18.3-6.2 1.3z" fill="#ff8a3d" opacity=".9" filter="url(#dicht)"/>
+<g fill="none" stroke="#ff8a5c" stroke-width=".45" stroke-linecap="round" stroke-linejoin="round" opacity=".55"></g>
+<path d="M25 .5 10.3 17.8l6.3-1.3L6.5 31.5l15.9-18.3-6.2 1.3z" fill="url(#buis)"/>
+<path d="M25 .5 10.3 17.8l6.3-1.3L6.5 31.5l15.9-18.3-6.2 1.3z" fill="none" stroke="#ff8257" stroke-width="1.1" stroke-linejoin="round"/>
+<path d="M25 .5 10.3 17.8l6.3-1.3L6.5 31.5l15.9-18.3-6.2 1.3z" fill="none" stroke="#fff3ea" stroke-width=".4" stroke-linejoin="round"/>
+</g>
+</svg>
