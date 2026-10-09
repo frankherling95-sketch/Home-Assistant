@@ -15,6 +15,7 @@ from thuis.connectors import bmw_gegevens as G
 from thuis.connectors.bmw import API, BMW, CONTAINER_DOEL, CONTAINER_DOEL_KERN, naar_details, naar_rij
 from thuis.connectors.kia import naar_details as kia_details
 from thuis.connectors.kia import naar_rij as kia_rij
+from thuis.inzicht import lokaal
 from thuis.laden import STANDAARD, maak_plan
 from thuis.opslag import DuckOpslag, nu, schrijf_instellingen
 from thuis.schema import AUTO, AUTO_DETAILS, AUTO_LAADSESSIE
@@ -229,7 +230,12 @@ def test_auto_overzicht_met_thuis(opslag):
     _vul(opslag, moment)
     a = auto_overzicht(opslag, moment)
     assert a["auto"]["naam"] == "BMW i4" and a["details"]["laden"]["doel_pct"] == 80
-    assert a["km"]["zeven_dagen"] == pytest.approx(350, abs=1) and len(a["km_per_dag"]) >= 9
+    # 50 km per dag; vandaag telt alleen tot nu, dus het totaal hangt af van het tijdstip van de test.
+    dagen = a["km_per_dag"]
+    assert len(dagen) >= 9 and all(x["km"] == pytest.approx(50, abs=0.1) for x in dagen[:-1])
+    week = [x["km"] for x in dagen if x["dag"] >= (lokaal(moment) - timedelta(days=6)).isoformat()]
+    assert len(week) == 7 and a["km"]["zeven_dagen"] == pytest.approx(sum(week), abs=0.1)
+    assert 300 <= a["km"]["zeven_dagen"] <= 350
     assert a["accu"] and all(p["tijd"] >= (moment - timedelta(days=7)).isoformat() for p in a["accu"])
     assert a["laden_30_dagen"] == {"sessies": 1, "kwh": 41.2, "kwh_onderweg": 41.2}
     assert "thuis" not in a["laadsessies"][0] and "lat" not in a["laadsessies"][0]
