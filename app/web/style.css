@@ -620,7 +620,8 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
 .kaart .melding + .melding, .kaart .melding + .gegevens { margin-top: 8px; }
 .tussenkop { font-size: 14px; font-weight: 500; color: var(--inkt-2); margin: 16px 0 8px; }
 .banden { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.tegel .waarde.tekst-let-op { color: var(--let-op); }
+.tekst-let-op, .tegel .waarde.tekst-let-op { color: var(--let-op); }
+.tekst-goed, .tegel .waarde.tekst-goed { color: var(--goed); }
 .tabel th.links, .tabel td.links { text-align: left; white-space: normal; }
 
 /* auto met foto (vrijstaande WebP uit img/auto/, zie autoFoto() in basis.js) */
@@ -644,14 +645,35 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
   .auto-foto { order: -1; margin: 0; }
 }
 
+/* Auto & laden: pillen onder de kop, stand links en foto rechts */
+.pillen { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: -4px 0 4px; }
+.held-auto.omgekeerd { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); margin-bottom: 8px; }
+.held-auto.omgekeerd .auto-foto { margin: -4px 0 -8px; }
+.auto-stand .groot { font-size: 64px; line-height: 1.05; }
+.auto-stand .groot small { font-size: 20px; }
+.auto-stand .bereik { color: var(--inkt-2); }
+#k-plan .tegels { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin-bottom: 12px; }
+@media (min-width: 600px) and (max-width: 1099px) {
+  .stapel.naast { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+}
+#k-plan .melding { margin-top: 12px; }
+@media (max-width: 599px) {
+  .pillen { justify-content: flex-start; }
+  .held-auto.omgekeerd { grid-template-columns: minmax(0, 1fr); }
+  .auto-stand .groot { font-size: 52px; }
+}
+
 /* ── sessies ───────────────────────────────────────────────────────────── */
+
+.sessies td.bespaard { color: var(--goed); font-weight: 500; }
 
 .slim { color: var(--c-laden); font-weight: 500; }
 @media (max-width: 599px) {
   .sessies thead { display: none; }
   .sessies, .sessies tbody, .sessies tr, .sessies td { display: block; }
   .sessies tr { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 0; border-bottom: 1px solid var(--lijn); }
-  .sessies td { border: 0; padding: 0; text-align: left; }
+  .sessies td { border: 0; padding: 0; text-align: left; white-space: normal; }
+  .sessies td.bespaard::before { font-weight: 400; }
   .sessies td[data-label]::before { content: attr(data-label) " "; color: var(--inkt-3); }
   .sessies td.r { text-align: right; }
   .sessies tfoot { display: block; }

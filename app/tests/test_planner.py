@@ -74,6 +74,13 @@ def test_picks_cheapest_hours():
     assert p.complete and not p.charge_now and p.reason == "wachten"
 
 
+def test_direct_cost_charges_from_now():
+    p = plan()  # direct: 10 kWh à 0.30 en 8 kWh à 0.25
+    assert p.direct_cost == round(10 * 0.30 + 8 * 0.25, 2)
+    assert p.direct_cost > p.estimated_cost
+    assert plan(soc=80).direct_cost == 0
+
+
 def test_charge_now_inside_planned_slot():
     p = plan(now=T0 + timedelta(hours=3, minutes=10))
     assert p.charge_now and p.reason == "gepland"

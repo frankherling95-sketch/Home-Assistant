@@ -21,7 +21,7 @@ Legenda: **1.0** = zit erin · **deels** = basis zit erin, de rest volgt · **la
 
 | Wens | Status | Toelichting |
 | --- | --- | --- |
-| Laadplanner: doel-accu en vertrektijd, kWh nodig, de goedkoopste blokken tot vertrek | 1.0 | `planner.py`, pagina Laden |
+| Laadplanner: doel-accu en vertrektijd, kWh nodig, de goedkoopste blokken tot vertrek | 1.0 | `planner.py`, pagina Auto & laden |
 | De Easee pauzeren en hervatten volgens het plan | 1.0 | Staat standaard **uit**; aanzetten in de instellingen |
 | Knop **Direct laden** (plan negeren, vol vermogen) | later | Nieuw endpoint dat de lader stuurt; tijdelijke override tot de auto is losgekoppeld |
 | Knop **Pauzeer** (nu stoppen zonder de kabel los te halen) | later | Idem |

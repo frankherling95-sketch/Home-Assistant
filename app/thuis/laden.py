@@ -67,6 +67,7 @@ def maak_plan(
         "reden": plan.reason,
         "nodig_kwh": plan.needed_kwh,
         "kosten": plan.estimated_cost,
+        "kosten_direct": plan.direct_cost,
         "volledig": plan.complete,
         "vertrek": deadline.isoformat(),
         "prijs_nu": plan.current_price,

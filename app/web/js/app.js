@@ -6,7 +6,6 @@ import * as auto from "./paginas/auto.js";
 import * as bronnen from "./paginas/bronnen.js";
 import * as energie from "./paginas/energie.js";
 import * as inzichten from "./paginas/inzichten.js";
-import * as laden from "./paginas/laden.js";
 import * as overzicht from "./paginas/overzicht.js";
 import * as prijzen from "./paginas/prijzen.js";
 
@@ -15,11 +14,11 @@ const PAGINAS = {
   overzicht: { titel: "Overzicht", module: overzicht, sub: () => `${datumLang(vandaag())} · ${klok(Date.now())}` },
   energie: { titel: "Energie", module: energie, sub: "stroom, gas en laden per periode" },
   prijzen: { titel: "Prijzen", module: prijzen, sub: "all-in per kwartier, vandaag en morgen" },
-  laden: { titel: "Laden", module: laden, sub: "" },
   auto: { titel: "Auto & laden", module: auto, sub: "" },
   inzichten: { titel: "Inzichten", module: inzichten, sub: "uitgerekend uit je eigen meter-, laad- en prijsdata" },
   koppelingen: { titel: "Koppelingen", module: bronnen, sub: "je accounts en de verzamelaar" },
-  bronnen: { titel: "Koppelingen", module: bronnen, als: "koppelingen" }, // oude links
+  laden: { als: "auto" }, // oude links
+  bronnen: { als: "koppelingen" },
 };
 
 let huidige = null;
