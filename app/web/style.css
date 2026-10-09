@@ -551,13 +551,11 @@ main { padding: 0 24px 32px; width: 100%; max-width: 1360px; outline: none; }
   content: ""; position: absolute; inset: 14% 4% 2%; border-radius: 50%;
   background: radial-gradient(closest-side, rgb(56 189 248 / 0.22), transparent); filter: blur(10px);
 }
-:root[data-theme="donker"] .auto-foto img { filter: drop-shadow(0 0 1px rgb(175 187 212 / 0.4)); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="licht"]) .auto-foto::before {
     content: ""; position: absolute; inset: 14% 4% 2%; border-radius: 50%;
     background: radial-gradient(closest-side, rgb(56 189 248 / 0.22), transparent); filter: blur(10px);
   }
-  :root:not([data-theme="licht"]) .auto-foto img { filter: drop-shadow(0 0 1px rgb(175 187 212 / 0.4)); }
 }
 @media (max-width: 599px) {
   .auto-held { grid-template-columns: minmax(0, 1fr); }
