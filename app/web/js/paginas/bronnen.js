@@ -9,6 +9,8 @@ const TABELNAMEN = {
   verbruik: "Verbruik (meter)",
   lader_meting: "Metingen lader",
   auto_meting: "Metingen auto",
+  auto_details: "Details auto",
+  auto_laadsessie: "Laadbeurten auto",
   instelling: "Instellingen",
   stuuractie: "Stuuracties",
   weer: "Weer",
@@ -47,23 +49,23 @@ export async function toon(main, _params, ctx) {
 
   main.innerHTML = `<div class="raster">
     ${kaart({
-      titel: "Koppelingen",
+      titel: "Accounts",
       sub: "je accounts bij Frank Energie, Easee en je auto",
       klasse: "b-12",
       id: "k-koppelingen",
       inhoud: `${melding("Thuis bewaart je wachtwoord niet. Je logt één keer in; daarna gebruikt Thuis alleen de sleutel (token) die de dienst teruggeeft.", "", "vink")}
-        <ul class="koppelingen" id="koppelingen"></ul>`,
+        <ul class="koppel-raster" id="koppelingen"></ul>`,
     })}
     ${kaart({
       titel: "Verzamelaar",
-      sub: laatste ? `laatste ronde ${relatief(laatste)}` : "",
+      sub: laatste ? `laatste ronde ${relatief(laatste)} · elke 15 minuten` : "elke 15 minuten",
       klasse: "b-8",
       id: "k-bronnen",
       inhoud: `${waarschuwing}<ul class="bronlijst">${s.bronnen.map(bron).join("")}</ul>`,
     })}
     ${kaart({
       titel: "Tabellen",
-      sub: "laatst bijgewerkt",
+      sub: "laatst bijgewerkt · BigQuery",
       klasse: "b-4",
       id: "k-tabellen",
       inhoud: `<div class="tabel-wrap"><table class="tabel"><tbody>
@@ -92,10 +94,9 @@ function koppelingItem(k) {
   const sinds = k.sinds ? `gekoppeld op ${datumKort(isoDatum(new Date(k.sinds)))}` : "";
   const detail = [k.account, sinds].filter(Boolean).map(esc).join(", ");
   const knop = k.status === "ok" ? "Opnieuw koppelen" : k.status === "opnieuw" ? "Opnieuw koppelen" : k.status === "script" ? "Koppel hier" : "Koppelen";
-  return `<li class="${klasse}" data-dienst="${esc(k.dienst)}">
+  return `<li class="koppel-kaart ${klasse}" data-dienst="${esc(k.dienst)}">
     <span class="icoon">${icoon(ic)}</span>
-    <span class="naam">${esc(k.naam)}</span>
-    <span class="pil ${klasse}">${tekst}</span>
+    <span class="koppel-kop"><span class="naam">${esc(k.naam)}</span><span class="pil ${klasse}">${tekst}</span></span>
     <span class="detail">${esc(k.uitleg)}${detail ? `<br>${detail}` : ""}${k.status === "opnieuw" ? '<br><span class="tekst">De bewaarde sleutel werkt niet meer. Koppel opnieuw om verder te gaan.</span>' : ""}</span>
     <span class="acties">
       <button class="knop ${k.status === "niet" || k.status === "opnieuw" ? "primair" : ""}" type="button" data-koppel>${knop}</button>
@@ -209,6 +210,20 @@ async function ontkoppel(k) {
 
 // ── verzamelaar ───────────────────────────────────────────────────────────────
 
+// Korte namen per stap; de bron (Frank Energie, Easee, …) staat erachter.
+const STAPPEN = { prijzen: "Prijzen", verbruik: "Verbruik", lader: "Lader", auto: "Auto", bmw: "BMW", weer: "Weer", sturen: "Sturen", meldingen: "Meldingen" };
+const HISTORIE = 8;
+
+/** De laatste rondes als staafjes: hoog bij gelukt of mislukt, laag bij overgeslagen of niet gedraaid. */
+function historie(lijst = []) {
+  const soort = (u) => (u === "ok" ? "ok" : u?.startsWith("fout") ? "fout" : "");
+  const titel = (h) => `${relatief(h.tijd)}: ${h.uitslag === "ok" ? "gelukt" : h.uitslag === "overgeslagen" ? "niet ingesteld" : "mislukt"}`;
+  const leeg = Array(Math.max(0, HISTORIE - lijst.length)).fill('<i title="Niet gedraaid"></i>');
+  const staafjes = lijst.slice(-HISTORIE).map((h) => `<i class="${soort(h.uitslag)}" title="${esc(titel(h))}"></i>`);
+  const gelukt = lijst.filter((h) => h.uitslag === "ok").length;
+  return `<span class="historie" role="img" aria-label="Laatste ${lijst.length} rondes: ${gelukt} gelukt">${[...leeg, ...staafjes].join("")}</span>`;
+}
+
 function bron(b) {
   const u = b.uitslag;
   const [klasse, ic, tekst] = !u
@@ -218,12 +233,13 @@ function bron(b) {
       : u === "overgeslagen"
         ? ["", "pauze", "Niet ingesteld"]
         : ["fout", "kruis", "Mislukt"];
-  const fout = u?.startsWith("fout") ? `<span class="tekst">${esc(u.replace(/^fout:\s*/, ""))}</span><br>` : "";
+  const fout = u?.startsWith("fout") ? `<span class="tekst">${esc(u.replace(/^fout:\s*/, ""))}</span>` : "";
   const ok = u?.startsWith("fout") && b.laatst_ok ? `Laatst gelukt ${esc(relatief(b.laatst_ok))}` : "";
+  const detail = [esc(b.naam.split(" · ")[0]), ok].filter(Boolean).join(" · ");
   return `<li class="${klasse}">
     <span class="icoon">${icoon(ic)}</span>
-    <span class="naam">${esc(b.naam)}</span>
+    <span class="tekst-regel"><span class="naam">${esc(STAPPEN[b.stap] || b.naam)}</span><span class="detail">${fout ? `${detail}<br>${fout}` : detail}</span></span>
+    ${historie(b.historie)}
     <span class="pil ${klasse === "ok" ? "goed" : klasse}">${tekst}</span>
-    <span class="detail">${fout}${b.tijd ? `Laatste ronde ${esc(relatief(b.tijd))}` : ""}${ok ? `. ${ok}` : ""}</span>
   </li>`;
 }

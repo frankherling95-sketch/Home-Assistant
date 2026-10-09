@@ -216,12 +216,13 @@ de site van BMW.
   "container" met de gegevens die het leest (accu, bereik, stekker, laadstatus).
 
 ### `GET /api/status?tabellen=true|false`
-Gezondheid per bron uit de rondelog van de verzamelaar, voor de statusstip en de pagina "Bronnen".
+Gezondheid per bron uit de rondelog van de verzamelaar, voor de statusstip en de pagina "Koppelingen".
 Standaard zonder `tabellen` (één query); `tabellen=true` voegt ze toe (een query per tabel).
 ```json
 {
   "bronnen": [
-    {"stap": "prijzen",  "naam": "Frank Energie · prijzen",  "uitslag": "ok", "tijd": "...", "laatst_ok": "..."},
+    {"stap": "prijzen",  "naam": "Frank Energie · prijzen",  "uitslag": "ok", "tijd": "...", "laatst_ok": "...",
+     "historie": [{"tijd": "...", "uitslag": "ok"}, "..."]},
     {"stap": "verbruik", "naam": "Frank Energie · verbruik", "uitslag": "fout: ...", "tijd": "...", "laatst_ok": "..."},
     {"stap": "lader",    "naam": "Easee",                    "uitslag": "overgeslagen", "tijd": "...", "laatst_ok": null},
     {"stap": "auto",     "naam": "Kia Connect",              "...": "..."},
@@ -235,6 +236,7 @@ Standaard zonder `tabellen` (één query); `tabellen=true` voegt ze toe (een que
 ```
 - `uitslag`: `ok` | `overgeslagen` | `fout: <tekst>`, of `null` als de stap de laatste 30 dagen niet draaide.
 - `tijd` = laatste ronde; `laatst_ok` = laatste ronde met `ok` (binnen 30 dagen).
+- `historie` = de laatste 8 uitslagen van die stap, oudste eerst (uit dezelfde query).
 - `tabellen` = wanneer elke tabel voor het laatst een rij kreeg (`null` = nog leeg).
 - De naam van `auto` volgt `KIA_MERK`: Kia Connect, Hyundai Bluelink of Genesis Connected.
 - `bmw` is ook `ok` in een ronde waarin de auto niet aan de beurt was: BMW staat 50 verzoeken per

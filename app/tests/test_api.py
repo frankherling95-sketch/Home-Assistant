@@ -99,6 +99,8 @@ def test_status_uit_rondelog(client):
     assert list(bronnen) == ["prijzen", "verbruik", "lader", "auto", "bmw", "weer", "sturen", "meldingen"]
     assert bronnen["prijzen"]["uitslag"] == "fout: HTTP 502" and bronnen["prijzen"]["tijd"] == t.isoformat()
     assert (t - timedelta(minutes=15)).isoformat() <= bronnen["prijzen"]["laatst_ok"] < t.isoformat()
+    historie = [h["uitslag"] for h in bronnen["prijzen"]["historie"]]
+    assert len(historie) <= 8 and historie[-2:] == ["ok", "fout: HTTP 502"]  # oudste eerst
     assert bronnen["meldingen"]["uitslag"] == "overgeslagen" and bronnen["auto"]["naam"] == "Kia Connect"
     assert s["tabellen"]["prijs"] and s["tabellen"]["melding"] is None
 
