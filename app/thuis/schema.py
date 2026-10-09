@@ -77,10 +77,47 @@ AUTO = Tabel(
         ("laadt", "BOOL"),
         ("bijgewerkt", "TIMESTAMP"),
         OPGEHAALD,
+        # Later toegevoegd (BMW CarData; bij andere merken leeg). Nieuwe kolommen altijd achteraan:
+        # maak_tabellen() voegt ze toe aan een bestaande tabel.
+        ("km_stand", "FLOAT64"),
+        ("laadvermogen_kw", "FLOAT64"),
+        ("laadtijd_min", "FLOAT64"),  # resterende laadtijd volgens de auto
+        ("kwh_tot_vol", "FLOAT64"),
+        ("doel_pct", "FLOAT64"),  # laaddoel dat in de auto is ingesteld
+        ("capaciteit_kwh", "FLOAT64"),  # bruikbare accu-inhoud volgens de auto
     ),
     ("auto_id", "tijd"),
     "tijd",
 )
+
+AUTO_DETAILS = Tabel(
+    "auto_details",
+    (("tijd", "TIMESTAMP"), ("auto_id", "STRING"), ("gegevens", "STRING"), OPGEHAALD),
+    ("auto_id", "tijd"),
+    "tijd",
+)  # alles wat de auto verder doorgeeft (onderhoud, banden, deuren, locatie, …) als JSON, per ophaalmoment
+
+AUTO_LAADSESSIE = Tabel(
+    "auto_laadsessie",
+    (
+        ("start", "TIMESTAMP"),
+        ("auto_id", "STRING"),
+        ("eind", "TIMESTAMP"),
+        ("kwh", "FLOAT64"),
+        ("start_pct", "FLOAT64"),
+        ("eind_pct", "FLOAT64"),
+        ("plaats", "STRING"),
+        ("publiek", "BOOL"),
+        ("kosten", "FLOAT64"),  # zoals de auto ze berekent; leeg als BMW ze niet kent
+        ("valuta", "STRING"),
+        ("km_stand", "FLOAT64"),
+        ("lat", "FLOAT64"),
+        ("lon", "FLOAT64"),
+        OPGEHAALD,
+    ),
+    ("auto_id", "start"),
+    "start",
+)  # laadhistorie zoals de auto die bijhoudt, ook laden onderweg (BMW CarData)
 
 INSTELLING = Tabel(
     "instelling",
@@ -116,7 +153,19 @@ RONDE = Tabel(
     "tijd",
 )  # rondelog van de verzamelaar: per stap ok | overgeslagen | fout: …
 
-TABELLEN = (PRIJS, VERBRUIK, LADER, AUTO, INSTELLING, STUURACTIE, WEER, MELDING, RONDE)
+TABELLEN = (
+    PRIJS,
+    VERBRUIK,
+    LADER,
+    AUTO,
+    AUTO_DETAILS,
+    AUTO_LAADSESSIE,
+    INSTELLING,
+    STUURACTIE,
+    WEER,
+    MELDING,
+    RONDE,
+)
 
 
 def actueel(t: Tabel, ref: str) -> str:

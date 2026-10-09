@@ -24,11 +24,11 @@ export async function toon(main, params, ctx) {
 
   ruimOp();
   main.innerHTML = `<div class="raster">
-    ${autoKaart(auto, instellingen)}
+    ${autoKaart(auto, plan)}
     ${laderKaart(lader)}
     ${planKaart(plan, instellingen)}
     ${kaart({ titel: "Laadsessies", sub: "laatste 30 dagen", klasse: "b-8", id: "k-sessies", inhoud: sessieTabel(sessies) })}
-    ${kaart({ titel: "Instellingen", klasse: "b-4", id: "k-instellingen", inhoud: formulier(instellingen) })}
+    ${kaart({ titel: "Instellingen", klasse: "b-4", id: "k-instellingen", inhoud: formulier(instellingen, plan) })}
   </div>`;
   planGrafiek(plan, [...d0.prijzen.stroom, ...d1.prijzen.stroom]);
 
@@ -53,7 +53,7 @@ export async function toon(main, params, ctx) {
   });
 }
 
-function autoKaart(auto, instellingen) {
+function autoKaart(auto, plan) {
   if (!auto) return kaart({ titel: "Auto", klasse: "b-6 half-tablet", inhoud: '<p class="leeg">Nog geen gegevens van de auto. <a href="#/koppelingen">Koppel je auto</a></p>' });
   const pct = auto.accu_pct ?? 0;
   return kaart({
@@ -63,15 +63,15 @@ function autoKaart(auto, instellingen) {
     rechts: auto.laadt ? '<span class="pil goed"><span class="stip"></span>Laadt</span>' : "",
     inhoud: `<div class="accu" role="meter" aria-label="Accu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}">
         <div class="vulling" style="width:${pct}%"></div>
-        <div class="doel" style="left:${instellingen.doel_pct}%" title="Doel ${instellingen.doel_pct}%"></div>
-        <span><b>${getal(pct, 0)}%</b><span class="zacht">doel ${getal(instellingen.doel_pct, 0)}%</span></span>
+        <div class="doel" style="left:${plan.doel_pct}%" title="Doel ${plan.doel_pct}%"></div>
+        <span><b>${getal(pct, 0)}%</b><span class="zacht">doel ${getal(plan.doel_pct, 0)}%</span></span>
       </div>
       <div class="tegels" style="margin-top:12px">
         ${tegel("Bereik", auto.bereik_km != null ? `${getal(auto.bereik_km, 0)} <small>km</small>` : "–")}
         ${tegel("Stekker", auto.ingeplugd ? "Ingeplugd" : "Los")}
         ${tegel("Bijgewerkt", auto.bijgewerkt ? relatief(auto.bijgewerkt) : "–")}
       </div>`,
-    voet: "De auto wordt niet gewekt: dit is de laatste stand die de auto zelf heeft doorgegeven.",
+    voet: `De auto wordt niet gewekt: dit is de laatste stand die de auto zelf heeft doorgegeven. <a href="#/auto">Meer over de auto</a>`,
   });
 }
 
@@ -97,7 +97,7 @@ function planKaart(plan, instellingen) {
   const status = plan.nu_laden ? "goed" : plan.reden === "geen_prijzen" ? "let_op" : "accent";
   return kaart({
     titel: "Laadplan",
-    sub: `klaar vóór ${klok(plan.vertrek)} ${dagnaam(plan.vertrek)}, doel ${getal(instellingen.doel_pct, 0)}%`,
+    sub: `klaar vóór ${klok(plan.vertrek)} ${dagnaam(plan.vertrek)}, doel ${getal(plan.doel_pct, 0)}%${plan.doel_van_auto ? " (laaddoel van de auto)" : ""}`,
     klasse: "b-12",
     id: "k-plan",
     rechts: `<span class="pil ${status}"><span class="stip"></span>${PLAN_REDEN[plan.reden] || plan.reden}</span>`,
@@ -193,15 +193,15 @@ function sessieTabel(sessies) {
   <p class="kaart-voet">Bespaard: wat dezelfde kWh hadden gekost als de auto direct na het inpluggen op vol vermogen had geladen.</p>`;
 }
 
-function formulier(i) {
+function formulier(i, plan) {
   const veld = (naam, label, uitleg, invoer) =>
     `<div class="veld"><label for="v-${naam}">${label}<span class="uitleg">${uitleg}</span></label>${invoer}</div>`;
   const getalVeld = (naam, min, max, stap, eenheid, voor = "") =>
     `<span class="invoer">${voor}<input id="v-${naam}" name="${naam}" type="number" min="${min}" max="${max}" step="${stap}" value="${i[naam]}" required inputmode="decimal">${eenheid}</span>`;
   return `<form id="instellingen" class="formulier">
-    ${veld("doel_pct", "Doel accu", "Tot hoever Slim laden laadt", getalVeld("doel_pct", 10, 100, 5, "%"))}
+    ${veld("doel_pct", "Doel accu", plan.doel_van_auto ? `In de auto staat ${getal(plan.doel_pct, 0)}%: verder laadt hij niet` : "Tot hoever Slim laden laadt", getalVeld("doel_pct", 10, 100, 5, "%"))}
     ${veld("vertrek", "Vertrektijd", "Vóór dit tijdstip is de auto klaar", `<span class="invoer"><input id="v-vertrek" name="vertrek" type="time" value="${i.vertrek}" required></span>`)}
-    ${veld("capaciteit_kwh", "Accucapaciteit", "Bruikbaar, volgens de fabrikant", getalVeld("capaciteit_kwh", 5, 200, 0.1, "kWh"))}
+    ${veld("capaciteit_kwh", "Accucapaciteit", plan.capaciteit_van_auto ? `Je auto geeft ${getal(plan.capaciteit_kwh, 1)} kWh door; daar rekent Thuis mee` : "Bruikbaar, volgens de fabrikant", getalVeld("capaciteit_kwh", 5, 200, 0.1, "kWh"))}
     ${veld("vermogen_kw", "Laadvermogen", "Wat de lader levert", getalVeld("vermogen_kw", 1, 22, 0.1, "kW"))}
     ${veld("rendement_pct", "Laadrendement", "Verlies tussen net en accu", getalVeld("rendement_pct", 50, 100, 1, "%"))}
     ${veld("altijd_onder", "Altijd laden onder", "Ook als het doel al bereikt is", getalVeld("altijd_onder", -1, 1, 0.01, "/kWh", "€"))}

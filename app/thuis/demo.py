@@ -19,13 +19,28 @@ from typing import Any
 
 from .config import TZ, Config
 from .inzicht import dag_grenzen, dagen_grenzen, vandaag
-from .opslag import DuckOpslag, Opslag, maak_opslag, nu
-from .schema import AUTO, LADER, PRIJS, RONDE, STUURACTIE, TABELLEN, VERBRUIK, WEER
+from .opslag import DuckOpslag, Opslag, maak_opslag, nu, schrijf_instellingen
+from .schema import (
+    AUTO,
+    AUTO_DETAILS,
+    AUTO_LAADSESSIE,
+    LADER,
+    PRIJS,
+    RONDE,
+    STUURACTIE,
+    TABELLEN,
+    VERBRUIK,
+    WEER,
+)
 
 KWARTIER = timedelta(minutes=15)
 LAADVERMOGEN = 10.8  # kW, 3 fasen 16 A
 ACCU_KWH = 77.4
 METING = timedelta(seconds=40)  # de verzamelaar draait net na het kwartier
+AUTO_NAAM = "BMW i4 eDrive40"
+VIN = "WBY00000000DEMO01"
+THUIS = {"lat": 52.1009, "lon": 5.1801}  # De Bilt
+KWH_PER_KM = 0.175
 
 
 def _seizoen(d: date) -> float:
@@ -177,9 +192,12 @@ def vul(opslag: Opslag, rond: date | None = None, dagen: int = 400, seed: int = 
     laad_kwh: dict[datetime, float] = defaultdict(float)
     lader_rijen, auto_rijen, acties = [], [], []
     accu, totaal, sessie = 62.0, 1830.0, 0.0
+    km = 18240.0
+    laadbeurten: list[dict[str, Any]] = []
+    beurt: dict[str, Any] | None = None
     weg, ingeplugd = False, False
     gekozen: dict[datetime, float] = {}
-    auto_vanaf = meting_tot - timedelta(days=3)
+    auto_vanaf = meting_tot - timedelta(days=35)
     for t, d, _u in kwartieren:
         if t >= meting_tot:
             break
@@ -238,27 +256,44 @@ def vul(opslag: Opslag, rond: date | None = None, dagen: int = 400, seed: int = 
             }
         )
         if t >= auto_vanaf:
+            nog = [k for k in gekozen if k >= t] if laadt else []
             auto_rijen.append(
                 {
                     "tijd": t + METING,
-                    "auto_id": "demo",
-                    "naam": "EV6",
+                    "auto_id": VIN,
+                    "naam": AUTO_NAAM,
                     "accu_pct": round(accu, 1),
                     "bereik_km": round(accu * 4.6),
                     "ingeplugd": ingeplugd,
                     "laadt": laadt,
                     "bijgewerkt": t + METING - timedelta(minutes=5),
+                    "km_stand": round(km, 1),
+                    "laadvermogen_kw": LAADVERMOGEN if laadt else 0.0,
+                    "laadtijd_min": 15.0 * len(nog) if laadt else None,
+                    "kwh_tot_vol": round((100 - accu) / 100 * ACCU_KWH, 1),
+                    "doel_pct": 80.0,
+                    "capaciteit_kwh": ACCU_KWH,
                 }
             )
+        if laadt and beurt is None:
+            beurt = {"start": t, "start_pct": round(accu), "kwh": 0.0}
+        if beurt is not None and not ingeplugd:  # één sessie van inpluggen tot uitpluggen
+            laadbeurten.append({**beurt, "eind_pct": round(accu), "km_stand": round(km)})
+            beurt = None
         if laadt:
             kwh = gekozen[t]
             laad_kwh[t] = kwh
             totaal += kwh
             sessie += kwh
+            if beurt is not None:
+                beurt["kwh"] += kwh
+                beurt["eind"] = t + KWARTIER  # laatste kwartier waarin geladen werd
             accu = min(100.0, accu + kwh * 0.9 / ACCU_KWH * 100)
         if weg:
             kwartieren_weg = max(1, (dag["terug"] - dag["vertrek"]) / KWARTIER)
-            accu = max(5.0, accu - dag["rit_pct"] / kwartieren_weg)
+            daling = min(accu - 5.0, dag["rit_pct"] / kwartieren_weg)
+            accu -= daling
+            km += daling / 100 * ACCU_KWH / KWH_PER_KM
 
     # ── meter (Frank): per uur afname, teruglevering en gas ──
     uren: dict[datetime, dict[str, float]] = defaultdict(lambda: defaultdict(float))
@@ -300,6 +335,7 @@ def vul(opslag: Opslag, rond: date | None = None, dagen: int = 400, seed: int = 
     opslag.voeg_toe(VERBRUIK, verbruik_rijen)
     opslag.voeg_toe(LADER, lader_rijen)
     opslag.voeg_toe(AUTO, auto_rijen)
+    _auto_extra(opslag, auto_rijen[-1], laadbeurten, meting_tot, rnd)
     opslag.voeg_toe(STUURACTIE, acties)
     opslag.voeg_toe(WEER, weer_rijen)
 
@@ -319,13 +355,146 @@ def vul(opslag: Opslag, rond: date | None = None, dagen: int = 400, seed: int = 
                 ("prijzen", "ok"),
                 ("verbruik", "ok"),
                 ("lader", "ok"),
-                ("auto", "ok"),
+                ("auto", "overgeslagen"),
+                ("bmw", "ok"),
                 ("weer", "ok"),
                 ("sturen", "ok"),
                 ("meldingen", "overgeslagen"),
             )
         ],
     )
+
+
+def _auto_extra(
+    opslag: Opslag,
+    laatste: dict[str, Any],
+    laadbeurten: list[dict[str, Any]],
+    tot: datetime,
+    rnd: random.Random,
+) -> None:
+    """Wat een BMW verder doorgeeft (pagina Auto): details, laadhistorie en een thuislocatie."""
+    import json
+
+    t = laatste["tijd"]
+    bij = (t - timedelta(minutes=7)).isoformat()
+    details = {
+        "laden": {
+            "doel_pct": 80.0,
+            "bereik_bij_doel_km": 368.0,
+            "capaciteit_kwh": ACCU_KWH,
+            "capaciteit_nieuw_kwh": 80.7,
+            "gezondheid_pct": 96.0,
+            "ac_limiet_a": 16.0,
+            "methode": "AC_TYPE2PLUG",
+            "fasen": "3-PHASES" if laatste["laadt"] else "NO_CHARGING",
+            "voorkeur": "NO_PRESELECTION",
+            "laatste_einde": "CHARGING_GOAL_REACHED",
+            "laatste_resultaat": "SUCCESS",
+            "kabelslot": "CHARGING_CABLE_LOCKED" if laatste["ingeplugd"] else "CHARGING_CABLE_NOT_LOCKED",
+            "klep_open": bool(laatste["ingeplugd"]),
+            "bijgewerkt": bij,
+        },
+        "rijden": {
+            "km_stand": laatste["km_stand"],
+            "verbruik_kwh_100km": 17.4,
+            "week_km": 318.0,
+            "week_km_lang": 296.0,
+            "rit": {
+                "eind": (t - timedelta(hours=3, minutes=20)).isoformat(),
+                "km_stand": laatste["km_stand"],
+                "accu_pct": laatste["accu_pct"],
+                "teruggewonnen": 1.8,
+            },
+            "rijstijl": {"optrekken": 3.8, "anticiperen": 4.4},
+            "bijgewerkt": bij,
+        },
+        "onderhoud": {
+            "service_km": 12400.0,
+            "apk": "2029-03-31T22:00:00+00:00",
+            "services": [
+                {"type": "BRAKE_FLUID", "status": "OK", "dateTime": "2027-04-30T00:00:00Z"},
+                {"type": "VEHICLE_CHECK", "status": "OK", "dateTime": "2027-10-31T00:00:00Z"},
+            ],
+            "meldingen": [{"name": "Bandenspanning rechtsachter controleren", "severity": "LOW"}],
+            "banden": {
+                "linksvoor": {"bar": 2.6, "doel_bar": 2.6},
+                "rechtsvoor": {"bar": 2.6, "doel_bar": 2.6},
+                "linksachter": {"bar": 2.8, "doel_bar": 2.9},
+                "rechtsachter": {"bar": 2.5, "doel_bar": 2.9},
+            },
+            "accu_12v_pct": 84.0,
+            "bijgewerkt": bij,
+        },
+        "beveiliging": {
+            "slot": "SECURED",
+            "alarm": "doorsTiltCabin",
+            "deuren_open": {
+                "linksvoor": False,
+                "rechtsvoor": False,
+                "linksachter": False,
+                "rechtsachter": False,
+            },
+            "ramen": {
+                "linksvoor": "CLOSED",
+                "rechtsvoor": "CLOSED",
+                "linksachter": "CLOSED",
+                "rechtsachter": "CLOSED",
+            },
+            "kofferbak_open": False,
+            "motorkap_open": False,
+            "dak": "CLOSED",
+            "bijgewerkt": bij,
+        },
+        "klimaat": {"activiteit": "standby", "bijgewerkt": bij},
+        "locatie": {**THUIS, "bijgewerkt": bij},
+        "basis": {
+            "merk": "BMW",
+            "model": "i4 eDrive40",
+            "serie": "4",
+            "carrosserie": "Gran Coupé",
+            "aandrijving": "BEV",
+            "bouwdatum": "2024-03",
+            "kleurcode": "C4P",
+        },
+    }
+    opslag.voeg_toe(AUTO_DETAILS, [{"tijd": t, "auto_id": VIN, "gegevens": json.dumps(details)}])
+
+    sessies = [
+        {
+            "start": b["start"],
+            "auto_id": VIN,
+            "eind": b["eind"],
+            "kwh": round(b["kwh"] * 0.92, 1),  # wat in de auto komt
+            "start_pct": float(b["start_pct"]),
+            "eind_pct": float(b["eind_pct"]),
+            "plaats": "De Bilt",
+            "publiek": False,
+            "km_stand": float(b["km_stand"]),
+            **THUIS,
+        }
+        for b in laadbeurten
+        if b["start"] >= tot - timedelta(days=35)
+    ]
+    for dagen_terug, plaats, kwh in ((4, "Fastned, Utrecht", 38.6), (17, "Ionity, Zevenaar", 44.2)):
+        start = tot - timedelta(days=dagen_terug, hours=rnd.uniform(2, 6))
+        sessies.append(
+            {
+                "start": start,
+                "auto_id": VIN,
+                "eind": start + timedelta(minutes=27),
+                "kwh": kwh,
+                "start_pct": 18.0,
+                "eind_pct": 70.0,
+                "plaats": plaats,
+                "publiek": True,
+                "kosten": round(kwh * 0.59, 2),
+                "valuta": "EUR",
+                "lat": 52.09,
+                "lon": 5.12,
+            }
+        )
+    opslag.voeg_toe(AUTO_LAADSESSIE, sessies)
+    schrijf_instellingen(opslag, {"auto_thuis": THUIS})
 
 
 def main() -> None:

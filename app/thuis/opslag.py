@@ -57,6 +57,9 @@ class DuckOpslag:
         for t in TABELLEN:
             kolommen = ", ".join(f"{k} {_DUCK_TYPES[v]}" for k, v in t.kolommen)
             self.con.execute(f"CREATE TABLE IF NOT EXISTS {self._ref(t)} ({kolommen})")
+            # Bestaande tabel uit een oudere versie: nieuwe kolommen erbij.
+            for k, v in t.kolommen:
+                self.con.execute(f"ALTER TABLE {self._ref(t)} ADD COLUMN IF NOT EXISTS {k} {_DUCK_TYPES[v]}")
 
     def voeg_toe(self, tabel: Tabel, rijen: list[dict[str, Any]]) -> int:
         if not rijen:
@@ -108,17 +111,29 @@ class BigQueryOpslag:
         return [self.bq.SchemaField(k, v) for k, v in t.kolommen]
 
     def maak_tabellen(self) -> None:
+        from google.api_core.exceptions import NotFound
+
         ds = self.bq.Dataset(self.dataset)
         ds.location = self.locatie  # anders wordt een nieuwe dataset in de VS aangemaakt
         self.client.create_dataset(ds, exists_ok=True)
         for t in TABELLEN:
-            tabel = self.bq.Table(f"{self.dataset}.{t.naam}", schema=self._schema(t))
-            # Partitie op de tijd waar queries op filteren, clustering op de sleutel:
-            # zo leest een dagoverzicht alleen die dag in plaats van de hele historie.
-            if t.tijdkolom:
-                tabel.time_partitioning = self.bq.TimePartitioning(field=t.tijdkolom)
-            tabel.clustering_fields = list(t.sleutel)[:4]
-            self.client.create_table(tabel, exists_ok=True)
+            try:
+                bestaand = self.client.get_table(f"{self.dataset}.{t.naam}")
+            except NotFound:
+                tabel = self.bq.Table(f"{self.dataset}.{t.naam}", schema=self._schema(t))
+                # Partitie op de tijd waar queries op filteren, clustering op de sleutel:
+                # zo leest een dagoverzicht alleen die dag in plaats van de hele historie.
+                if t.tijdkolom:
+                    tabel.time_partitioning = self.bq.TimePartitioning(field=t.tijdkolom)
+                tabel.clustering_fields = list(t.sleutel)[:4]
+                self.client.create_table(tabel, exists_ok=True)
+                continue
+            # Tabel uit een oudere versie: nieuwe kolommen erbij (BigQuery staat toevoegen toe).
+            namen = {f.name for f in bestaand.schema}
+            nieuw = [f for f in self._schema(t) if f.name not in namen]
+            if nieuw:
+                bestaand.schema = [*bestaand.schema, *nieuw]
+                self.client.update_table(bestaand, ["schema"])
 
     def voeg_toe(self, tabel: Tabel, rijen: list[dict[str, Any]]) -> int:
         if not rijen:

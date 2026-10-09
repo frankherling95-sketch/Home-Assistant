@@ -32,13 +32,22 @@ def maak_plan(
     moment: datetime | None = None,
     auto: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Laadplan tot de volgende vertrektijd. `auto` = laatste meting, als die al opgehaald is."""
+    """Laadplan tot de volgende vertrektijd. `auto` = laatste meting, als die al opgehaald is.
+
+    Geeft de auto zelf zijn accu-inhoud en laaddoel door (BMW), dan rekent het plan daarmee:
+    de inhoud van de auto in plaats van de instelling, en nooit verder dan het laaddoel in de
+    auto (daar stopt de auto zelf).
+    """
     moment = moment or nu()
     lokaal = moment.astimezone(TZ)
     deadline = next_deadline(lokaal, time.fromisoformat(instellingen["vertrek"]))
     blokken = prijzen(opslag, "stroom", moment - timedelta(hours=1), moment + timedelta(days=2))
     auto = auto or laatste(opslag, "auto_meting", moment)
     soc = auto["accu_pct"] if auto else None
+    capaciteit = (auto or {}).get("capaciteit_kwh") or float(instellingen["capaciteit_kwh"])
+    doel = float(instellingen["doel_pct"])
+    if (auto_doel := (auto or {}).get("doel_pct")) and auto_doel < doel:
+        doel = float(auto_doel)
 
     plan: Plan = make_plan(
         PlanInput(
@@ -46,8 +55,8 @@ def maak_plan(
             deadline=deadline,
             slots=[PriceSlot(b["van"], b["tot"], b["allin"]) for b in blokken],
             soc=soc,
-            target_soc=float(instellingen["doel_pct"]),
-            capacity_kwh=float(instellingen["capaciteit_kwh"]),
+            target_soc=doel,
+            capacity_kwh=float(capaciteit),
             power_kw=float(instellingen["vermogen_kw"]),
             efficiency=float(instellingen["rendement_pct"]) / 100,
             cheap_threshold=float(instellingen["altijd_onder"]),
@@ -62,6 +71,10 @@ def maak_plan(
         "vertrek": deadline.isoformat(),
         "prijs_nu": plan.current_price,
         "accu_pct": soc,
+        "doel_pct": doel,
+        "capaciteit_kwh": round(float(capaciteit), 1),
+        "doel_van_auto": doel != float(instellingen["doel_pct"]),
+        "capaciteit_van_auto": bool((auto or {}).get("capaciteit_kwh")),
         "blokken": [
             {"van": s.start.isoformat(), "tot": s.end.isoformat(), "prijs": s.price} for s in plan.slots
         ],

@@ -22,6 +22,7 @@ Cloud Run-service thuis-app  (API + web-app)  ◀── jij, ingelogd via IAP (W
 | Energie | Stroom, teruglevering, gas en laden per uur/dag/maand, met vergelijking t.o.v. vorige periode |
 | Prijzen | All-in prijzen vandaag en morgen per kwartier, goedkoopste momenten, negatieve prijzen |
 | Laden | Auto en lader live, laadplan (Slim laden), laadsessies met kosten, instellingen |
+| Auto | Alles wat de auto doorgeeft: accu en laden, kilometers per dag, onderhoud en bandenspanning, deuren en ramen, locatie, laadhistorie (ook onderweg) |
 | Inzichten | Besparing door slim laden, kosten deze maand, gas t.o.v. vorige week (graaddagen), … |
 | Koppelingen | Je accounts koppelen (Thuis bewaart alleen tokens, geen wachtwoorden) en de status per bron |
 
@@ -29,6 +30,7 @@ Cloud Run-service thuis-app  (API + web-app)  ◀── jij, ingelogd via IAP (W
 | --- | --- |
 | ![Overzicht op desktop](docs/screenshots/desktop-licht-overzicht.png) | ![Energie op mobiel](docs/screenshots/mobiel-donker-energie.png) |
 | ![Prijzen op desktop, donker](docs/screenshots/desktop-donker-prijzen.png) | ![Overzicht op mobiel, licht](docs/screenshots/mobiel-licht-overzicht.png) |
+| ![Auto op desktop](docs/screenshots/desktop-licht-auto.png) | ![Auto op mobiel, donker](docs/screenshots/mobiel-donker-auto.png) |
 
 *Schermafdrukken met de voorbeelddata uit `python -m thuis.demo`.*
 
@@ -45,6 +47,7 @@ een paar dagen klopt.
 | `app/thuis/opslag.py` | Opslaglaag: append-only, actuele stand per sleutel, alleen gewijzigde rijen erbij |
 | `app/thuis/verzamel.py` | De verzamelaar: elke bron faalt los, uitslag per stap in de rondelog |
 | `app/thuis/inzicht.py` | Dag- en periodeoverzichten (dag/week/maand/jaar), laden uit de meterstand van de lader |
+| `app/thuis/auto.py` | De pagina Auto: kilometers per dag, thuislocatie, laadhistorie van de auto |
 | `app/thuis/sessies.py` | Laadsessies van inpluggen tot uitpluggen, met kosten en besparing t.o.v. direct laden |
 | `app/thuis/inzichten.py` | Inzichten voor de overzichtspagina (negatieve prijzen, besparing, gas per graaddag, …) |
 | `app/thuis/meldingen.py` | Google Chat-meldingen, elk maar één keer |
@@ -95,6 +98,7 @@ laag (er moet wel een betaalaccount aan het project hangen; het script zet een b
   elk half uur met de stekker erin en anders elk uur. Koppelen: maak in het CarData-portaal
   (My BMW → BMW CarData) een client aan met "CarData API" aan, en vul de client-ID in op de pagina
   Koppelingen. Daarna bevestig je een code op de site van BMW; je wachtwoord gaat niet via Thuis.
+  De laadhistorie haalt Thuis één keer per dag op, model en bouwdatum één keer per week.
 - **Kia/Hyundai** heeft geen officiële API. De community-bibliotheek volgt wijzigingen meestal
   snel; bij inlogproblemen is een update van `hyundai_kia_connect_api` vaak genoeg.
 - **Verbruik** komt van de slimme meter via Frank Energie, met ongeveer een dag vertraging.

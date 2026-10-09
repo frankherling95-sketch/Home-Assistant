@@ -2,6 +2,7 @@
 
 import { $, $$, api, esc, icoon, legeCache, meldFout, relatief, thema, zetThema } from "./basis.js";
 import { herschaal, ruimOp } from "./grafiek.js";
+import * as auto from "./paginas/auto.js";
 import * as bronnen from "./paginas/bronnen.js";
 import * as energie from "./paginas/energie.js";
 import * as inzichten from "./paginas/inzichten.js";
@@ -14,6 +15,7 @@ const PAGINAS = {
   energie: { titel: "Energie", module: energie },
   prijzen: { titel: "Prijzen", module: prijzen },
   laden: { titel: "Laden", module: laden },
+  auto: { titel: "Auto", module: auto },
   inzichten: { titel: "Inzichten", module: inzichten },
   koppelingen: { titel: "Koppelingen", module: bronnen },
   bronnen: { titel: "Koppelingen", module: bronnen, als: "koppelingen" }, // oude links

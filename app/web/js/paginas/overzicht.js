@@ -159,7 +159,7 @@ function autoKaart({ auto, lader, plan, instellingen }) {
   const accu = auto
     ? `<div class="accu" role="meter" aria-label="Accu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct ?? 0)}">
         <div class="vulling" style="width:${pct ?? 0}%"></div>
-        <div class="doel" style="left:${instellingen.doel_pct}%" title="Doel ${instellingen.doel_pct}%"></div>
+        <div class="doel" style="left:${plan.doel_pct ?? instellingen.doel_pct}%" title="Doel ${plan.doel_pct ?? instellingen.doel_pct}%"></div>
         <span><b>${getal(pct, 0)}%</b><span class="zacht">${auto.bereik_km != null ? `${getal(auto.bereik_km, 0)} km` : ""}</span></span>
       </div>`
     : '<p class="leeg">Nog geen gegevens van de auto. <a href="#/koppelingen">Koppel je auto</a></p>';

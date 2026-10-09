@@ -28,7 +28,7 @@ from .koppelingen import DIENSTEN, maak_connectoren, nieuwe_stand
 from .laden import stuur
 from .meldingen import controleer
 from .opslag import Opslag, maak_opslag, nu, voeg_toe_gewijzigd
-from .schema import AUTO, LADER, PRIJS, RONDE, VERBRUIK, WEER
+from .schema import AUTO, AUTO_DETAILS, AUTO_LAADSESSIE, LADER, PRIJS, RONDE, VERBRUIK, WEER
 
 _LOG = logging.getLogger("thuis.verzamel")
 # Welke koppeling een stap gebruikt (voor de status "opnieuw koppelen").
@@ -74,10 +74,13 @@ def ronde(
 
     def auto() -> None:
         opslag.voeg_toe(AUTO, c.kia.metingen())
+        opslag.voeg_toe(AUTO_DETAILS, getattr(c.kia, "details", []))
 
     def bmw_auto() -> None:
         # Niet elke ronde: BMW staat 50 verzoeken per dag toe (zie connectors/bmw.py).
         opslag.voeg_toe(AUTO, c.bmw.metingen(begin))
+        opslag.voeg_toe(AUTO_DETAILS, c.bmw.details)
+        voeg_toe_gewijzigd(opslag, AUTO_LAADSESSIE, c.bmw.laadsessies)  # elke dag de laatste 30 dagen
 
     def temperatuur() -> None:
         voeg_toe_gewijzigd(opslag, WEER, weer.temperaturen(terug=2, vooruit=2))
