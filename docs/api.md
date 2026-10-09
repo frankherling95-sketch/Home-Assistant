@@ -171,7 +171,7 @@ Per dienst de status, voor de pagina "Koppelingen". Nooit tokens of wachtwoorden
   {"dienst": "easee", "naam": "Easee", "uitleg": "Voor de lader: …",
    "velden": [{"naam": "gebruiker", "label": "E-mailadres of telefoonnummer", "type": "text"},
               {"naam": "wachtwoord", "label": "Wachtwoord", "type": "password"}],
-   "methode": "inloggen", "status": "ok", "account": "fr…@herling.nl", "sinds": "2026-10-08T14:00:00+00:00"}
+   "methode": "inloggen", "status": "ok", "account": "fr…@voorbeeld.nl", "sinds": "2026-10-08T14:00:00+00:00"}
 ]
 ```
 - `dienst`: `frank` | `easee` | `kia` | `bmw` | `google_chat`
