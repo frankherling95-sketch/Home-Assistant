@@ -37,6 +37,7 @@ from .laden import STANDAARD, maak_plan
 from .opslag import Opslag, lees_instellingen, maak_opslag, nu, schrijf_instellingen, tegelijk
 from .schema import TABELLEN
 from .sessies import laadsessies
+from .weer import WeerLive, weer_overzicht
 
 # In de container staat de web-app los van het geïnstalleerde pakket (THUIS_WEB=/app/web).
 WEB = Path(os.environ.get("THUIS_WEB") or Path(__file__).resolve().parent.parent / "web")
@@ -60,6 +61,9 @@ async def _levensloop(app: FastAPI):
     if app.state.cfg.demo_apparaten:
         from .demo_apparaten import DemoTuya as demo
     app.state.apparaten = Live(lambda: app.state.kluis.lees(), demo)  # de kluis van nu (tests vervangen hem)
+    from .connectors.weer import OpenMeteo
+
+    app.state.weer = WeerLive(OpenMeteo(app.state.cfg.lat, app.state.cfg.lon))
     # BigQuery: de verzamelaar maakt de tabellen (ook direct na elke deploy); dat scheelt
     # hier tien API-aanroepen bij elke koude start.
     if app.state.cfg.opslag != "bigquery":
@@ -259,6 +263,17 @@ def api_auto_thuis(_: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> 
 def api_auto_thuis_weg(_: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str, Any]:
     schrijf_instellingen(o, {"auto_thuis": None})
     return auto_overzicht(o)
+
+
+@app.get("/api/weer")
+def api_weer(request: Request, _: str = Depends(gebruiker), o: Opslag = Depends(opslag)) -> dict[str, Any]:
+    """Het weer voor thuis (Open-Meteo) met het verwachte gasverbruik per dag (zie docs/api.md)."""
+    cfg: Config = request.app.state.cfg
+    try:
+        return bewaard(request, o, lambda: weer_overzicht(o, cfg, request.app.state.weer))
+    except httpx.HTTPError as err:
+        _LOG.warning("Weer niet opgehaald: %s", err)
+        raise HTTPException(502, "Het weer is nu niet op te halen; probeer het zo nog eens.") from err
 
 
 @app.get("/api/instellingen")

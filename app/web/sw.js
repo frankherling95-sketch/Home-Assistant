@@ -2,7 +2,7 @@
 // Netwerk eerst (dan zie je altijd de nieuwste versie), cache als terugval.
 // /api/ blijft altijd buiten de cache: verouderde cijfers zijn erger dan een foutmelding.
 
-const CACHE = "thuis-v6";
+const CACHE = "thuis-v7";
 const SCHIL = [
   "./",
   "index.html",
@@ -14,11 +14,13 @@ const SCHIL = [
   "js/grafiek.js",
   "js/onderdelen.js",
   "js/ophalen.js",
+  "js/weer.js",
   "js/paginas/overzicht.js",
   "js/paginas/energie.js",
   "js/paginas/prijzen.js",
   "js/paginas/auto.js",
   "js/paginas/apparaten.js",
+  "js/paginas/weer.js",
   "js/paginas/inzichten.js",
   "js/paginas/bronnen.js",
 ];

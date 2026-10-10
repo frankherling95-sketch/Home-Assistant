@@ -38,6 +38,7 @@
   --op-laden: #1b1f24;
   --c-prijs: #ff9800;
   --c-temp: #78909c;
+  --c-regen: #4a90e2; /* neerslag op de pagina Weer */
 
   /* Status: altijd samen met een icoon of tekst, nooit kleur alleen */
   --goed: #2e7d32;
@@ -102,6 +103,7 @@
     --op-laden: #04121f;
     --c-prijs: #ffa23a;
     --c-temp: #94a3b8;
+    --c-regen: #60a5fa;
     --goed: #4ade80;
     --goed-zacht: #0f2e22;
     --let-op: #fbbf24;
@@ -156,6 +158,7 @@
   --op-laden: #04121f;
   --c-prijs: #ffa23a;
   --c-temp: #94a3b8;
+  --c-regen: #60a5fa;
   --goed: #4ade80;
   --goed-zacht: #0f2e22;
   --let-op: #fbbf24;
@@ -870,6 +873,87 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
   .snelknoppen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .snelknop { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }
 }
+
+/* ── weer ──────────────────────────────────────────────────────────────── */
+
+.weer-held { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+.weer-icoon { width: 64px; height: 64px; flex: none; display: grid; place-items: center; border-radius: 50%;
+  background: var(--oppervlak-2); color: var(--inkt-2); }
+.weer-icoon svg { width: 40px; height: 40px; }
+.weer-held.klein .weer-icoon { width: 52px; height: 52px; }
+.weer-held.klein .weer-icoon svg { width: 32px; height: 32px; }
+.weer-naam { font-weight: 500; }
+.weer-held .zacht { font-size: 14px; }
+.windpijl { width: 16px; height: 16px; vertical-align: -2px; margin-right: 4px; stroke-width: 2.2; color: var(--inkt-2); }
+.tegels.drie { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 599px) { .tegels.drie { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* regen de komende uren, per kwartier, zoals een buienradar */
+.regen { margin: 0 0 14px; }
+.regen-tekst { font-weight: 500; margin-bottom: 8px; }
+.regenbalk { display: flex; align-items: flex-end; gap: 3px; height: 36px; border-bottom: 1px solid var(--lijn-sterk); }
+.regenbalk i { flex: 1; min-height: 2px; border-radius: 3px 3px 0 0; background: var(--lijn); }
+.regenbalk i.nat { background: var(--c-regen); box-shadow: 0 0 var(--gloed-stip) var(--c-regen); }
+.regenbalk-labels { position: relative; height: 18px; font-size: 12px; color: var(--inkt-3); font-variant-numeric: tabular-nums; }
+.regenbalk-labels span { position: absolute; top: 3px; }
+
+/* de komende uren als strook die je opzij schuift */
+.uurstrook { list-style: none; margin: 12px 0 0; padding: 0 0 6px; display: grid; grid-auto-flow: column;
+  grid-auto-columns: 56px; gap: 4px; overflow-x: auto; scrollbar-width: thin; }
+/* position: relative houdt de verborgen tekst (voor schermlezers) binnen de strook; anders wordt de pagina op een telefoon breder */
+.uurstrook li { position: relative; display: grid; justify-items: center; gap: 4px; padding: 8px 0; border-radius: 10px; font-variant-numeric: tabular-nums; }
+.uurstrook li:first-child { background: var(--oppervlak-2); }
+.uurstrook .tijd { font-size: 12px; color: var(--inkt-3); }
+.uurstrook svg { width: 26px; height: 26px; color: var(--inkt-2); }
+.uurstrook .temp { font-weight: 500; }
+.uurstrook .kans { min-height: 16px; font-size: 12px; color: var(--inkt-3); }
+.uurstrook .kans.nat { color: var(--inkt-2); font-weight: 500; }
+
+/* overzicht: nu links, de feiten ernaast, de uren eronder */
+.weer-kort { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 40px; }
+.weer-kort .weer-held { margin: 0; }
+.weer-feiten { flex: 1 1 360px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 24px; }
+.weer-feit { display: grid; gap: 2px; min-width: 0; }
+.weer-feit .feit-waarde small { font-size: 13px; font-weight: 400; color: var(--inkt-3); }
+@media (max-width: 599px) { .weer-feiten { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; } }
+
+/* 7 dagen: één regel per dag met het bereik van laag tot hoog; open voor de details */
+.dagen { display: grid; }
+.dagrij { border-bottom: 1px solid var(--lijn); }
+.dagrij:last-child { border-bottom: 0; }
+.dagrij summary {
+  display: grid; grid-template-columns: 5.6em 28px 4.2em 2.4em minmax(60px, 1fr) 2.4em 3.4em; align-items: center;
+  gap: 10px; padding: 10px 6px; border-radius: 8px; cursor: pointer; list-style: none; font-variant-numeric: tabular-nums;
+}
+.dagrij summary::-webkit-details-marker { display: none; }
+.dagrij summary:hover, .dagrij[open] summary { background: var(--oppervlak-2); }
+.dag-naam { font-weight: 500; }
+.dag-icoon { position: relative; display: grid; }
+.dag-icoon svg { width: 26px; height: 26px; color: var(--inkt-2); }
+.dag-regen { font-size: 13px; color: var(--inkt-3); white-space: nowrap; }
+.dag-regen.nat { color: var(--inkt-2); }
+.dag-min { text-align: right; color: var(--inkt-3); }
+.dag-max { font-weight: 500; }
+.dag-wind { text-align: right; font-size: 13px; color: var(--inkt-2); white-space: nowrap; }
+.bereik { position: relative; height: 6px; border-radius: 999px; background: var(--oppervlak-2); }
+.dagrij[open] .bereik, .dagrij summary:hover .bereik { background: var(--lijn); }
+.bereik i { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: var(--c-temp); }
+.bereik b { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
+  background: var(--oppervlak); border: 2px solid var(--inkt); }
+.dagrij .gegevens { padding: 4px 6px 10px; }
+@media (max-width: 599px) {
+  .dagrij summary { grid-template-columns: 4.8em 26px 3.6em 2.2em minmax(36px, 1fr) 2.2em; gap: 8px; }
+  .dag-wind { display: none; }
+}
+
+/* gas per dag (geschat) */
+.gasdagen { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; height: 128px; margin: 14px 0 10px; }
+.gasdag { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; justify-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.gasdag i { align-self: end; width: 70%; max-width: 28px; min-height: 3px; border-radius: 4px 4px 0 0; background: var(--c-gas);
+  box-shadow: 0 0 calc(var(--gloed-grafiek) * 1px) var(--c-gas); }
+.gasdag .m3 { font-size: 12px; color: var(--inkt-2); }
+.gasdag .naam { font-size: 12px; color: var(--inkt-3); }
+.weerbron { margin: 0; font-size: 13px; color: var(--inkt-3); }
 
 /* ── skeletons en toasts ───────────────────────────────────────────────── */
 
