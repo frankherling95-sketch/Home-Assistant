@@ -20,6 +20,12 @@
   /* Gloed en achtergronden: in licht rustig, in donker gloeit het (zie hieronder) */
   --schaduw-kaart: none;
   --gloed-accent: none;
+  /* het merk: neonbliksem in het blauw van de huisstijl (zie .merk); --gloed-icoon: menu-icoon bij hover */
+  --merk-rand: #0277bd; --merk-draad: #d6efff; --merk-kern: #e3f4ff; --merk-boog: #0288d1;
+  --merk-verloop-1: #4fb3ea; --merk-verloop-2: #0288d1; --merk-verloop-3: #01579b;
+  --merk-gloed: drop-shadow(0 0 0.6px rgb(2 136 209 / 0.5)) drop-shadow(0 0 2px rgb(2 119 189 / 0.22));
+  --merk-gloed-sterk: drop-shadow(0 0 2px rgb(79 179 234 / 0.9)) drop-shadow(0 0 7px rgb(2 119 189 / 0.55));
+  --gloed-icoon: none;
   --gloed-laden: none;
   --gloed-stip: 0px;
   --gloed-grafiek: 0;
@@ -84,6 +90,11 @@
     --schaduw-zwevend: 0 8px 32px rgb(0 0 0 / 0.5);
     --schaduw-kaart: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 12px 32px rgb(2 6 23 / 0.45);
     --gloed-accent: 0 0 0 1px rgb(56 189 248 / 0.45), 0 0 18px rgb(56 189 248 / 0.28);
+    --merk-rand: #38bdf8; --merk-draad: #ecf9ff; --merk-kern: #e6f7ff; --merk-boog: #7dd3fc;
+    --merk-verloop-1: #7dd3fc; --merk-verloop-2: #0ea5e9; --merk-verloop-3: #0369a1;
+    --merk-gloed: drop-shadow(0 0 1.5px #38bdf8) drop-shadow(0 0 6px rgb(14 165 233 / 0.6));
+    --merk-gloed-sterk: drop-shadow(0 0 3px #bae6fd) drop-shadow(0 0 12px rgb(56 189 248 / 0.95));
+    --gloed-icoon: drop-shadow(0 0 6px rgb(56 189 248 / 0.65));
     --gloed-laden: 0 0 18px rgb(45 226 196 / 0.55);
     --gloed-stip: 8px;
     --gloed-grafiek: 10;
@@ -139,6 +150,11 @@
   --schaduw-zwevend: 0 8px 32px rgb(0 0 0 / 0.5);
   --schaduw-kaart: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 12px 32px rgb(2 6 23 / 0.45);
   --gloed-accent: 0 0 0 1px rgb(56 189 248 / 0.45), 0 0 18px rgb(56 189 248 / 0.28);
+  --merk-rand: #38bdf8; --merk-draad: #ecf9ff; --merk-kern: #e6f7ff; --merk-boog: #7dd3fc;
+  --merk-verloop-1: #7dd3fc; --merk-verloop-2: #0ea5e9; --merk-verloop-3: #0369a1;
+  --merk-gloed: drop-shadow(0 0 1.5px #38bdf8) drop-shadow(0 0 6px rgb(14 165 233 / 0.6));
+  --merk-gloed-sterk: drop-shadow(0 0 3px #bae6fd) drop-shadow(0 0 12px rgb(56 189 248 / 0.95));
+  --gloed-icoon: drop-shadow(0 0 6px rgb(56 189 248 / 0.65));
   --gloed-laden: 0 0 18px rgb(45 226 196 / 0.55);
   --gloed-stip: 8px;
   --gloed-grafiek: 10;
@@ -212,34 +228,96 @@ svg.ic.vol { fill: currentColor; stroke: none; }
 }
 .merk { display: flex; align-items: center; gap: 10px; height: var(--kop-hoogte); padding: 0 8px;
   font-size: 20px; font-weight: 500; }
-.merk svg { width: 28px; height: 28px; }
-/* Het merk leeft: de bliksem ademt een gloed en elke 6 seconden loopt er een vonk langs de rand. */
-.merk .bliksem { color: var(--accent); overflow: visible; }
-.merk .bliksem .kern { fill: currentColor; animation: gloei 6s ease-in-out infinite; }
-.merk .bliksem .vonk {
-  fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
-  stroke-dasharray: 16 84; stroke-dashoffset: 100; opacity: 0; animation: vonk 6s linear infinite;
+/* Het merk: een neonbliksem die elke 7 seconden opnieuw inslaat. Eerst schiet er een witte
+   flits van boven naar beneden, dan ontsteekt de buis, sprankelen er vonken bij de punt en
+   knetteren er boogjes omheen; daartussen zoemt de neon zacht (met af en toe een hapering). */
+.merk .bliksem { width: 34px; height: 34px; margin: 0 -2px 0 -4px; overflow: visible; flex: none; }
+.merk .buis { filter: var(--merk-gloed); animation: merk-buis 7s linear infinite; }
+.merk .kern { fill: url(#merk-verloop); fill-opacity: 0.92; }
+.merk .v1 { stop-color: var(--merk-verloop-1); }
+.merk .v2 { stop-color: var(--merk-verloop-2); }
+.merk .v3 { stop-color: var(--merk-verloop-3); }
+.merk .rand { fill: none; stroke: var(--merk-rand); stroke-width: 1.1; stroke-linejoin: round; }
+.merk .gloeidraad { fill: none; stroke: var(--merk-draad); stroke-width: 0.4; stroke-linejoin: round; }
+.merk .flits {
+  fill: none; stroke: #fff; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 0; animation: merk-flits 7s linear infinite;
 }
-@keyframes gloei {
-  0%, 100% { filter: drop-shadow(0 0 1px var(--accent)); }
-  46% { filter: drop-shadow(0 0 4px var(--accent)); }
-  50% { filter: drop-shadow(0 0 9px var(--accent)); }
-  52% { filter: drop-shadow(0 0 2px var(--accent)); }
-  55% { filter: drop-shadow(0 0 10px var(--accent)); }
-  70% { filter: drop-shadow(0 0 4px var(--accent)); }
+.merk .bogen { filter: var(--merk-gloed); }
+.merk .bogen path {
+  fill: none; stroke: var(--merk-boog); stroke-width: 0.55; stroke-linecap: round; stroke-linejoin: round; opacity: 0;
 }
-@keyframes vonk {
-  0%, 44% { stroke-dashoffset: 100; opacity: 0; }
-  46% { opacity: 1; }
-  62% { stroke-dashoffset: 0; opacity: 1; }
-  66%, 100% { stroke-dashoffset: 0; opacity: 0; }
+.merk .boog-1 { animation: merk-boog-1 7s linear infinite; }
+.merk .boog-2 { animation: merk-boog-2 7s linear infinite; }
+.merk .boog-3 { animation: merk-boog-3 7s linear infinite; }
+.merk .boog-4 { animation: merk-boog-4 7s linear infinite; }
+.merk .boog-5 { animation: merk-boog-5 7s linear infinite; }
+.merk .vonken {
+  opacity: 0; transform-box: view-box; transform-origin: 6.5px 31.5px; animation: merk-vonken 7s ease-out infinite;
+}
+.merk .vonken path { fill: none; stroke: var(--merk-kern); stroke-width: 0.8; stroke-linecap: round; }
+.merk .vonken circle { fill: var(--merk-kern); }
+
+@keyframes merk-buis {
+  0%, 3% { opacity: 0.18; filter: brightness(1) var(--merk-gloed); }
+  4.5% { opacity: 1; filter: brightness(1.8) var(--merk-gloed-sterk); }
+  10% { opacity: 1; filter: brightness(1) var(--merk-gloed); }
+  54% { opacity: 1; }
+  54.6% { opacity: 0.5; }
+  55.2% { opacity: 1; }
+  55.8% { opacity: 0.7; }
+  56.4%, 100% { opacity: 1; filter: brightness(1) var(--merk-gloed); }
+}
+@keyframes merk-flits {
+  0% { stroke-dashoffset: 100; opacity: 1; }
+  4% { stroke-dashoffset: 0; opacity: 1; }
+  7% { stroke-dashoffset: 0; opacity: 0.9; }
+  12%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes merk-vonken {
+  0%, 4% { opacity: 0; transform: scale(0.3); }
+  5% { opacity: 1; transform: scale(1); }
+  12%, 100% { opacity: 0; transform: scale(1.6); }
+}
+@keyframes merk-boog-1 {
+  0%, 4% { opacity: 0; } 5% { opacity: 1; } 6% { opacity: 0.2; } 7.5% { opacity: 1; } 9%, 38% { opacity: 0; }
+  38.6% { opacity: 0.9; } 39.4%, 100% { opacity: 0; }
+}
+@keyframes merk-boog-2 {
+  0%, 5% { opacity: 0; } 6% { opacity: 1; } 8% { opacity: 0; } 9% { opacity: 0.8; } 11%, 71% { opacity: 0; }
+  71.5% { opacity: 0.9; } 72.3%, 100% { opacity: 0; }
+}
+@keyframes merk-boog-3 {
+  0%, 4.5% { opacity: 0; } 5.5% { opacity: 0.9; } 7%, 86% { opacity: 0; } 86.5% { opacity: 0.8; } 87%, 100% { opacity: 0; }
+}
+@keyframes merk-boog-4 {
+  0%, 6% { opacity: 0; } 7% { opacity: 1; } 10%, 23% { opacity: 0; } 23.5% { opacity: 0.7; } 24%, 100% { opacity: 0; }
+}
+@keyframes merk-boog-5 {
+  0%, 3.5% { opacity: 0; } 4.5% { opacity: 1; } 6%, 61% { opacity: 0; } 61.6% { opacity: 0.8; } 62.2%, 100% { opacity: 0; }
 }
 .menu { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 2px; }
 .menu a {
-  display: flex; align-items: center; gap: 14px; padding: 10px 12px; border-radius: 10px;
-  color: var(--inkt-2); text-decoration: none; font-weight: 500;
+  position: relative; display: flex; align-items: center; gap: 14px; padding: 10px 12px; border-radius: 10px;
+  color: var(--inkt-2); text-decoration: none; font-weight: 500; transition: background-color 0.18s, color 0.18s;
 }
-.menu a:hover { background: var(--oppervlak-2); color: var(--inkt); }
+/* Hover (en toetsenbordfocus): een accentstreepje groeit links op, het icoon licht op in het accent en schuift
+   een tikje naar rechts; in donker gloeit het icoon. Het actieve item heeft al zijn eigen vlak. */
+.menu a::before {
+  content: ""; position: absolute; left: 3px; top: 11px; bottom: 11px; width: 3px; border-radius: 3px;
+  background: var(--accent); box-shadow: var(--gloed-accent); transform: scaleY(0); transition: transform 0.2s ease;
+}
+.menu a svg { transition: transform 0.2s ease, color 0.18s, filter 0.18s; }
+.menu a:focus-visible { background: var(--oppervlak-2); color: var(--inkt); }
+.menu a:not([aria-current="page"]):focus-visible::before { transform: scaleY(1); }
+.menu a:focus-visible svg { color: var(--accent); transform: translateX(2px); filter: var(--gloed-icoon); }
+@media (hover: hover) {
+  .menu a:hover { background: var(--oppervlak-2); color: var(--inkt); }
+  .menu a:not([aria-current="page"]):hover::before { transform: scaleY(1); }
+  .menu a:hover svg { color: var(--accent); transform: translateX(2px) scale(1.06); filter: var(--gloed-icoon); }
+  .zijbalk-koppelingen:hover { border-color: var(--lijn-sterk); }
+  .zijbalk-koppelingen:hover svg { color: var(--accent); filter: var(--gloed-icoon); }
+}
 .menu a[aria-current="page"] { background: var(--accent-zacht); color: var(--accent); box-shadow: var(--gloed-accent); }
 .menu .status-stip { margin-left: auto; }
 .zijbalk-voet { margin-top: auto; display: grid; gap: 12px; padding: 0 4px; }
@@ -250,6 +328,7 @@ svg.ic.vol { fill: currentColor; stroke: none; }
   padding: 10px 12px; border: 1px solid var(--lijn); border-radius: 10px; color: var(--inkt); text-decoration: none;
 }
 .zijbalk-koppelingen:hover { background: var(--oppervlak-2); }
+.zijbalk-koppelingen svg { transition: color 0.18s, filter 0.18s; }
 .zijbalk-koppelingen[aria-current="page"] { background: var(--accent-zacht); border-color: transparent; box-shadow: var(--gloed-accent); }
 .zijbalk-koppelingen svg { width: 22px; height: 22px; color: var(--inkt-2); }
 .zijbalk-koppelingen .tekst { display: grid; min-width: 0; }
@@ -306,6 +385,8 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
   }
   .tabbalk a svg { width: 26px; height: 26px; padding: 2px 10px; box-sizing: content-box; border-radius: 16px; }
   .tabbalk a[aria-current="page"] { color: var(--accent); }
+  .tabbalk a svg { transition: transform 0.15s ease, background-color 0.15s; }
+  .tabbalk a:active svg { transform: scale(0.9); background: var(--oppervlak-2); }
   .tabbalk a[aria-current="page"] svg { background: var(--accent-zacht); box-shadow: var(--gloed-accent); }
 }
 
@@ -985,6 +1066,8 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
   .skelet, .toast, .ophaalknop.bezig svg, [aria-busy="true"] :is(.icoon, .groot-icoon) { animation: none; }
   :is(.apparaat, .snelknop) .icoon { transition: none; }
   .accu .vulling, .schakelaar span, .schakelaar span::after { transition: none; }
-  .merk .bliksem .kern { animation: none; filter: drop-shadow(0 0 4px var(--accent)); }
-  .merk .bliksem .vonk { animation: none; }
+  .merk .buis, .merk .flits, .merk .bogen path, .merk .vonken { animation: none; }
+  .merk .buis { opacity: 1; }
+  .menu a, .menu a::before, .menu a svg, .zijbalk-koppelingen svg, .tabbalk a svg { transition: none; }
+  .menu a svg { transform: none !important; }
 }
