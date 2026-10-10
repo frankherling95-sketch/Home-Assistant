@@ -57,6 +57,15 @@ Legenda: **1.0** = zit erin · **erbij** = na 1.0 toegevoegd · **deels** = basi
 | Melding als een sensor alarm geeft of een batterij bijna leeg is | later | Via Google Chat, zoals de andere meldingen |
 | Lokaal bedienen zonder de cloud van Tuya | later | Kan niet vanuit Cloud Run; zou een klein programma thuis nodig hebben |
 
+## 6. Weer
+
+| Wens | Status | Toelichting |
+| --- | --- | --- |
+| Het weer voor thuis: nu, regen per kwartier, 48 uur en 7 dagen | erbij | Pagina Weer en kaart op het overzicht, via Open-Meteo (gratis, geen account) |
+| Verwacht gasverbruik per dag uit de weersverwachting | erbij | Basis + per graaddag, uit je eigen meterdata van de laatste acht weken |
+| Verwachte opbrengst van zonnepanelen | later | Kan zodra bekend is welke panelen het zijn (vermogen, richting); de straling staat al in de verwachting |
+| Melding bij storm, ijzel of hitte | later | Via Google Chat, zoals de andere meldingen |
+
 ## Ook genoteerd tijdens de bouw
 
 - **Historie inladen**: verbruik bij Frank Energie vanaf de start van het contract en temperaturen

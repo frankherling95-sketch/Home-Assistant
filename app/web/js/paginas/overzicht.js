@@ -1,6 +1,6 @@
 // Overzicht: van wat je nu kunt doen naar terugblikken. Bovenaan de stroomprijs met vandaag en
-// morgen, dan de auto en het verbruik van de laatste dag met meterdata, je slimme apparaten (als
-// Tuya gekoppeld is) en onderaan de inzichten. Het stromendiagram en de totalentabel staan op Energie.
+// morgen, dan de auto en het verbruik van de laatste dag met meterdata, het weer, je slimme apparaten
+// (als Tuya gekoppeld is) en onderaan de inzichten. Het stromendiagram en de totalentabel staan op Energie.
 
 import {
   $, LADER_STATUS, PLAN_REDEN, api, autoFoto, autoStand, css, dagnaam, esc, euro, gemiddelde, getal, goedkoopsteVenster,
@@ -8,6 +8,7 @@ import {
 } from "../basis.js";
 import { basis, doorzichtig, gekleurd, grafiek, nuLijn, regel, ruimOp, scheiding, staven } from "../grafiek.js";
 import { accuBalk, inzichtTegel, kaart, leeg, melding, pijl, skeletKaart, tegel } from "../onderdelen.js";
+import { graden, plekTekst, regenTekst, uurStrook, weerNaam, weerSvg, wind } from "../weer.js";
 import { hoofd, icoonVan, stand as apparaatStand } from "./apparaten.js";
 
 const WEEKDAG = new Intl.DateTimeFormat("nl-NL", { weekday: "long", timeZone: "UTC" });
@@ -22,12 +23,13 @@ export async function toon(main, _params, ctx) {
     </div>`;
   }
   const v = vandaag();
-  const [nu, dag, morgen, inzichten, apparaten] = await Promise.all([
+  const [nu, dag, morgen, inzichten, apparaten, weer] = await Promise.all([
     api("nu"),
     api(`dag?datum=${v}`),
     api(`dag?datum=${plusDagen(v, 1)}`),
     api(`inzichten?datum=${v}`).catch(() => []),
     api("apparaten").catch(() => null), // Tuya onbereikbaar: het overzicht gewoon zonder apparaten
+    api("weer").catch(() => null), // idem zonder weer
   ]);
   // De slimme meter komt via Frank met een dag vertraging: dan gisteren tonen, vergeleken met de dag ervoor.
   const meterdag = dag.compleet.verbruik ? dag : await api(`dag?datum=${plusDagen(v, -1)}`);
@@ -41,6 +43,7 @@ export async function toon(main, _params, ctx) {
       ${autoKaart(nu)}
       ${verbruikKaart(meterdag, ervoor, meterdag === dag)}
     </div>
+    ${weer ? weerKaart(weer) : ""}
     ${apparaten?.gekoppeld && apparaten.apparaten.length ? apparatenKaart(apparaten.apparaten) : ""}
     ${inzichten.length
       ? kaart({
@@ -263,6 +266,34 @@ function autoKaart({ auto, lader, plan }) {
       ${stekkerLos && b.length ? melding(`Het laadplan start ${wanneer(b[0].van)} om ${klok(b[0].van)}. Steek de stekker erin, anders laadt de auto niet.`, "let_op") : ""}
       <div class="tegels vier">${tegels.join("")}</div>`,
     voet: pijl("Naar auto & laden", "#/auto"),
+  });
+}
+
+// ── weer: nu, de komende uren en wat het voor je gas betekent ─────────────────
+
+function weerKaart(w) {
+  const n = w.nu;
+  const vandaag = w.dagen[0] || {};
+  const feit = (label, waarde) => `<div class="weer-feit"><span class="feit-label">${label}</span><span class="feit-waarde">${waarde}</span></div>`;
+  return kaart({
+    titel: "Weer",
+    sub: `${plekTekst(w.locatie)} · ${klok(n.tijd)}`,
+    id: "k-weer",
+    rechts: pijl("Per uur en per dag", "#/weer"),
+    inhoud: `<div class="weer-kort">
+        <div class="weer-held klein">
+          <span class="weer-icoon">${weerSvg(n.weercode, n.dag !== 0)}</span>
+          <div><div class="groot">${getal(n.temperatuur, 0)}<small>°C</small></div>
+            <p class="weer-naam">${esc(weerNaam(n.weercode))}</p><p class="zacht">voelt als ${graden(n.gevoel)}</p></div>
+        </div>
+        <div class="weer-feiten">
+          ${feit("Neerslag", esc(regenTekst(w.kwartieren)))}
+          ${feit("Wind", esc(wind(n.wind, n.windrichting)))}
+          ${feit("Vandaag", `${graden(vandaag.temp_min)} tot ${graden(vandaag.temp_max)}`)}
+          ${vandaag.gas_m3 != null ? feit("Gas vandaag", `±${hoeveelheid(vandaag.gas_m3)} m³${vandaag.gas_kosten != null ? ` <small>${euro(vandaag.gas_kosten)}</small>` : ""}`) : ""}
+        </div>
+      </div>
+      ${uurStrook(w.uren, 24)}`,
   });
 }
 
