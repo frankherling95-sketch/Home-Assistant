@@ -10,6 +10,7 @@ import * as energie from "./paginas/energie.js";
 import * as inzichten from "./paginas/inzichten.js";
 import * as overzicht from "./paginas/overzicht.js";
 import * as prijzen from "./paginas/prijzen.js";
+import * as weer from "./paginas/weer.js";
 
 // `sub`: de contextregel naast de titel. Een functie wordt elke halve minuut opnieuw uitgerekend.
 const PAGINAS = {
@@ -19,6 +20,7 @@ const PAGINAS = {
   auto: { titel: "Auto & laden", module: auto, sub: "" },
   apparaten: { titel: "Apparaten", module: apparaten, sub: "" },
   inzichten: { titel: "Inzichten", module: inzichten, sub: "uitgerekend uit je eigen meter-, laad- en prijsdata" },
+  weer: { titel: "Weer", module: weer, sub: "" }, // niet in de tabbalk: op een telefoon via de kaart Weer op het overzicht
   koppelingen: { titel: "Koppelingen", module: bronnen, sub: "je accounts en de verzamelaar" },
   laden: { als: "auto" }, // oude links
   bronnen: { als: "koppelingen" },

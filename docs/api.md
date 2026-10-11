@@ -8,7 +8,7 @@ Zonder geldige header: 401; een adres buiten `TOEGESTANE_EMAILS`: 403. Validatie
 Dit bestand is leidend voor backend (`app/thuis`) en frontend (`app/web`).
 
 **Bewaren.** Met BigQuery bewaart de app de antwoorden van `dag`, `periode`, `nu`, `auto`,
-`laadsessies`, `inzichten`, `apparaten/vandaag` en `apparaten/{id}/historie` tot de volgende ronde
+`laadsessies`, `inzichten`, `weer`, `apparaten/vandaag` en `apparaten/{id}/historie` tot de volgende ronde
 van de verzamelaar of het volgende kwartier, wat het eerst komt (`app/thuis/bewaar.py`, uit te
 zetten met `THUIS_BEWAREN=0`). Elk verzoek dat iets wijzigt (alles behalve `GET`) maakt het
 bewaarde leeg, behalve een apparaat bedienen: dat verandert niets aan de database. Met de header `x-thuis-vers: 1` maakt de app
@@ -326,3 +326,34 @@ dan 35 minuten telt niet mee.
 ### `GET /api/apparaten/{id}/historie?dagen=1..7`
 De metingen van de verzamelaar, oudste eerst: `{"tijden": [...], "online": [...], "aan": [...],
 "vermogen_w": [...], "temperatuur": [...], "vochtigheid": [...]}` (`null` waar het apparaat niets meldt).
+
+## Weer
+
+### `GET /api/weer`
+De verwachting van Open-Meteo (KNMI, DWD en ECMWF) voor thuis: de plek die bij Auto & laden als thuis
+is ingesteld, anders `THUIS_LAT`/`THUIS_LON` (standaard De Bilt), afgerond op twee decimalen. Met per
+dag het verwachte gasverbruik, geschat uit de eigen meterdata. De verwachting zelf wordt 10 minuten
+bewaard (`app/thuis/weer.py`); met BigQuery ook het hele antwoord, zoals hierboven bij Bewaren.
+```json
+{
+  "locatie": {"lat": 52.1, "lon": 5.18, "bron": "thuis", "naam": "thuis"},
+  "bijgewerkt": "2026-10-10T11:34:02+00:00",
+  "nu": {"tijd": "...", "temperatuur": 14.0, "gevoel": 11.2, "vochtigheid": 81, "neerslag": 0.1, "weercode": 51,
+         "bewolking": 100, "wind": 21.4, "windstoten": 44.3, "windrichting": 268, "dag": 1},
+  "kwartieren": [{"tijd": "...", "neerslag": 0.1}],
+  "uren": [{"tijd": "...", "temperatuur": 13.4, "gevoel": 11.0, "neerslag": 0.3, "neerslagkans": 71, "weercode": 61,
+            "wind": 20.5, "windstoten": 41.0, "windrichting": 265, "dag": 1, "straling": 112.0}],
+  "dagen": [{"datum": "2026-10-10", "weercode": 63, "temp_max": 14.0, "temp_min": 9.4, "temp_gem": 11.7,
+             "neerslag": 8.0, "neerslagkans": 100, "zon_op": "...", "zon_onder": "...", "zon_s": 14040,
+             "wind": 23.4, "windstoten": 55.4, "windrichting": 250, "uv": 3.1,
+             "graaddagen": 6.3, "gas_m3": 2.71, "gas_kosten": 3.47}],
+  "gas": {"basis_m3": 0.46, "per_graaddag_m3": 0.36, "dagen": 45, "prijs": 1.2814}
+}
+```
+- `bron`: `thuis` (ingesteld bij Auto & laden) of `instelling` (`THUIS_LAT`/`THUIS_LON`); `naam` is wat de app toont.
+- `kwartieren`: neerslag in mm per kwartier, de komende 3 uur. `uren`: 48 uur vanaf dit uur. `dagen`: 7 dagen vanaf vandaag.
+- `weercode`: WMO-code zoals Open-Meteo die geeft; `dag`: 1 overdag, 0 's nachts. Wind in km/u, windrichting in
+  graden (waar de wind vandaan komt), straling in W/m², `zon_s` in seconden zon.
+- `gas`: `basis_m3` + `per_graaddag_m3` × graaddagen (18 °C − etmaalgemiddelde), kleinste kwadraten over de laatste
+  acht weken met meterdata; `null` bij minder dan 10 dagen. `prijs` = laatste all-in gasprijs per m³.
+- 502: Open-Meteo is niet bereikbaar.

@@ -27,6 +27,7 @@ Cloud Run-service thuis-app  (API + web-app)  ◀── jij, ingelogd via IAP (W
 | Auto | Alles wat de auto doorgeeft: accu en laden, kilometers per dag, onderhoud en bandenspanning, deuren en ramen, locatie, laadhistorie (ook onderweg) |
 | Apparaten | Slimme stekkers, lampen, thermostaten, rolluiken en sensoren uit Smart Life of Tuya Smart: live stand, aan en uit, helderheid, temperatuur, wat ze nu per uur kosten en wat ze vandaag verbruikten |
 | Inzichten | Besparing door slim laden, kosten deze maand, gas t.o.v. vorige week (graaddagen), … |
+| Weer | Het weer voor thuis (Open-Meteo: KNMI, DWD, ECMWF): nu, regen per kwartier, 48 uur en 7 dagen, en het verwachte gasverbruik per dag uit je eigen meterdata. Op een telefoon via de kaart Weer op het overzicht |
 | Koppelingen | Je accounts koppelen (Thuis bewaart alleen tokens, geen wachtwoorden) en de status per bron |
 
 | Desktop (licht) | Mobiel (donker) |
@@ -35,6 +36,7 @@ Cloud Run-service thuis-app  (API + web-app)  ◀── jij, ingelogd via IAP (W
 | ![Prijzen op desktop, donker](docs/screenshots/desktop-donker-prijzen.png) | ![Overzicht op mobiel, licht](docs/screenshots/mobiel-licht-overzicht.png) |
 | ![Auto op desktop](docs/screenshots/desktop-licht-auto.png) | ![Auto op mobiel, donker](docs/screenshots/mobiel-donker-auto.png) |
 | ![Apparaten op desktop](docs/screenshots/desktop-licht-apparaten.png) | ![Apparaten op mobiel, donker](docs/screenshots/mobiel-donker-apparaten.png) |
+| ![Weer op desktop, donker](docs/screenshots/desktop-donker-weer.png) | ![Weer op mobiel, licht](docs/screenshots/mobiel-licht-weer.png) |
 
 *Schermafdrukken met de voorbeelddata uit `python -m thuis.demo` (apparaten: `THUIS_DEMO_APPARATEN=1`).*
 
@@ -52,6 +54,7 @@ een paar dagen klopt.
 | `app/thuis/verzamel.py` | De verzamelaar: elke bron faalt los, uitslag per stap in de rondelog |
 | `app/thuis/inzicht.py` | Dag- en periodeoverzichten (dag/week/maand/jaar), laden uit de meterstand van de lader |
 | `app/thuis/auto.py` | De pagina Auto: kilometers per dag, thuislocatie, laadhistorie van de auto |
+| `app/thuis/weer.py` | De pagina Weer: verwachting voor thuis (afgerond op ±1 km), gas per graaddag uit je eigen meterdata |
 | `app/thuis/apparaten.py` | De pagina Apparaten: codes van Tuya in gewone eenheden, opdrachten controleren, geschat verbruik |
 | `app/thuis/sessies.py` | Laadsessies van inpluggen tot uitpluggen, met kosten en besparing t.o.v. direct laden |
 | `app/thuis/inzichten.py` | Inzichten voor de overzichtspagina (negatieve prijzen, besparing, gas per graaddag, …) |
