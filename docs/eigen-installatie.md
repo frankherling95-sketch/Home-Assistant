@@ -193,7 +193,9 @@ Wat je op elke pagina vindt:
    niet nodig.
 4. Optioneel: **Google Chat**, voor meldingen op je telefoon. Hoe je het webhook-adres maakt,
    staat bij het formulier.
-5. Optioneel: **Tuya / Smart Life**, voor je slimme stekkers, lampen en sensoren. Daarvoor maak je
+5. Optioneel: **tado°**, voor je thermostaat en radiatorknoppen. Klik op **Code aanvragen**, open
+   de site van tado, log in met je tado-account en bevestig de code. Thuis koppelt dan vanzelf.
+6. Optioneel: **Tuya / Smart Life**, voor je slimme stekkers, lampen en sensoren. Daarvoor maak je
    eerst een gratis project op platform.tuya.com en koppel je daar je Smart Life-account. De vier
    stappen staan bij het formulier; reken op ±10 minuten.
 

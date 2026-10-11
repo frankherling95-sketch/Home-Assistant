@@ -41,6 +41,7 @@ DIENST_VAN_STAP = {
     "auto": "kia",
     "bmw": "bmw",
     "apparaten": "tuya",
+    "tado": "tado",
 }
 
 
@@ -54,6 +55,7 @@ def ronde(
     bmw: object | None = None,
     chat: object | None = None,
     tuya: object | None = None,
+    tado: object | None = None,
     kluis: Kluis | None = None,
 ) -> dict[str, str]:
     """Voert alle stappen uit; geeft per stap 'ok', 'overgeslagen' of de fout terug."""
@@ -61,10 +63,11 @@ def ronde(
     vandaag = begin.astimezone(TZ).date()
     data = kluis.lees() if kluis else {}
     cfg = cfg.met_geheimen(data)
-    c = maak_connectoren(cfg, data)
+    c = maak_connectoren(cfg, data, kluis)
     c.frank, c.easee, c.kia, c.chat = frank or c.frank, easee or c.easee, kia or c.kia, chat or c.chat
     c.bmw = bmw or c.bmw
     c.tuya = tuya or c.tuya
+    c.tado = tado or c.tado
     weer = weer or OpenMeteo(cfg.lat, cfg.lon)
     gevraagd = ophalen.gevraagd(data, begin)  # Nu ophalen in de app: de auto ook buiten zijn beurt
     verlopen: set[str] = set()
@@ -100,6 +103,10 @@ def ronde(
         c.tuya.zorg_voor_specs(lijst)
         opslag.voeg_toe(APPARAAT, [meting(a, c.tuya.specs.get(a["id"]), begin) for a in lijst])
 
+    def thermostaat() -> None:
+        # Zonder Auto-Assist hooguit eens per uur: tado staat dan 100 verzoeken per dag toe.
+        opslag.voeg_toe(APPARAAT, c.tado.metingen(begin, gevraagd))
+
     def temperatuur() -> None:
         voeg_toe_gewijzigd(opslag, WEER, weer.temperaturen(terug=2, vooruit=2))
 
@@ -125,6 +132,7 @@ def ronde(
         ("auto", c.kia is not None, auto),
         ("bmw", c.bmw is not None, bmw_auto),
         ("apparaten", c.tuya is not None, apparaten),
+        ("tado", c.tado is not None, thermostaat),
         ("weer", True, temperatuur),
         ("sturen", c.easee is not None, sturen),  # na lader en auto: rekent met verse metingen
         ("meldingen", c.chat is not None, meldingen),  # als laatste: ziet alles van deze ronde

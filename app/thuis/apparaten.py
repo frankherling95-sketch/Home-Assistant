@@ -1,4 +1,4 @@
-"""Slimme apparaten (Tuya): wat de app toont en bedient, en wat de verzamelaar bewaart.
+"""Slimme apparaten (Tuya en tado): wat de app toont en bedient, en wat de verzamelaar bewaart.
 
 Tuya beschrijft elk apparaat met codes ("switch_1", "cur_power", "bright_value_v2") en ruwe
 getallen. De specificatie zegt per code welk type het is, welk bereik het heeft en met hoeveel
@@ -13,7 +13,8 @@ decimalen een getal bedoeld is (scale: 2304 met scale 1 is 230,4). Hier wordt da
 - `bediening`: alles wat je kunt bedienen, met type, waarde en bereik in gewone eenheden;
 - `status`: wat het apparaat verder meldt, ook in gewone eenheden.
 
-De namen van de codes in het Nederlands staan in de web-app (js/paginas/apparaten.js).
+De namen van de codes in het Nederlands staan in de web-app (js/paginas/apparaten.js). De zones
+van tado komen in dezelfde vorm uit connectors/tado.py (id "tado-<zone>", soort klimaat).
 """
 
 from __future__ import annotations
@@ -217,10 +218,10 @@ def meting(apparaat: dict[str, Any], spec: dict[str, Any] | None, tijd: datetime
     }
 
 
-# ── live: wat Tuya nu meldt, voor de app ─────────────────────────────────────
+# ── live: wat Tuya en tado nu melden, voor de app ─────────────────────────────
 
 
-class Live:
+class TuyaBron:
     """De apparaten zoals Tuya ze nu meldt, gedeeld door alle verzoeken van deze instantie.
 
     Hooguit VERS_S oud, zodat twee telefoons met de pagina open Tuya niet dubbel vragen (het
@@ -231,6 +232,7 @@ class Live:
     opdracht toont de app daarom wat er gevraagd is, ook als Tuya nog de oude stand meldt.
     """
 
+    naam = "tuya"
     VERS_S = 15.0
     MIN_S = 3.0  # ook met `vers` niet vaker dan dit
     KLUIS_S = 30 * 60.0
@@ -249,19 +251,20 @@ class Live:
         self._lees_kluis = lees_kluis
         self._maak_tuya = maak_tuya
         self._klok = klok
-        self._slot = threading.Lock()
         self._tuya: Any = None
         self._sleutels: tuple | None = None
         self._kluis_tijd = float("-inf")
         self._lijst: list[dict[str, Any]] | None = None
         self._lijst_tijd = float("-inf")
-        self._bijgewerkt: datetime | None = None
+        self.bijgewerkt: datetime | None = None
         self._verwacht: dict[tuple[str, str], tuple[Any, float]] = {}
 
     def vergeet(self) -> None:
-        with self._slot:
-            self._tuya, self._sleutels, self._lijst = None, None, None
-            self._kluis_tijd = self._lijst_tijd = float("-inf")
+        self._tuya, self._sleutels, self._lijst = None, None, None
+        self._kluis_tijd = self._lijst_tijd = float("-inf")
+
+    def heeft(self, apparaat_id: str) -> bool:
+        return not apparaat_id.startswith("tado-")
 
     def _koppeling(self) -> Any:
         """De Tuya-connector volgens de kluis, of None als Tuya niet gekoppeld is."""
@@ -279,20 +282,23 @@ class Live:
             self._tuya.specs.update(record.get("specs") or {})  # nieuwe apparaten uit de verzamelaar
         return self._tuya
 
-    def lijst(self, vers: bool = False) -> dict[str, Any]:
-        """{"gekoppeld", "apparaten", "bijgewerkt"}. Een fout van Tuya gaat door naar de aanroeper."""
-        with self._slot:
-            t = self._koppeling()
-            if t is None:
-                return {"gekoppeld": False, "apparaten": [], "bijgewerkt": None}
-            leeftijd = self._klok() - self._lijst_tijd
-            if self._lijst is None or leeftijd >= (self.MIN_S if vers else self.VERS_S):
-                lijst = t.apparaten()
-                t.zorg_voor_specs(lijst)
-                self._lijst, self._lijst_tijd, self._bijgewerkt = lijst, self._klok(), nu()
-            return self._antwoord(t)
+    def gekoppeld(self) -> bool:
+        return self._koppeling() is not None
 
-    def _antwoord(self, t: Any) -> dict[str, Any]:
+    def lijst(self, vers: bool = False) -> list[dict[str, Any]]:
+        """De apparaten in de vorm van `maak`. Een fout van Tuya gaat door naar de aanroeper."""
+        t = self._koppeling()
+        leeftijd = self._klok() - self._lijst_tijd
+        if self._lijst is None or leeftijd >= (self.MIN_S if vers else self.VERS_S):
+            lijst = t.apparaten()
+            t.zorg_voor_specs(lijst)
+            self._lijst, self._lijst_tijd, self.bijgewerkt = lijst, self._klok(), nu()
+        return self._apparaten(t)
+
+    def info(self) -> dict[str, Any]:
+        return {}
+
+    def _apparaten(self, t: Any) -> list[dict[str, Any]]:
         moment = self._klok()
         self._verwacht = {k: v for k, v in self._verwacht.items() if v[1] > moment}
         apparaten = []
@@ -304,41 +310,219 @@ class Live:
                 for s in a.get("status") or []
             ]
             apparaten.append(maak({**a, "status": status}, t.specs.get(a["id"])))
-        volgorde = ("stekker", "schakelaar", "lamp", "klimaat", "gordijn", "sensor", "overig")
-        apparaten.sort(key=lambda a: (volgorde.index(a["soort"]), a["naam"].lower()))
-        return {
-            "gekoppeld": True,
-            "apparaten": apparaten,
-            "bijgewerkt": self._bijgewerkt.isoformat() if self._bijgewerkt else None,
-        }
+        return apparaten
+
+    def bedien(self, apparaat_id: str, wensen: list[dict[str, Any]]) -> dict[str, Any]:
+        t = self._koppeling()
+        if t is None:
+            raise LookupError("Tuya is niet gekoppeld.")
+        if self._lijst is None:
+            self._lijst, self._lijst_tijd, self.bijgewerkt = t.apparaten(), self._klok(), nu()
+        apparaat = next((a for a in self._lijst if a["id"] == apparaat_id), None)
+        if apparaat is None:
+            raise LookupError("Dit apparaat kent Tuya niet (meer).")
+        if not apparaat.get("online", True):
+            raise LookupError(f"{apparaat.get('name') or 'Het apparaat'} is offline.")
+        spec = t.specs.get(apparaat_id)
+        opdrachten = [opdracht(spec, w.get("code", ""), w.get("waarde")) for w in wensen]
+        t.stuur(apparaat_id, opdrachten)
+        tot = self._klok() + self.VERWACHT_S
+        for o in opdrachten:
+            self._verwacht[(apparaat_id, o["code"])] = (o["value"], tot)
+            if not any(s.get("code") == o["code"] for s in apparaat.get("status") or []):
+                apparaat.setdefault("status", []).append({"code": o["code"], "value": o["value"]})
+        return next(a for a in self._apparaten(t) if a["id"] == apparaat_id)
+
+
+class TadoBron:
+    """De zones van tado, zuinig: tado staat zonder Auto-Assist 100 verzoeken per dag toe.
+
+    Zonder Auto-Assist is de stand hooguit vijf minuten oud (ook met `vers`), en met minder dan
+    SPAAR verzoeken over vraagt de app niets meer en toont hij de laatste stand. Bedienen kost één
+    verzoek; daarna toont de app wat er gevraagd is (tado meldt de nieuwe stand niet terug).
+    """
+
+    naam = "tado"
+    KLUIS_S = 30 * 60.0
+    SPAAR = 10
+
+    def __init__(
+        self,
+        kluis: Callable[[], Any],
+        maak_tado: Callable[..., Any] | None = None,
+        klok: Callable[[], float] = time.monotonic,
+    ) -> None:
+        if maak_tado is None:
+            from .connectors.tado import Tado
+
+            maak_tado = Tado
+        self._kluis = kluis
+        self._maak_tado = maak_tado
+        self._klok = klok
+        self._tado: Any = None
+        self._huis: tuple | None = None
+        self._kluis_tijd = float("-inf")
+        self._lijst: list[dict[str, Any]] | None = None
+        self._lijst_tijd = float("-inf")
+        self.bijgewerkt: datetime | None = None
+
+    def vergeet(self) -> None:
+        self._tado, self._huis, self._lijst = None, None, None
+        self._kluis_tijd = self._lijst_tijd = float("-inf")
+
+    def heeft(self, apparaat_id: str) -> bool:
+        return apparaat_id.startswith("tado-")
+
+    def _koppeling(self) -> Any:
+        if self._klok() - self._kluis_tijd < self.KLUIS_S:
+            return self._tado
+        record = (self._kluis().lees().get("koppelingen") or {}).get("tado")
+        self._kluis_tijd = self._klok()
+        if not record:
+            self._tado, self._huis, self._lijst = None, None, None
+            return None
+        huis = (
+            record.get("home_id"),
+            record.get("generatie"),
+            json.dumps(record.get("zones"), sort_keys=True),
+        )
+        if self._tado is None or huis != self._huis:
+            self._tado, self._huis, self._lijst = self._maak_tado(record, self._kluis()), huis, None
+        return self._tado
+
+    def gekoppeld(self) -> bool:
+        return self._koppeling() is not None
+
+    def _vers_s(self) -> float:
+        return 300.0 if self._tado.zuinig else 30.0
+
+    def lijst(self, vers: bool = False) -> list[dict[str, Any]]:
+        t = self._koppeling()
+        leeftijd = self._klok() - self._lijst_tijd
+        over = (t.quotum or {}).get("over")
+        sparen = t.zuinig and over is not None and over < self.SPAAR
+        minimaal = self._vers_s() if t.zuinig else (10.0 if vers else self._vers_s())
+        if self._lijst is None or (leeftijd >= minimaal and not sparen):
+            self._lijst, self._lijst_tijd, self.bijgewerkt = t.apparaten(), self._klok(), nu()
+        return [dict(a) for a in self._lijst]
+
+    def info(self) -> dict[str, Any]:
+        return {"quotum": self._tado.quotum if self._tado else None}
+
+    def bedien(self, apparaat_id: str, wensen: list[dict[str, Any]]) -> dict[str, Any]:
+        t = self._koppeling()
+        if t is None:
+            raise LookupError("tado is niet gekoppeld.")
+        if self._lijst is None:
+            self._lijst, self._lijst_tijd, self.bijgewerkt = t.apparaten(), self._klok(), nu()
+        a = next((x for x in self._lijst if x["id"] == apparaat_id), None)
+        if a is None:
+            raise LookupError("Deze zone kent tado niet (meer).")
+        if not a["online"]:
+            raise LookupError(f"{a['naam']} is offline.")
+        b = {x["code"]: x for x in a["bediening"]}
+        stand_nu = b["tado_stand"]["waarde"]
+        stand, temp = None, None
+        for w in wensen:
+            if w.get("code") == "tado_stand":
+                if w.get("waarde") not in b["tado_stand"]["keuzes"]:
+                    raise ValueError("Deze stand kent tado niet.")
+                stand = w["waarde"]
+            elif w.get("code") == "temp_set" and "temp_set" in b:
+                waarde = w.get("waarde")
+                if isinstance(waarde, bool) or not isinstance(waarde, (int, float)):
+                    raise ValueError("Verwacht een temperatuur.")
+                d = b["temp_set"]
+                temp = min(d["max"], max(d["min"], round(waarde / d["stap"]) * d["stap"]))
+            else:
+                raise ValueError("Deze zone kun je zo niet bedienen.")
+        gewenst = (
+            temp
+            if temp is not None
+            else (b.get("temp_set") or {}).get("waarde") or (b.get("temp_set") or {}).get("standaard")
+        )
+        if stand is None:  # alleen de temperatuur: handmatig blijft handmatig, anders tot het volgende blok
+            stand = "handmatig" if stand_nu == "handmatig" else "blok"
+        t.zet(apparaat_id.removeprefix("tado-"), stand, gewenst)
+        # tado meldt de nieuwe stand niet terug: toon wat er gevraagd is tot de volgende keer lezen.
+        b["tado_stand"]["waarde"] = "handmatig" if stand == "blok" else stand
+        if "temp_set" in b:
+            b["temp_set"]["waarde"] = (
+                None if stand == "uit" else gewenst if stand != "schema" else b["temp_set"]["waarde"]
+            )
+        if stand == "uit":
+            a["toestand"], a["aan"] = "uit", False
+        elif a.get("toestand") == "uit":
+            a["toestand"] = None
+        return dict(a)
+
+
+class Live:
+    """Alle apparaten, van alle bronnen (Tuya en tado), zoals ze nu zijn.
+
+    Elke bron staat los: werkt tado niet, dan komen de Tuya-apparaten gewoon, met een melding per
+    bron in `bronnen`. Alleen als geen enkele gekoppelde bron werkt, gaat de fout door.
+    """
+
+    def __init__(
+        self,
+        kluis: Callable[[], Any],
+        maak_tuya: Callable[..., Any] | None = None,
+        maak_tado: Callable[..., Any] | None = None,
+        klok: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self.bronnen = (
+            TuyaBron(lambda: kluis().lees(), maak_tuya, klok),
+            TadoBron(kluis, maak_tado, klok),
+        )
+        self._slot = threading.Lock()
+
+    def vergeet(self) -> None:
+        with self._slot:
+            for b in self.bronnen:
+                b.vergeet()
+
+    def lijst(self, vers: bool = False) -> dict[str, Any]:
+        """{"gekoppeld", "apparaten", "bijgewerkt", "bronnen": {naam: {"bijgewerkt", "fout", …}}}."""
+        with self._slot:
+            apparaten: list[dict[str, Any]] = []
+            bronnen: dict[str, dict[str, Any]] = {}
+            fouten: list[Exception] = []
+            for b in self.bronnen:
+                if not b.gekoppeld():
+                    continue
+                try:
+                    apparaten += b.lijst(vers)
+                    fout = None
+                except Exception as err:  # noqa: BLE001 — elke bron los laten falen
+                    fouten.append(err)
+                    fout = getattr(err, "uitleg", None) or getattr(err, "reden", None) or str(err)
+                bronnen[b.naam] = {
+                    "bijgewerkt": b.bijgewerkt.isoformat() if b.bijgewerkt else None,
+                    "fout": fout,
+                    **b.info(),
+                }
+            if fouten and len(fouten) == len(bronnen):
+                raise fouten[0]
+            volgorde = ("stekker", "schakelaar", "lamp", "klimaat", "gordijn", "sensor", "overig")
+            apparaten.sort(key=lambda a: (volgorde.index(a["soort"]), a["naam"].lower()))
+            tijden = [v["bijgewerkt"] for v in bronnen.values() if v["bijgewerkt"] and not v["fout"]]
+            return {
+                "gekoppeld": bool(bronnen),
+                "apparaten": apparaten,
+                "bijgewerkt": min(tijden) if tijden else None,  # de oudste stand: eerlijk
+                "bronnen": bronnen,
+            }
 
     def bedien(self, apparaat_id: str, wensen: list[dict[str, Any]]) -> dict[str, Any]:
         """Opdrachten ({code, waarde}) naar een apparaat; geeft het apparaat met de verwachte stand.
 
-        LookupError: apparaat onbekend of offline; ValueError: opdracht past niet; fouten van Tuya
-        gaan door.
+        LookupError: niet gekoppeld, onbekend of offline; ValueError: opdracht past niet; fouten
+        van de bron gaan door.
         """
         with self._slot:
-            t = self._koppeling()
-            if t is None:
-                raise LookupError("Tuya is niet gekoppeld.")
-            if self._lijst is None:
-                self._lijst, self._lijst_tijd, self._bijgewerkt = t.apparaten(), self._klok(), nu()
-            apparaat = next((a for a in self._lijst if a["id"] == apparaat_id), None)
-            if apparaat is None:
-                raise LookupError("Dit apparaat kent Tuya niet (meer).")
-            if not apparaat.get("online", True):
-                raise LookupError(f"{apparaat.get('name') or 'Het apparaat'} is offline.")
-            spec = t.specs.get(apparaat_id)
-            opdrachten = [opdracht(spec, w.get("code", ""), w.get("waarde")) for w in wensen]
-            t.stuur(apparaat_id, opdrachten)
-            tot = self._klok() + self.VERWACHT_S
-            for o in opdrachten:
-                self._verwacht[(apparaat_id, o["code"])] = (o["value"], tot)
-                if not any(s.get("code") == o["code"] for s in apparaat.get("status") or []):
-                    apparaat.setdefault("status", []).append({"code": o["code"], "value": o["value"]})
-            uit = self._antwoord(t)
-            return next(a for a in uit["apparaten"] if a["id"] == apparaat_id)
+            bron = next(b for b in self.bronnen if b.heeft(apparaat_id))
+            return bron.bedien(apparaat_id, wensen)
 
 
 # ── historie: wat de verzamelaar bewaarde ─────────────────────────────────────

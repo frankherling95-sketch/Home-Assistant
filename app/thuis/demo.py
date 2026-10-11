@@ -21,7 +21,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
 from .config import TZ, Config
-from .demo_apparaten import vul_apparaten
+from .demo_apparaten import vul_apparaten, vul_tado
 from .inzicht import dag_grenzen, dagen_grenzen, vandaag
 from .opslag import DuckOpslag, Opslag, maak_opslag, nu, schrijf_instellingen
 from .schema import (
@@ -369,6 +369,7 @@ def vul(opslag: Opslag, rond: date | None = None, dagen: int = 400, seed: int = 
         ],
     )
     vul_apparaten(opslag, moment)
+    vul_tado(opslag, moment)
 
 
 def _auto_extra(

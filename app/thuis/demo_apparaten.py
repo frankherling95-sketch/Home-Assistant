@@ -1,16 +1,16 @@
-"""Nagebootste Tuya-apparaten: een gewoon huishouden, om de pagina Apparaten zonder account te bekijken.
+"""Nagebootste Tuya-apparaten en tado: een gewoon huishouden, om de pagina Apparaten zonder account te bekijken.
 
 Lokaal met THUIS_DEMO_APPARATEN=1 (en Tuya als koppeling in de lokale kluis): de app vraagt dan
 niet de cloud van Tuya maar `DemoTuya`, die opdrachten onthoudt zolang de server draait.
 `vul_apparaten` zet een week aan metingen in de demo-database, zoals de verzamelaar ze elk
-kwartier bewaart.
+kwartier bewaart. Voor tado hetzelfde met `DemoTado` en `vul_tado` (tado als koppeling in de kluis).
 """
 
 from __future__ import annotations
 
 import math
 import random
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from .apparaten import meting
@@ -278,4 +278,123 @@ def vul_apparaten(opslag: Opslag, eind: datetime, dagen: int = 8, seed: int = 11
             ruw = {**a, "online": online, "status": [{"code": c, "value": w} for c, w in s.items()]}
             rijen.append(meting(ruw, specs[a["id"]], t))
         t += timedelta(minutes=15)
+    opslag.voeg_toe(APPARAAT, rijen)
+
+
+# ── tado: drie kamers en warm water ───────────────────────────────────────────
+
+TADO_ZONES = {
+    "1": {"naam": "Woonkamer", "type": "HEATING"},
+    "2": {"naam": "Slaapkamer", "type": "HEATING"},
+    "3": {"naam": "Badkamer", "type": "HEATING"},
+    "4": {"naam": "Warm water", "type": "HOT_WATER"},
+}
+TADO_BEGIN: dict[str, dict[str, Any]] = {
+    "1": {"aan": True, "gewenst": 20.5, "binnen": 19.6, "vocht": 52, "verwarming": 46, "handmatig": None},
+    "2": {"aan": True, "gewenst": 16.0, "binnen": 17.2, "vocht": 58, "verwarming": 0, "handmatig": None},
+    "3": {"aan": False, "gewenst": None, "binnen": 18.1, "vocht": 71, "verwarming": 0, "handmatig": "MANUAL"},
+    "4": {"aan": True, "gewenst": None, "binnen": None, "vocht": None, "verwarming": None, "handmatig": None},
+}
+_tado: dict[str, dict[str, Any]] = {}
+
+
+def _zone_v3(zone: str, s: dict[str, Any], nu_: datetime) -> dict[str, Any]:
+    """Zoals my.tado.com/api/v2/homes/{id}/zoneStates een zone geeft."""
+    volgend = (nu_ + timedelta(hours=2)).replace(minute=0, second=0, microsecond=0)
+    setting: dict[str, Any] = {"type": TADO_ZONES[zone]["type"], "power": "ON" if s["aan"] else "OFF"}
+    if s["aan"] and s["gewenst"] is not None:
+        setting["temperature"] = {"celsius": s["gewenst"]}
+    uit: dict[str, Any] = {
+        "setting": setting,
+        "link": {"state": "ONLINE"},
+        "overlay": {"termination": {"type": s["handmatig"]}} if s["handmatig"] else None,
+        "nextScheduleChange": {"start": volgend.isoformat(), "setting": {"temperature": {"celsius": 18.0}}},
+        "openWindow": None,
+    }
+    if s["binnen"] is not None:
+        uit["sensorDataPoints"] = {
+            "insideTemperature": {"celsius": s["binnen"]},
+            "humidity": {"percentage": s["vocht"]},
+        }
+    if s["verwarming"] is not None:
+        uit["activityDataPoints"] = {"heatingPower": {"percentage": s["verwarming"]}}
+    return uit
+
+
+class DemoTado:
+    """Zelfde gedrag als connectors.tado.Tado, zonder cloud: een huis zonder Auto-Assist."""
+
+    def __init__(self, record: dict[str, Any] | None = None, kluis: Any = None) -> None:
+        self.record = {"zones": TADO_ZONES, "quotum": {"over": 71, "per_dag": 100}}
+        if not _tado:
+            _tado.update({k: dict(v) for k, v in TADO_BEGIN.items()})
+
+    @property
+    def quotum(self) -> dict[str, Any]:
+        return self.record["quotum"]
+
+    zuinig = True
+
+    def apparaten(self) -> list[dict[str, Any]]:
+        from .connectors.tado import apparaat_v3
+
+        self.record["quotum"]["over"] -= 1
+        moment = datetime.now(UTC)
+        return [apparaat_v3(z, TADO_ZONES[z], _zone_v3(z, _tado[z], moment)) for z in TADO_ZONES]
+
+    def zet(self, zone_id: str, stand: str, temperatuur: float | None = None) -> None:
+        s = _tado[zone_id]
+        self.record["quotum"]["over"] -= 1
+        if stand == "schema":
+            s.update({"handmatig": None, "aan": True, "gewenst": TADO_BEGIN[zone_id]["gewenst"] or 18.0})
+        elif stand == "uit":
+            s.update(
+                {
+                    "handmatig": "MANUAL",
+                    "aan": False,
+                    "gewenst": None,
+                    "verwarming": 0 if s["verwarming"] is not None else None,
+                }
+            )
+        else:
+            s.update({"handmatig": "MANUAL" if stand == "handmatig" else "NEXT_TIME_BLOCK", "aan": True})
+            if TADO_ZONES[zone_id]["type"] == "HEATING":
+                s["gewenst"] = temperatuur
+                s["verwarming"] = 60 if s["binnen"] is not None and temperatuur > s["binnen"] else 0
+
+    def metingen(self, moment: datetime, gevraagd: datetime | None = None) -> list[dict[str, Any]]:
+        from .connectors.tado import meting as tado_meting
+
+        return [tado_meting(a, moment) for a in self.apparaten()]
+
+
+def vul_tado(opslag: Opslag, eind: datetime, dagen: int = 8, seed: int = 13) -> None:
+    """Een meting per uur per kamer, zoals de verzamelaar zonder Auto-Assist bewaart."""
+    from .connectors.tado import apparaat_v3
+    from .connectors.tado import meting as tado_meting
+
+    rnd = random.Random(seed)
+    eind = eind.replace(minute=0, second=40, microsecond=0)
+    rijen = []
+    t = eind - timedelta(days=dagen)
+    while t <= eind:
+        lok = t.astimezone(TZ)
+        uur = lok.hour
+        for z, info in TADO_ZONES.items():
+            s = dict(TADO_BEGIN[z])
+            if info["type"] == "HEATING" and t < eind:
+                dag = 6 <= uur < 23
+                s["gewenst"] = {
+                    "1": 20.5 if dag else 17.0,
+                    "2": 16.0 if dag else 18.0,
+                    "3": 21.0 if 6 <= uur < 9 else 16.0,
+                }[z]
+                s["aan"] = True
+                s["binnen"] = round(s["gewenst"] - rnd.uniform(0.2, 1.2) + (0.4 if 13 <= uur < 17 else 0), 1)
+                s["verwarming"] = max(0, round((s["gewenst"] - s["binnen"]) * 45 + rnd.uniform(-5, 5)))
+                s["vocht"] = round(
+                    TADO_BEGIN[z]["vocht"] + rnd.uniform(-4, 4) + (12 if z == "3" and 6 <= uur < 8 else 0)
+                )
+            rijen.append(tado_meting(apparaat_v3(z, info, _zone_v3(z, s, t)), t))
+        t += timedelta(hours=1)
     opslag.voeg_toe(APPARAAT, rijen)

@@ -918,6 +918,7 @@ main { padding: 0 28px 40px; width: 100%; max-width: 1400px; outline: none; }
 /* kop van de kaart: het filter mag scrollen op een smal scherm */
 .filter-rij { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .filter-rij::-webkit-scrollbar { display: none; }
+.bron-meldingen { display: grid; gap: 8px; margin: 0 0 12px; }
 .kpi-sub .niveau { display: inline-flex; align-items: center; gap: 6px; }
 .kpi-sub .niveau i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 @media (max-width: 599px) {

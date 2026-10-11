@@ -53,6 +53,8 @@ Legenda: **1.0** = zit erin · **erbij** = na 1.0 toegevoegd · **deels** = basi
 | --- | --- | --- |
 | Koppeling met Tuya (Smart Life, Tuya Smart en merken als LSC, Nedis, Calex) | erbij | Pagina Apparaten: live stand, aan en uit, helderheid, temperatuur, rolluiken, timer; snelknoppen op het overzicht. Via de cloud-API van Tuya met een eigen cloudproject |
 | Verbruik en kosten per stekker met meting | erbij | Geschat uit de metingen per kwartier, tegen de stroomprijs van dat moment |
+| Koppeling met tado° (V3+ en tado X): temperatuur per kamer, schema, handmatig, uit, warm water | erbij | Op de pagina Apparaten bij Klimaat; zuinig met de 100 verzoeken per dag zonder Auto-Assist |
+| Thuis/afwezig van tado, en de verwarming lager bij een hoge gasprijs | later | Kost per actie één verzoek bij tado |
 | Apparaten automatisch schakelen op de stroomprijs (bijv. boiler aan bij negatieve prijzen) | later | Zoals Slim laden voor de auto: een regel per apparaat, standaard uit |
 | Melding als een sensor alarm geeft of een batterij bijna leeg is | later | Via Google Chat, zoals de andere meldingen |
 | Lokaal bedienen zonder de cloud van Tuya | later | Kan niet vanuit Cloud Run; zou een klein programma thuis nodig hebben |

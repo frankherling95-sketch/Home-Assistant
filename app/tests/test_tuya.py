@@ -303,7 +303,8 @@ def test_live_bewaart_kort_en_toont_de_gevraagde_stand():
         gemaakt.append(record)
         return DemoTuya(record)
 
-    live = Live(lambda: {"koppelingen": {"tuya": RECORD}}, maak_demo, klok=klok)
+    kluis = GeheugenKluis({"koppelingen": {"tuya": RECORD}})
+    live = Live(lambda: kluis, maak_demo, klok=klok)
     eerste = live.lijst()
     assert eerste["gekoppeld"] and len(eerste["apparaten"]) == 11
     lamp = next(a for a in eerste["apparaten"] if a["id"] == "demo-ledstrip")
@@ -320,7 +321,8 @@ def test_live_bewaart_kort_en_toont_de_gevraagde_stand():
     assert len(gemaakt) == 1
 
     live.bedien("demo-ledstrip", [{"code": "switch_led", "waarde": False}])  # terug, voor de andere tests
-    assert Live(lambda: {}, maak_demo).lijst() == {"gekoppeld": False, "apparaten": [], "bijgewerkt": None}
+    leeg = {"gekoppeld": False, "apparaten": [], "bijgewerkt": None, "bronnen": {}}
+    assert Live(lambda: GeheugenKluis(), maak_demo).lijst() == leeg
 
 
 def test_live_vraagt_tuya_niet_vaker_dan_nodig():
@@ -332,7 +334,8 @@ def test_live_vraagt_tuya_niet_vaker_dan_nodig():
             vragen.append(klok.t)
             return super().apparaten()
 
-    live = Live(lambda: {"koppelingen": {"tuya": RECORD}}, Teller, klok=klok)
+    kluis = GeheugenKluis({"koppelingen": {"tuya": RECORD}})
+    live = Live(lambda: kluis, Teller, klok=klok)
     live.lijst()
     klok.t = 10
     live.lijst()  # binnen 15 s: bewaard
@@ -425,7 +428,12 @@ def app_demo(monkeypatch, tmp_path):
 
 def test_api_apparaten(app_demo):
     c = app_demo
-    assert c.get("/api/apparaten").json() == {"gekoppeld": False, "apparaten": [], "bijgewerkt": None}
+    assert c.get("/api/apparaten").json() == {
+        "gekoppeld": False,
+        "apparaten": [],
+        "bijgewerkt": None,
+        "bronnen": {},
+    }
     c.app.state.kluis.data = {"koppelingen": {"tuya": {**RECORD, "status": "ok"}}}
     c.app.state.apparaten.vergeet()
     lijst = c.get("/api/apparaten").json()
@@ -467,7 +475,7 @@ def test_api_bedienen_laat_bewaarde_antwoorden_staan(app_demo):
 @respx.mock
 def test_api_fouten_van_tuya(app_demo, monkeypatch):
     c = app_demo
-    monkeypatch.setattr(c.app.state.apparaten, "_maak_tuya", Tuya)
+    monkeypatch.setattr(c.app.state.apparaten.bronnen[0], "_maak_tuya", Tuya)
     c.app.state.kluis.data = {"koppelingen": {"tuya": {**RECORD, "status": "ok"}}}
     c.app.state.apparaten.vergeet()
     respx.get(f"{URL}/v1.0/token").mock(return_value=fout(1004))
