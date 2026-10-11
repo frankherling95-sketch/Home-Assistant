@@ -1,8 +1,9 @@
 # Thuis: je eigen installatie, stap voor stap
 
 Met deze handleiding zet je de app **Thuis** op in je eigen Google Cloud-account. Je ziet daarna
-op je computer en telefoon je stroom- en gasverbruik, de stroomprijzen per kwartier, en de accu
-en het laden van je auto.
+op je computer en telefoon je stroom- en gasverbruik, de stroomprijzen per kwartier, de accu
+en het laden van je auto, het weer bij je thuis, en (als je die hebt) je slimme stekkers, lampen
+en sensoren uit de app Smart Life.
 
 - **Tijd:** ongeveer 45 minuten, één keer.
 - **Kosten:** € 0 per maand. Alles blijft binnen de gratis ruimte van Google Cloud. Je krijgt een
@@ -25,6 +26,8 @@ Loop je vast, maak dan een schermafdruk en stuur die naar Frank.
     - Frank Energie: e-mailadres en wachtwoord.
     - Easee: e-mailadres (of telefoonnummer) en wachtwoord.
     - Kia Connect of Hyundai Bluelink: e-mailadres en wachtwoord. Je pincode is **niet** nodig.
+    - Optioneel, Smart Life of Tuya Smart: alleen als je slimme stekkers of lampen hebt. Daarvoor
+      maak je in deel 7 een gratis project bij Tuya.
 4. **Een computer** met Chrome of Edge. Dat werkt makkelijker dan een telefoon.
 
 De logins vul je pas aan het eind in, in de app zelf (deel 7). Heb je er een nog niet bij de
@@ -170,11 +173,13 @@ Wat je op elke pagina vindt:
 
 | Pagina | Wat je ziet |
 | --- | --- |
-| Overzicht | stroomprijs nu, energiestromen, auto en lader, tips |
+| Overzicht | stroomprijs nu, auto en lader, verbruik, het weer, je apparaten, tips |
 | Energie | verbruik en kosten per dag, week, maand en jaar |
 | Prijzen | de stroomprijs per kwartier, vandaag en morgen |
-| Laden | je auto, de lader, het laadplan en je laadsessies |
+| Auto & laden | je auto, de lader, het laadplan, je laadsessies en de instellingen van Slim laden |
+| Apparaten | je slimme stekkers, lampen, thermostaten en sensoren: zien en aan- of uitzetten |
 | Inzichten | besparingen en vergelijkingen |
+| Weer | het weer bij je thuis, per uur en per dag, en hoeveel gas je verwacht te stoken (op je telefoon via de kaart Weer op het overzicht) |
 | Koppelingen (ook via het bolletje rechtsboven) | je accounts koppelen, en of alles werkt |
 
 ---
@@ -202,8 +207,10 @@ Goed om te weten:
 - **Opnieuw koppelen:** staat er ooit **Opnieuw koppelen** bij een dienst, bijvoorbeeld omdat je
   je wachtwoord daar hebt veranderd? Klik erop en log opnieuw in.
 - **Slim laden:** de app laat je zien wanneer laden het goedkoopst is. Hij stuurt de lader
-  **niet** zelf aan. Dat zet je pas aan bij Laden → Instellingen, als het plan een paar dagen
+  **niet** zelf aan. Dat zet je pas aan bij Auto & laden → Slim laden, als het plan een paar dagen
   klopt.
+- **Het weer** is van je thuis zodra je bij Auto & laden op **Dit is thuis** hebt geklikt (terwijl
+  de auto thuis staat). Tot die tijd is het weer van De Bilt.
 
 ---
 
@@ -211,7 +218,8 @@ Goed om te weten:
 
 ### Een nieuwe versie installeren
 
-Laat Frank weten dat er een nieuwe versie is? Open Cloud Shell en plak:
+Laat Frank weten dat er een nieuwe versie is? Open Cloud Shell
+(**https://shell.cloud.google.com**, zoals in deel 3) en plak:
 
 ```bash
 cd ~/Home-Assistant && git pull
@@ -220,7 +228,9 @@ cd ~/Home-Assistant && git pull
 BOUW=1 bash deploy/setup-gcp.sh
 ```
 
-Druk bij beide vragen op **Enter**.
+Druk bij beide vragen op **Enter**. Na een paar minuten staat **== Klaar** in beeld. Je
+koppelingen en je gegevens blijven gewoon staan. Ververs de app op je telefoon (of sluit hem en
+open hem opnieuw) om de nieuwe versie te zien.
 
 ### Kosten bekijken
 
