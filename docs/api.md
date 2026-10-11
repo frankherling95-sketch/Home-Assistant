@@ -184,7 +184,7 @@ Per dienst de status, voor de pagina "Koppelingen". Nooit tokens of wachtwoorden
    "methode": "inloggen", "status": "ok", "account": "fr…@voorbeeld.nl", "sinds": "2026-10-08T14:00:00+00:00"}
 ]
 ```
-- `dienst`: `frank` | `easee` | `kia` | `bmw` | `tuya` | `google_chat`
+- `dienst`: `frank` | `easee` | `kia` | `bmw` | `tuya` | `tado` | `google_chat`
 - `methode`: `inloggen` (de velden versturen is genoeg) | `code` (BMW: daarna een code bevestigen
   op de site van BMW, zie hieronder)
 - `status`: `ok` | `opnieuw` (bewaarde tokens werken niet meer) | `script` (oude login uit het
@@ -205,7 +205,11 @@ Thuis meteen een ronde van de verzamelaar.
   422 ongeldig veld (wachtwoorden worden nooit teruggegeven), 502 als de dienst onverwacht antwoordt.
 - DELETE haalt de koppeling weg (en een koppeling die nog op bevestiging wacht); antwoord zoals GET.
 
-### Koppelen met een code (BMW)
+### Koppelen met een code (BMW, tado)
+tado werkt net zo, zonder velden: `POST /api/koppelingen/tado` met `{}` geeft een code en een link naar
+login.tado.com; daarna `POST /api/koppelingen/tado/controleer` tot de code bevestigd is. Thuis zoekt dan
+het huis (het eerste), de generatie (`LINE_X` = tado° X) en de zones. Hieronder de stappen voor BMW.
+
 BMW CarData werkt met de device code flow: Thuis krijgt geen wachtwoord, je bevestigt een code op
 de site van BMW.
 1. `POST /api/koppelingen/bmw` met `{"client_id": "…"}` (de client-ID uit het CarData-portaal).
@@ -267,12 +271,14 @@ van BMW). Wakker maken kan niet: BMW en Kia geven de laatste stand die de auto z
 ## Apparaten (Tuya)
 
 Slimme stekkers, lampen, thermostaten, rolluiken en sensoren uit Smart Life of Tuya Smart, via de
-cloud-API van Tuya (`app/thuis/connectors/tuya.py`). De stand is live; de verzamelaar bewaart elk
+cloud-API van Tuya (`app/thuis/connectors/tuya.py`), en de kamers van tado° (`app/thuis/connectors/tado.py`). De stand is live; de verzamelaar bewaart elk
 kwartier een meting per apparaat (tabel `apparaat_meting`) voor de historie en het verbruik.
 
 ### `GET /api/apparaten`
-Zoals Tuya de apparaten nu meldt, hooguit 15 seconden oud (met `x-thuis-vers: 1` hooguit 3): het
-proefabonnement van Tuya telt elk verzoek. Niet gekoppeld: `{"gekoppeld": false, "apparaten": [], "bijgewerkt": null}`.
+Zoals Tuya en tado de apparaten nu melden. Tuya: hooguit 15 seconden oud (met `x-thuis-vers: 1` hooguit
+3), want het proefabonnement telt elk verzoek. tado: zonder Auto-Assist hooguit vijf minuten oud (ook met
+`x-thuis-vers`), met Auto-Assist een halve minuut; met minder dan 10 verzoeken over vraagt de app niets
+meer. Niet gekoppeld: `{"gekoppeld": false, "apparaten": [], "bijgewerkt": null, "bronnen": {}}`.
 ```json
 {
   "gekoppeld": true,
@@ -288,9 +294,19 @@ proefabonnement van Tuya telt elk verzoek. Niet gekoppeld: `{"gekoppeld": false,
        {"code": "relay_status", "type": "Enum", "waarde": "last", "keuzes": ["power_off", "power_on", "last"]}
      ],
      "status": [{"code": "add_ele", "waarde": 0.128, "eenheid": "kWh"}]}
-  ]
+  ],
+  "bronnen": {
+    "tuya": {"bijgewerkt": "...", "fout": null},
+    "tado": {"bijgewerkt": "...", "fout": null, "quotum": {"over": 71, "per_dag": 100, "vol_om": "...", "tijd": "..."}}
+  }
 }
 ```
+- `bronnen`: per gekoppelde bron wanneer hij gelezen is en of dat lukte. Werkt één bron niet, dan komen de
+  apparaten van de andere gewoon, met `fout` bij die bron; werkt geen enkele, dan volgt 409 of 502.
+- tado-zones: `id` `tado-<zone>`, `soort` `klimaat`, `bron` `tado`. `aan` = verwarmt nu (warm water: staat
+  aan). `toestand`: `uit` of `raam_open`. `bediening`: `tado_stand` (Enum `schema` | `handmatig` | `uit`)
+  en, behalve bij warm water, `temp_set` (5–25 °C, stap 0,5, `standaard` 20 als de zone uit staat).
+  `status`: `verwarming` (%), `handmatig_tot` (tijdstip of tekst), `schema_volgende` (tijdstip), `schema_temp`.
 - `soort`: `stekker` | `schakelaar` | `lamp` | `klimaat` | `gordijn` | `sensor` | `overig` (uit de
   categorie van Tuya); de lijst staat in die volgorde, daarbinnen op naam.
 - `aan`: de stand van `schakelaars` (bij een stekkerdoos: aan als één stopcontact aan is), `null`
@@ -310,6 +326,9 @@ Een apparaat bedienen: `{"opdrachten": [{"code": "switch_1", "waarde": false}]}`
 opdrachten, waarden in de eenheden van `bediening`). Antwoord: `{"apparaat": { …zoals hierboven… }}`.
 - Thuis controleert elke opdracht tegen de specificatie: alleen codes uit `bediening`, `Boolean`
   aan of uit, `Enum` een van de `keuzes`, `Integer` afgerond op `stap` en binnen `min`–`max`.
+- tado: `temp_set` alleen zet de temperatuur tot het volgende blok in je schema (of houdt handmatig
+  handmatig); `tado_stand` `schema` gaat terug naar het schema, `handmatig` blijft tot je het terugzet,
+  `uit` zet de verwarming uit. Elke opdracht is één verzoek bij tado.
 - 409: Tuya niet gekoppeld, apparaat onbekend of offline; 422: de opdracht past niet (`detail`
   zegt waarom); 502: zoals hierboven.
 

@@ -29,6 +29,13 @@ const STATUS = {
 const HULP = {
   google_chat: "Maak in Google Chat een ruimte, kies Apps en integraties → Webhooks → Webhook toevoegen, en kopieer het adres.",
   bmw: "Log in op de BMW-site, ga naar BMW CarData en maak een client aan met 'CarData API' aan. Kopieer de Client-ID. Daarna geeft Thuis je een code om bij BMW te bevestigen.",
+  tado: "Thuis vraagt een code aan; die bevestig je met je tado-account op de site van tado. Je wachtwoord komt niet langs Thuis. Zonder Auto-Assist staat tado 100 verzoeken per dag toe: Thuis vraagt de stand van je kamers dan eens per uur en houdt de rest over voor als je de app gebruikt.",
+};
+
+// Koppelen met een code: wat er bij de code staat, per dienst.
+const CODE = {
+  bmw: { tekst: "Open de site van BMW, log in met je BMW-account en bevestig deze code:", knop: "Open BMW en bevestig" },
+  tado: { tekst: "Open de site van tado°, log in met je tado-account en bevestig deze code:", knop: "Open tado° en bevestig" },
 };
 
 // Koppelen in stappen (eigen tekst, dus HTML met links mag).
@@ -192,14 +199,14 @@ function gekoppeld(k, r) {
   toonKoppelingen(r.koppelingen);
 }
 
-// Koppelen met een code (BMW): jij bevestigt de code op de site van BMW, Thuis vraagt ondertussen
+// Koppelen met een code (BMW, tado): jij bevestigt de code op hun site, Thuis vraagt ondertussen
 // steeds of dat al gebeurd is.
 function toonCode(vak, k, code) {
   vak.innerHTML = `<div class="koppel-form koppel-code">
-    <p>Open de site van BMW, log in met je BMW-account en bevestig deze code:</p>
+    <p>${esc(CODE[k.dienst]?.tekst || "Open de site en bevestig deze code:")}</p>
     <p class="code" aria-label="Code ${esc(code.code.split("").join(" "))}">${esc(code.code)}</p>
     <div class="formulier-acties">
-      <a class="knop primair" href="${esc(code.link)}" target="_blank" rel="noopener noreferrer">Open BMW en bevestig</a>
+      <a class="knop primair" href="${esc(code.link)}" target="_blank" rel="noopener noreferrer">${esc(CODE[k.dienst]?.knop || "Open en bevestig")}</a>
       <button class="knop" type="button" data-annuleer>Annuleren</button>
     </div>
     <p class="zacht klein" aria-live="polite" data-wacht>Wachten op je bevestiging. De code is geldig tot ${esc(klok(code.verloopt))}.</p>
@@ -240,7 +247,7 @@ async function ontkoppel(k) {
 // ── verzamelaar ───────────────────────────────────────────────────────────────
 
 // Korte namen per stap; de bron (Frank Energie, Easee, …) staat erachter.
-const STAPPEN = { prijzen: "Prijzen", verbruik: "Verbruik", lader: "Lader", auto: "Auto", bmw: "BMW", apparaten: "Apparaten", weer: "Weer", sturen: "Sturen", meldingen: "Meldingen" };
+const STAPPEN = { prijzen: "Prijzen", verbruik: "Verbruik", lader: "Lader", auto: "Auto", bmw: "BMW", apparaten: "Apparaten", tado: "tado°", weer: "Weer", sturen: "Sturen", meldingen: "Meldingen" };
 const HISTORIE = 8;
 
 /** De laatste rondes als staafjes: hoog bij gelukt of mislukt, laag bij overgeslagen of niet gedraaid. */

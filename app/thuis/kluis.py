@@ -63,6 +63,22 @@ def werk_bij(
     return data
 
 
+def werk_velden_bij(kluis: Kluis, dienst: str, velden: dict[str, Any]) -> None:
+    """Alleen deze velden van één koppeling bijwerken, op de nieuwste stand van de kluis.
+
+    Voor tado: de app en de verzamelaar verversen allebei tokens, en een refresh-token werkt maar
+    één keer. Een hele koppeling terugschrijven zou een vers token van de ander kunnen overschrijven.
+    Is de koppeling intussen weggehaald (ontkoppeld), dan schrijft dit niets.
+    """
+    data = kluis.lees()
+    alle = dict(data.get("koppelingen") or {})
+    if dienst not in alle:
+        return
+    alle[dienst] = {**alle[dienst], **velden}
+    data["koppelingen"] = alle
+    kluis.schrijf(data)
+
+
 def maak_kluis(cfg: Config) -> Kluis:
     soort = cfg.kluis or ("secretmanager" if cfg.opslag == "bigquery" else "bestand")
     if soort == "secretmanager":

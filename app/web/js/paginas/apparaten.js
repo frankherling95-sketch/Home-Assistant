@@ -1,4 +1,5 @@
-// Apparaten: je slimme stekkers, lampen, thermostaten, rolluiken en sensoren uit Smart Life of Tuya Smart.
+// Apparaten: je slimme stekkers, lampen, thermostaten, rolluiken en sensoren uit Smart Life of Tuya Smart,
+// en de kamers van tado° (die zuinig: tado staat zonder Auto-Assist 100 verzoeken per dag toe).
 // De stand komt live uit de cloud van Tuya (hooguit 15 seconden oud); de historie en het geschatte
 // verbruik uit wat de verzamelaar elk kwartier bewaart. Bedienen gaat meteen naar Tuya: de app toont
 // direct wat je vroeg en kijkt een paar seconden later of het apparaat het ook meldt.
@@ -21,8 +22,11 @@ export const SOORTEN = {
   sensor: { naam: "Sensoren", icoon: "sensor" },
   overig: { naam: "Overig", icoon: "apparaten" },
 };
-const TOESTAND = { open: "Open", dicht: "Dicht", beweging: "Beweging", rust: "Geen beweging", alarm: "Alarm", normaal: "In orde" };
-const TOESTAND_SOORT = { open: "let_op", alarm: "fout", beweging: "accent" };
+const TOESTAND = {
+  open: "Open", dicht: "Dicht", beweging: "Beweging", rust: "Geen beweging", alarm: "Alarm", normaal: "In orde",
+  uit: "Uit", raam_open: "Raam open",
+};
+const TOESTAND_SOORT = { open: "let_op", alarm: "fout", beweging: "accent", raam_open: "let_op" };
 
 // Wat je kunt bedienen: label, uitleg en woorden voor de keuzes.
 const BEDIENING = {
@@ -42,6 +46,7 @@ const BEDIENING = {
   temp_value: { label: "Kleur van het wit", procent: true, uitleg: "Van warm naar koel" },
   temp_value_v2: { label: "Kleur van het wit", procent: true, uitleg: "Van warm naar koel" },
   temp_set: { label: "Gewenste temperatuur" },
+  tado_stand: { label: "Stand", keuzes: { schema: "Schema", handmatig: "Handmatig", uit: "Uit" } },
   mode: {
     label: "Stand",
     keuzes: { auto: "Automatisch", manual: "Handmatig", eco: "Eco", comfort: "Comfort", holiday: "Vakantie", off: "Uit", cold: "Koelen", hot: "Verwarmen", wet: "Drogen", wind: "Ventileren", smart: "Slim", sleep: "Slapen" },
@@ -64,6 +69,11 @@ const STATUS = {
   smoke_sensor_status: { label: "Rook", keuzes: { alarm: "Alarm", normal: "Niets" } },
   watersensor_state: { label: "Water", keuzes: { alarm: "Lek", normal: "Droog" } },
   valve_state: { label: "Klep", keuzes: { open: "Open", close: "Dicht" } },
+  // tado
+  verwarming: { label: "Verwarming", eenheid: "%" },
+  handmatig_tot: { label: "Handmatig", tijd: "tot " },
+  schema_volgende: { label: "Volgende in schema", tijd: "" },
+  schema_temp: { label: "Dan naar", eenheid: "°C" },
 };
 // Al getoond via `metingen`: niet nog eens in de lijst.
 const GEMETEN = new Set(["cur_power", "cur_voltage", "cur_current", "add_ele", "forward_energy_total", "va_temperature", "temp_current",
@@ -119,6 +129,8 @@ export function stand(a) {
     const doel = { open: 100, close: 0 }[bed(a, "control")?.waarde];
     if (p != null && doel != null && Math.abs(p - doel) > 1) delen.push(doel ? "Gaat open" : "Gaat dicht");
     else if (p != null) delen.push(p >= 99 ? "Open" : p <= 1 ? "Dicht" : `${getal(p, 0)}% open`);
+  } else if (a.soort === "klimaat") {
+    if (a.aan) delen.push(a.metingen.temperatuur == null ? "Aan" : "Verwarmt"); // tado: verwarmt nu
   } else if (a.aan != null) delen.push(a.aan ? "Aan" : "Uit");
   if (m.vermogen_w >= 0.05 && a.aan !== false) delen.push(wattTekst(m.vermogen_w)); // net aangezet: nog 0 W
   if (a.soort === "lamp" && a.aan && helderheid(a) != null) delen.push(`${helderheid(a)}%`);
@@ -154,7 +166,7 @@ export async function toon(main, params, ctx) {
   const v = vandaag();
   const vers = !staat || ctx.ververs || Date.now() - staat.tijd > 15_000;
   const [live, dag, verbruik] = await Promise.all([
-    vers ? api("apparaten", { vers: true }) : Promise.resolve({ gekoppeld: true, apparaten: staat.lijst, bijgewerkt: staat.bijgewerkt }),
+    vers ? api("apparaten", { vers: true }) : Promise.resolve({ gekoppeld: true, apparaten: staat.lijst, bijgewerkt: staat.bijgewerkt, bronnen: staat.bronnen }),
     api(`dag?datum=${v}`).catch(() => null),
     api("apparaten/vandaag").catch(() => null),
   ]);
@@ -164,6 +176,7 @@ export async function toon(main, params, ctx) {
   staat = {
     lijst: live.apparaten,
     bijgewerkt: live.bijgewerkt,
+    bronnen: live.bronnen || staat?.bronnen,
     tijd: vers ? Date.now() : staat.tijd,
     prijs: blok?.prijs ?? null,
     niveau: blok ? niveau(blok.prijs, gemiddelde(blokken)) : null,
@@ -210,8 +223,9 @@ function nietGekoppeld() {
       <span class="rond">${icoon("apparaten")}</span>
       <p class="titel">Nog geen apparaten gekoppeld</p>
       <p class="zacht">Koppel Tuya om je slimme stekkers, lampen, thermostaten en sensoren hier te zien en te bedienen.
-        Dat werkt voor alles wat in de app Smart Life of Tuya Smart staat, ook van merken als LSC Smart Connect (Action), Nedis, Calex en Silvercrest (Lidl).</p>
-      <a class="knop primair" href="#/koppelingen">Koppel Tuya</a>
+        Dat werkt voor alles wat in de app Smart Life of Tuya Smart staat, ook van merken als LSC Smart Connect (Action), Nedis, Calex en Silvercrest (Lidl).
+        Heb je tado°? Koppel tado voor je thermostaat en radiatorknoppen.</p>
+      <a class="knop primair" href="#/koppelingen">Naar Koppelingen</a>
     </div>`,
   })}</div>`;
 }
@@ -233,12 +247,41 @@ function tekenLijst(main) {
       </header>
       <ul class="apparaten" id="apparaten-lijst">${lijst.map(tegel).join("")}</ul>
       <p class="leeg" id="apparaten-leeg" hidden>Er staat nu niets aan.</p>
-      <p class="kaart-voet">Bedienen gaat via de cloud van Tuya: een apparaat reageert meestal binnen een tel. Het verbruik van vandaag is geschat uit de metingen van elk kwartier.</p>
+      ${bronMeldingen()}
+      <p class="kaart-voet">${voetTekst()}</p>
     </section>
     <p class="verborgen" aria-live="polite" id="apparaten-melding"></p>
   </div>`;
   pasFilterToe();
   koppel($("#apparaten", main));
+}
+
+/** Per bron: werkt hij niet, of raakt het dagmaximum van tado op? Dan een melding boven de lijst. */
+function bronMeldingen() {
+  const b = staat.bronnen || {};
+  const uit = [];
+  for (const [naam, info] of Object.entries(b)) {
+    const wie = naam === "tado" ? "tado°" : "Tuya";
+    if (info.fout) uit.push(melding(`${esc(wie)}: ${esc(info.fout)}${info.bijgewerkt ? ` De stand is van ${esc(klok(info.bijgewerkt))}.` : ""}`, "fout"));
+  }
+  const q = b.tado?.quotum;
+  if (q && q.per_dag && q.per_dag < 1000 && q.over != null && q.over < 25) {
+    uit.push(melding(`tado°: nog ${q.over} van de ${q.per_dag} verzoeken vandaag. Thuis vraagt de stand van je kamers nu nog zuiniger; bedienen blijft werken zolang er verzoeken over zijn.`, "let_op"));
+  }
+  return uit.length ? `<div class="bron-meldingen">${uit.join("")}</div>` : "";
+}
+
+function voetTekst() {
+  const b = staat.bronnen || {};
+  const delen = [];
+  if (b.tuya) delen.push("Bedienen gaat via de cloud van Tuya: een apparaat reageert meestal binnen een tel. Het verbruik van vandaag is geschat uit de metingen van elk kwartier.");
+  if (b.tado) {
+    const zuinig = !b.tado.quotum?.per_dag || b.tado.quotum.per_dag < 1000;
+    delen.push(zuinig
+      ? "tado staat zonder Auto-Assist 100 verzoeken per dag toe: de stand van je kamers is hooguit vijf minuten oud, en bedienen kost één verzoek."
+      : "tado: met Auto-Assist ververst de stand van je kamers elke halve minuut.");
+  }
+  return delen.join(" ");
 }
 
 function bijgewerkt() {
@@ -299,6 +342,8 @@ function snelBediening(a) {
   if (a.soort === "lamp" && licht && a.aan) return `<div class="snel">${schuif(a, licht, true)}</div>`;
   const doel = bed(a, "temp_set");
   if (doel) return `<div class="snel">${stapper(a, doel, true)}</div>`;
+  const tadoStand = bed(a, "tado_stand"); // warm water: alleen de stand
+  if (tadoStand) return `<div class="snel">${keuzeKnoppen(a, tadoStand, true)}</div>`;
   const rolluik = bed(a, "control");
   if (rolluik) return `<div class="snel">${keuzeKnoppen(a, rolluik, true)}</div>`;
   return "";
@@ -341,7 +386,7 @@ function tekenDetail(main, a) {
     ${gegevensKaart(a)}
     ${heeftHistorie(a) ? kaart({
       titel: grafiekTitel(a),
-      sub: "uit de metingen van elk kwartier",
+      sub: a.bron === "tado" ? "uit de metingen van de verzamelaar (zonder Auto-Assist eens per uur)" : "uit de metingen van elk kwartier",
       klasse: "b-12",
       id: "k-historie",
       rechts: `<div class="segment" role="group" aria-label="Periode">
@@ -378,7 +423,10 @@ function detailKaart(a) {
     bed(a, "temp_set")?.waarde != null ? `gewenst ${graden(bed(a, "temp_set").waarde)}` : null,
   ].filter(Boolean);
   const pilKlasse = !a.online ? "" : a.toestand ? TOESTAND_SOORT[a.toestand] || "" : a.aan ? "accent" : "";
-  const pilTekst = !a.online ? "Offline" : a.toestand ? TOESTAND[a.toestand] : a.aan == null ? "Online" : a.aan ? "Aan" : "Uit";
+  const pilTekst = !a.online ? "Offline"
+    : a.toestand ? TOESTAND[a.toestand]
+      : a.soort === "klimaat" ? (a.aan ? (a.metingen.temperatuur == null ? "Aan" : "Verwarmt") : "Online")
+        : a.aan == null ? "Online" : a.aan ? "Aan" : "Uit";
   const regels = a.bediening.filter((b) => !(schakel.length === 1 && b.code === schakel[0])).map((b) => bedieningRegel(a, b)).filter(Boolean);
   return `<section class="kaart b-8 apparaat-detail ${a.aan ? "aan" : ""}" id="k-apparaat" data-id="${esc(a.id)}" aria-labelledby="k-apparaat-titel">
     <header class="kaart-kop"><h2 id="k-apparaat-titel">${esc(a.naam)}</h2>${a.product ? `<span class="sub">${esc(a.product)}</span>` : ""}
@@ -449,13 +497,15 @@ function schuif(a, b, kort = false) {
 }
 
 /** − 18,5 °C +: voor een temperatuur of een klein bereik. */
+/** − 18,5 °C +: voor een temperatuur of een klein bereik. Staat het uit (tado), dan begint − of + bij `standaard`. */
 function stapper(a, b, kort = false) {
-  const tekst = b.waarde == null ? "–" : `${getal(b.waarde, b.stap < 1 ? 1 : 0)}${b.eenheid ? ` ${b.eenheid}` : ""}`;
+  const uit = b.waarde == null && b.standaard != null;
+  const tekst = b.waarde == null ? (uit ? "Uit" : "–") : `${getal(b.waarde, b.stap < 1 ? 1 : 0)}${b.eenheid ? ` ${b.eenheid}` : ""}`;
   const label = BEDIENING[b.code]?.label || mens(b.code);
   return `<span class="stapper${kort ? " kort" : ""}" data-code="${b.code}" role="group" aria-label="${esc(label)}${kort ? ` ${esc(a.naam)}` : ""}">
-    <button type="button" class="icoonknop" data-stap="-1" aria-label="Lager" ${a.online && b.waarde > b.min ? "" : "disabled"}>${icoon("min")}</button>
+    <button type="button" class="icoonknop" data-stap="-1" aria-label="Lager" ${a.online && (uit || b.waarde > b.min) ? "" : "disabled"}>${icoon("min")}</button>
     <output aria-live="polite">${esc(tekst)}</output>
-    <button type="button" class="icoonknop" data-stap="1" aria-label="Hoger" ${a.online && b.waarde < b.max ? "" : "disabled"}>${icoon("plus")}</button></span>`;
+    <button type="button" class="icoonknop" data-stap="1" aria-label="Hoger" ${a.online && (uit || b.waarde < b.max) ? "" : "disabled"}>${icoon("plus")}</button></span>`;
 }
 
 function gegevensKaart(a) {
@@ -472,7 +522,11 @@ function gegevensKaart(a) {
   for (const s of a.status) {
     if (GEMETEN.has(s.code)) continue;
     const info = STATUS[s.code] || {};
-    const w = info.keuzes ? info.keuzes[String(s.waarde)] ?? mens(s.waarde) : typeof s.waarde === "boolean" ? (s.waarde ? "Ja" : "Nee") : typeof s.waarde === "number" ? getal(s.waarde, Number.isInteger(s.waarde) ? 0 : 1) : mens(s.waarde);
+    const tijdstip = info.tijd != null && /^\d{4}-\d\d-\d\dT/.test(s.waarde);
+    const w = tijdstip
+      ? `${info.tijd}${dagnaam(s.waarde)} ${klok(s.waarde)}`
+      : info.tijd != null ? s.waarde // tekst van de bron zelf ("tot je het terugzet")
+        : info.keuzes ? info.keuzes[String(s.waarde)] ?? mens(s.waarde) : typeof s.waarde === "boolean" ? (s.waarde ? "Ja" : "Nee") : typeof s.waarde === "number" ? getal(s.waarde, Number.isInteger(s.waarde) ? 0 : 1) : mens(s.waarde);
     const eenheid = info.eenheid || s.eenheid;
     r.push([info.label || mens(s.code), `${esc(w)}${eenheid && typeof s.waarde === "number" ? ` <small>${esc(eenheid)}</small>` : ""}`]);
   }
@@ -640,8 +694,10 @@ function stapOp(knop) {
   const groep = knop.closest(".stapper");
   const a = apparaatVan(groep);
   const b = bed(a, groep.dataset.code);
-  const huidig = Number(groep.dataset.nieuw ?? b.waarde ?? b.min);
-  const nieuw = Math.round(Math.max(b.min, Math.min(b.max, huidig + Number(knop.dataset.stap) * b.stap)) * 100) / 100;
+  const huidig = groep.dataset.nieuw ?? b.waarde;
+  const nieuw = huidig == null && b.standaard != null
+    ? b.standaard // stond uit: eerst naar de gewone temperatuur
+    : Math.round(Math.max(b.min, Math.min(b.max, Number(huidig ?? b.min) + Number(knop.dataset.stap) * b.stap)) * 100) / 100;
   groep.dataset.nieuw = nieuw;
   $("output", groep).textContent = `${getal(nieuw, b.stap < 1 ? 1 : 0)}${b.eenheid ? ` ${b.eenheid}` : ""}`;
   $('[data-stap="-1"]', groep).disabled = nieuw <= b.min;
@@ -723,6 +779,7 @@ async function ververs({ stil = false } = {}) {
   if (!live.gekoppeld || $("#inhoud").dataset.pagina !== "apparaten") return;
   const oud = new Map(staat.lijst.map((a) => [a.id, JSON.stringify(a)]));
   staat.bijgewerkt = live.bijgewerkt;
+  staat.bronnen = live.bronnen;
   staat.tijd = Date.now();
   const nieuwIds = live.apparaten.map((a) => a.id).join();
   if (nieuwIds !== staat.lijst.map((a) => a.id).join() && $("#apparaten-lijst")) {

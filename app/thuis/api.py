@@ -57,10 +57,13 @@ async def _levensloop(app: FastAPI):
     app.state.opslag = maak_opslag(app.state.cfg)
     app.state.kluis = maak_kluis(app.state.cfg)
     app.state.bewaard = Bewaard() if app.state.cfg.bewaren else NietBewaard()
-    demo = None
+    demo = demo_tado = None
     if app.state.cfg.demo_apparaten:
+        from .demo_apparaten import DemoTado as demo_tado
         from .demo_apparaten import DemoTuya as demo
-    app.state.apparaten = Live(lambda: app.state.kluis.lees(), demo)  # de kluis van nu (tests vervangen hem)
+    app.state.apparaten = Live(
+        lambda: app.state.kluis, demo, demo_tado
+    )  # de kluis van nu (tests vervangen hem)
     from .connectors.weer import OpenMeteo
 
     app.state.weer = WeerLive(OpenMeteo(app.state.cfg.lat, app.state.cfg.lon))
@@ -403,27 +406,28 @@ class Bediening(BaseModel):
 
 
 @contextmanager
-def _tuyafouten() -> Iterator[None]:
-    """Fouten van Tuya als tekst voor de gebruiker: sleutels weg (409), Tuya zelf (502)."""
+def _bronfouten() -> Iterator[None]:
+    """Fouten van Tuya of tado als tekst voor de gebruiker: koppeling weg (409), de dienst zelf (502)."""
+    from .connectors.tado import TadoFout
     from .connectors.tuya import TuyaFout
 
     try:
         yield
     except KoppelingVerlopen as err:
         raise HTTPException(
-            409, f"De koppeling met Tuya werkt niet meer. {err.reden} Koppel opnieuw bij Koppelingen."
+            409, f"De koppeling met {err.dienst} werkt niet meer. {err.reden} Koppel opnieuw bij Koppelingen."
         ) from err
-    except TuyaFout as err:
+    except (TuyaFout, TadoFout) as err:
         raise HTTPException(502, err.uitleg) from err
     except httpx.HTTPError as err:
-        _LOG.warning("Tuya niet bereikbaar: %s", err)
-        raise HTTPException(502, "Tuya is niet bereikbaar; probeer het zo nog eens.") from err
+        _LOG.warning("Apparaten niet bereikbaar: %s", err)
+        raise HTTPException(502, "De apparaten zijn niet bereikbaar; probeer het zo nog eens.") from err
 
 
 @app.get("/api/apparaten")
 def api_apparaten(request: Request, _: str = Depends(gebruiker)) -> dict[str, Any]:
-    """De apparaten zoals Tuya ze nu meldt (live, hooguit 15 seconden oud; zie apparaten.Live)."""
-    with _tuyafouten():
+    """De apparaten zoals Tuya en tado ze nu melden (live; zie apparaten.Live)."""
+    with _bronfouten():
         return request.app.state.apparaten.lijst(vers=request.headers.get("x-thuis-vers") == "1")
 
 
@@ -433,7 +437,7 @@ def api_bedien(
 ) -> dict[str, Any]:
     """Een apparaat bedienen: {"opdrachten": [{"code": "switch_1", "waarde": true}]}."""
     try:
-        with _tuyafouten():
+        with _bronfouten():
             apparaat = request.app.state.apparaten.bedien(
                 apparaat_id, [w.model_dump() for w in body.opdrachten]
             )
@@ -510,6 +514,7 @@ BRONNEN = (
     ("auto", "{auto}"),
     ("bmw", "BMW CarData"),
     ("apparaten", "Tuya"),
+    ("tado", "tado°"),
     ("weer", "Open-Meteo"),
     ("sturen", "Slim laden"),
     ("meldingen", "Google Chat"),

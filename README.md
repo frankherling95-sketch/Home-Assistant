@@ -1,19 +1,19 @@
 # Thuis — eigen energieplatform
 
 Eén app voor stroom, gas, prijzen, het laden van de auto en je slimme apparaten. Haalt de data
-zelf op bij **Frank Energie**, **Easee**, **Kia/Hyundai Connect**, **BMW CarData** en **Tuya** (Smart Life),
+zelf op bij **Frank Energie**, **Easee**, **Kia/Hyundai Connect**, **BMW CarData**, **Tuya** (Smart Life) en **tado°**,
 bewaart de historie in **BigQuery** en draait volledig in **Google Cloud** achter je Google
 Workspace-login. Geen Home Assistant nodig.
 
 ```
 Cloud Scheduler (elke 15 min)
-  └─▶ Cloud Run-job  thuis-verzamel ──▶ Frank Energie · Easee · Kia of BMW · Tuya · Open-Meteo
+  └─▶ Cloud Run-job  thuis-verzamel ──▶ Frank Energie · Easee · Kia of BMW · Tuya · tado · Open-Meteo
           │                         ──▶ Slim laden: lader pauzeren/hervatten (optioneel)
           ▼                         ──▶ Google Chat-meldingen (optioneel)
       BigQuery  (dataset thuis, EU)
           ▲
 Cloud Run-service thuis-app  (API + web-app)  ◀── jij, ingelogd via IAP (Workspace-account)
-          └─▶ Tuya: apparaten live bekijken en bedienen
+          └─▶ Tuya en tado: apparaten en thermostaten live bekijken en bedienen
 ```
 
 ## Wat het doet
@@ -25,7 +25,7 @@ Cloud Run-service thuis-app  (API + web-app)  ◀── jij, ingelogd via IAP (W
 | Prijzen | All-in prijzen vandaag en morgen per kwartier, goedkoopste momenten, negatieve prijzen |
 | Laden | Auto en lader live, laadplan (Slim laden), laadsessies met kosten, instellingen |
 | Auto | Alles wat de auto doorgeeft: accu en laden, kilometers per dag, onderhoud en bandenspanning, deuren en ramen, locatie, laadhistorie (ook onderweg) |
-| Apparaten | Slimme stekkers, lampen, thermostaten, rolluiken en sensoren uit Smart Life of Tuya Smart: live stand, aan en uit, helderheid, temperatuur, wat ze nu per uur kosten en wat ze vandaag verbruikten |
+| Apparaten | Slimme stekkers, lampen, thermostaten, rolluiken en sensoren uit Smart Life of Tuya Smart, en de kamers van tado° (temperatuur, schema, handmatig of uit): live stand, aan en uit, helderheid, temperatuur, wat ze nu per uur kosten en wat ze vandaag verbruikten |
 | Inzichten | Besparing door slim laden, kosten deze maand, gas t.o.v. vorige week (graaddagen), … |
 | Weer | Het weer voor thuis (Open-Meteo: KNMI, DWD, ECMWF): nu, regen per kwartier, 48 uur en 7 dagen, en het verwachte gasverbruik per dag uit je eigen meterdata. Op een telefoon via de kaart Weer op het overzicht |
 | Koppelingen | Je accounts koppelen (Thuis bewaart alleen tokens, geen wachtwoorden) en de status per bron |
@@ -48,7 +48,7 @@ een paar dagen klopt.
 
 | Pad | Wat |
 | --- | --- |
-| `app/thuis/connectors/` | Frank Energie (GraphQL), Easee (REST), Kia/Hyundai (community-bibliotheek), BMW CarData (officiële API), Tuya (cloud-API, ondertekend), Open-Meteo |
+| `app/thuis/connectors/` | Frank Energie (GraphQL), Easee (REST), Kia/Hyundai (community-bibliotheek), BMW CarData (officiële API), Tuya (cloud-API, ondertekend), tado (REST-API, device code flow), Open-Meteo |
 | `app/thuis/schema.py` | Alle tabellen op één plek, voor DuckDB én BigQuery |
 | `app/thuis/opslag.py` | Opslaglaag: append-only, actuele stand per sleutel, alleen gewijzigde rijen erbij |
 | `app/thuis/verzamel.py` | De verzamelaar: elke bron faalt los, uitslag per stap in de rondelog |
@@ -113,6 +113,11 @@ laag (er moet wel een betaalaccount aan het project hangen; het script zet een b
   maximum aantal verzoeken per maand. Daarom vraagt Thuis per ronde alle apparaten in één verzoek,
   bewaart het de live stand 15 seconden, en ververst de pagina Apparaten alleen zolang je hem
   gebruikt. Lokaal via de wifi bedienen kan vanuit Cloud Run niet.
+- **tado°** heeft geen officiële API voor derden; Thuis gebruikt de REST-API van de tado-app
+  ("fair use"). Zonder Auto-Assist staat tado **100 verzoeken per dag** toe (met: 20.000). Thuis
+  leest het restant uit elk antwoord: de verzamelaar vraagt de stand dan eens per uur en laat er
+  25 over, de app hooguit eens per vijf minuten, en bedienen kost één verzoek. Een refresh-token
+  van tado werkt maar één keer; app en verzamelaar delen de tokens daarom via de kluis.
 - **Kia/Hyundai** heeft geen officiële API. De community-bibliotheek volgt wijzigingen meestal
   snel; bij inlogproblemen is een update van `hyundai_kia_connect_api` vaak genoeg.
 - **Verbruik** komt van de slimme meter via Frank Energie, met ongeveer een dag vertraging.

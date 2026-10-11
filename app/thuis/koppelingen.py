@@ -1,11 +1,11 @@
-"""Koppelingen: de accounts van Frank Energie, Easee, Kia/Hyundai, BMW, Tuya en Google Chat.
+"""Koppelingen: de accounts van Frank Energie, Easee, Kia/Hyundai, BMW, Tuya, tado en Google Chat.
 
 Koppelen gebeurt in de app: één keer inloggen, daarna bewaart Thuis alleen de tokens die de
 dienst teruggeeft (nooit het wachtwoord) in de kluis. De verzamelaar bouwt zijn connectoren
 daaruit, ververst tokens en slaat de nieuwe op. Werken ze niet meer, dan krijgt de koppeling
 status "opnieuw" en vraagt de app om opnieuw te koppelen.
 
-BMW koppelt anders: met een code die je op de site van BMW bevestigt (methode "code"). Tot die
+BMW en tado koppelen anders: met een code die je op hun site bevestigt (methode "code"). Tot die
 bevestiging staat wat Thuis daarvoor nodig heeft onder "wachtend" in de kluis.
 
 Tuya koppelt met de sleutels van een eigen cloudproject (Access ID en Access Secret), niet met het
@@ -81,6 +81,13 @@ DIENSTEN: dict[str, dict[str, Any]] = {
         ],
         "oud": (),
     },
+    "tado": {
+        "naam": "tado°",
+        "uitleg": "Voor je thermostaat en radiatorknoppen: de temperatuur per kamer zien en de verwarming bedienen.",
+        "methode": "code",
+        "velden": [],
+        "oud": (),
+    },
     "google_chat": {
         "naam": "Google Chat",
         "uitleg": "Meldingen in een Chat-ruimte: negatieve prijzen, laden klaar, storingen.",
@@ -139,7 +146,14 @@ def _gekoppeld(r: dict[str, Any]) -> tuple[dict[str, Any], str]:
 
 
 def start_code(dienst: str, gegevens: dict[str, str]) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Koppelen met een code (BMW). Geeft (wat bewaard blijft tot de bevestiging, code en link)."""
+    """Koppelen met een code (BMW, tado). Geeft (wat bewaard blijft tot de bevestiging, code en link)."""
+    if dienst == "tado":
+        from .connectors.tado import Tado, TadoFout
+
+        try:
+            return Tado.start_koppeling()
+        except TadoFout as err:
+            raise KoppelFout(err.uitleg) from err
     if dienst != "bmw":
         raise KoppelFout(f"Onbekende dienst: {dienst}")
     from .connectors.bmw import start_koppeling
@@ -150,9 +164,14 @@ def start_code(dienst: str, gegevens: dict[str, str]) -> tuple[dict[str, Any], d
 
 def controleer_code(dienst: str, wacht: dict[str, Any]) -> tuple[dict[str, Any], str] | None:
     """None zolang de code niet is bevestigd; daarna (wat in de kluis komt, bevestiging)."""
-    from .connectors.bmw import controleer_koppeling
+    if dienst == "tado":
+        from .connectors.tado import Tado
 
-    r = controleer_koppeling(wacht)
+        r = Tado.controleer_koppeling(wacht)
+    else:
+        from .connectors.bmw import controleer_koppeling
+
+        r = controleer_koppeling(wacht)
     return None if r is None else _gekoppeld(r)
 
 
@@ -184,7 +203,7 @@ def overzicht(data: dict[str, Any]) -> list[dict[str, Any]]:
                 "velden": d["velden"],
                 "methode": d.get("methode", "inloggen"),
                 "status": status,  # ok | opnieuw | script | niet
-                "account": account if dienst in ("google_chat", "bmw") else _maskeer(account),
+                "account": account if dienst in ("google_chat", "bmw", "tado") else _maskeer(account),
                 "sinds": (k or {}).get("gekoppeld"),
             }
         )
@@ -202,12 +221,16 @@ class Connectoren:
     kia: Any = None
     bmw: Any = None
     tuya: Any = None
+    tado: Any = None
     chat: Any = None
     koppelingen: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
-def maak_connectoren(cfg: Config, data: dict[str, Any]) -> Connectoren:
-    """Connectoren uit de koppelingen in de kluis; anders uit de oude logins (setup-script)."""
+def maak_connectoren(cfg: Config, data: dict[str, Any], kluis: Any = None) -> Connectoren:
+    """Connectoren uit de koppelingen in de kluis; anders uit de oude logins (setup-script).
+
+    tado krijgt de kluis zelf mee: die schrijft een ververst token meteen terug (zie connectors/tado.py).
+    """
     from .connectors.easee import Easee
     from .connectors.frank import Frank
 
@@ -238,6 +261,10 @@ def maak_connectoren(cfg: Config, data: dict[str, Any]) -> Connectoren:
         from .connectors.tuya import Tuya
 
         c.tuya = Tuya(k["tuya"])
+    if "tado" in k:
+        from .connectors.tado import Tado
+
+        c.tado = Tado(k["tado"], kluis)
     webhook = (k.get("google_chat") or {}).get("webhook") or cfg.chat_webhook
     if webhook:
         from .meldingen import GoogleChat
@@ -250,7 +277,8 @@ def nieuwe_stand(c: Connectoren, verlopen: set[str], gelukt: set[str]) -> dict[s
     """Wat er na een ronde in de kluis moet: verse tokens, en de status per koppeling.
 
     BMW en Tuya houden meer bij dan tokens (de telling van verzoeken, de laatste toestand, de
-    specificaties van de apparaten): daar gaat het hele record terug.
+    specificaties van de apparaten): daar gaat het hele record terug. tado schrijft zelf, veld
+    voor veld en meteen, omdat de app tegelijk dezelfde tokens gebruikt.
     """
     wijzig: dict[str, dict[str, Any]] = {}
     for dienst, conn, sleutel in (

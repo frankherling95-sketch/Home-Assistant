@@ -103,6 +103,7 @@ def test_status_uit_rondelog(client):
         "auto",
         "bmw",
         "apparaten",
+        "tado",
         "weer",
         "sturen",
         "meldingen",
